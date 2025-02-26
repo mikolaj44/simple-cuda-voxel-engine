@@ -1,187 +1,519 @@
-/*
- * Copyright (c) 2020-2024, NVIDIA CORPORATION.
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
+#define SDL_MAIN_HANDLED
 
- #include <cuco/static_map.cuh>
+#include <SDL.h>
+#include <SDL_ttf.h>
+#include <iostream>
+#include <ctime>
+#include <vector>
+#include <map>
+#include <string>
+#include <algorithm>
 
- #include <thrust/device_vector.h>
- #include <thrust/execution_policy.h>
- #include <thrust/iterator/zip_iterator.h>
- #include <thrust/logical.h>
- #include <thrust/sequence.h>
- #include <thrust/tuple.h>
- 
- #include <cmath>
- #include <cstddef>
- #include <iostream>
- #include <limits>
- 
- /**
-  * @file device_ref_example.cu
-  * @brief Demonstrates usage of the device side APIs for individual operations like insert/find.
-  *
-  * Individual operations like a single insert or find can be performed in device code via the
-  * "static_map_ref" types.
-  *
-  * @note This example is for demonstration purposes only. It is not intended to show the most
-  * performant way to do the example algorithm.
-  *
-  */
- 
- /**
-  * @brief Inserts keys that pass the specified predicated into the map.
-  *
-  * @tparam Map Type of the map device reference
-  * @tparam KeyIter Input iterator whose value_type convertible to Map::key_type
-  * @tparam ValueIter Input iterator whose value_type is convertible to Map::mapped_type
-  * @tparam Predicate Unary predicate
-  *
-  * @param[in] map_ref Reference of the map into which inserts will be performed
-  * @param[in] key_begin The beginning of the range of keys to insert
-  * @param[in] value_begin The beginning of the range of values associated with each key to insert
-  * @param[in] num_keys The total number of keys and values
-  * @param[in] pred Unary predicate applied to each key. Only keys that pass the predicated will be
-  * inserted.
-  * @param[out] num_inserted The total number of keys successfully inserted
-  */
- template <typename Map, typename KeyIter, typename ValueIter, typename Predicate>
- __global__ void filtered_insert(Map map_ref,
-                                 KeyIter key_begin,
-                                 ValueIter value_begin,
-                                 std::size_t num_keys,
-                                 Predicate pred,
-                                 int* num_inserted)
- {
-   auto tid = threadIdx.x + blockIdx.x * blockDim.x;
- 
-   std::size_t counter = 0;
-   while (tid < num_keys) {
-     // Only insert keys that pass the predicate
-     if (pred(key_begin[tid])) {
-       // Map::insert returns `true` if it is the first time the given key was
-       // inserted and `false` if the key already existed
-       if (map_ref.insert(cuco::pair{key_begin[tid], value_begin[tid]})) {
-         ++counter;  // Count number of successfully inserted keys
-       }
-     }
-     tid += gridDim.x * blockDim.x;
-   }
- 
-   // Update global count of inserted keys
-   atomicAdd(num_inserted, counter);
- }
- 
- /**
-  * @brief For keys that have a match in the map, increments their corresponding value by one.
-  *
-  * @tparam Map Type of the map device reference
-  * @tparam KeyIter Input iterator whose value_type convertible to Map::key_type
-  *
-  * @param map_ref Reference of the map into which queries will be performed
-  * @param key_begin The beginning of the range of keys to query
-  * @param num_keys The total number of keys
-  */
- template <typename Map, typename KeyIter>
- __global__ void increment_values(Map map_ref, KeyIter key_begin, std::size_t num_keys)
- {
-   auto tid = threadIdx.x + blockIdx.x * blockDim.x;
-   while (tid < num_keys) {
-     // If the key exists in the map, find returns an iterator to the specified key. Otherwise it
-     // returns map.end()
-     auto found = map_ref.find(key_begin[tid]);
-     if (found != map_ref.end()) {
-       // If the key exists, atomically increment the associated value
-       auto ref =
-         cuda::atomic_ref<typename Map::mapped_type, cuda::thread_scope_device>{found->second};
-       ref.fetch_add(1, cuda::memory_order_relaxed);
-     }
-     tid += gridDim.x * blockDim.x;
-   }
- }
- 
- int main(void)
- {
-   using Key   = int;
-   using Value = int;
- 
-   // Empty slots are represented by reserved "sentinel" values. These values should be selected such
-   // that they never occur in your input data.
-   Key constexpr empty_key_sentinel     = -1;
-   Value constexpr empty_value_sentinel = -1;
- 
-   // Number of key/value pairs to be inserted
-   std::size_t constexpr num_keys = 50'000;
- 
-   // Create a sequence of keys and values {{0,0}, {1,1}, ... {i,i}}
-   thrust::device_vector<Key> insert_keys(num_keys);
-   thrust::sequence(insert_keys.begin(), insert_keys.end(), 0);
-   thrust::device_vector<Value> insert_values(num_keys);
-   thrust::sequence(insert_values.begin(), insert_values.end(), 0);
- 
-   // Compute capacity based on a 50% load factor
-   auto constexpr load_factor = 0.5;
-   std::size_t const capacity = std::ceil(num_keys / load_factor);
- 
-   // Constructs a map with "capacity" slots using -1 and -1 as the empty key/value sentinels.
-   auto map = cuco::static_map{capacity,
-                               cuco::empty_key{empty_key_sentinel},
-                               cuco::empty_value{empty_value_sentinel},
-                               thrust::equal_to<Key>{},
-                               cuco::linear_probing<1, cuco::default_hash_function<Key>>{}};
- 
-   // Get a non-owning, mutable reference of the map that allows inserts to pass by value into the
-   // kernel
-   auto insert_ref = map.ref(cuco::insert);
- 
-   // Predicate will only insert even keys
-   auto is_even = [] __device__(auto key) { return (key % 2) == 0; };
- 
-   // Allocate storage for count of number of inserted keys
-   thrust::device_vector<int> num_inserted(1);
- 
-   auto constexpr block_size = 256;
-   auto const grid_size      = (num_keys + block_size - 1) / block_size;
-   filtered_insert<<<grid_size, block_size>>>(insert_ref,
-                                              insert_keys.begin(),
-                                              insert_values.begin(),
-                                              num_keys,
-                                              is_even,
-                                              num_inserted.data().get());
- 
-   std::cout << "Number of keys inserted: " << num_inserted[0] << std::endl;
- 
-   // Get a non-owning reference of the map that allows find operations to pass by value into the
-   // kernel
-   auto find_ref = map.ref(cuco::find);
- 
-   increment_values<<<grid_size, block_size>>>(find_ref, insert_keys.begin(), num_keys);
- 
-   // Retrieve contents of all the non-empty slots in the map
-   thrust::device_vector<Key> contained_keys(num_inserted[0]);
-   thrust::device_vector<Value> contained_values(num_inserted[0]);
-   map.retrieve_all(contained_keys.begin(), contained_values.begin());
- 
-   auto tuple_iter =
-     thrust::make_zip_iterator(thrust::make_tuple(contained_keys.begin(), contained_values.begin()));
-   // Iterate over all slot contents and verify that `slot.key + 1 == slot.value` is always true.
-   auto result = thrust::all_of(
-     thrust::device, tuple_iter, tuple_iter + num_inserted[0], [] __device__(auto const& tuple) {
-       return thrust::get<0>(tuple) + 1 == thrust::get<1>(tuple);
-     });
- 
-   if (result) { std::cout << "Success! Target values are properly incremented.\n"; }
- 
-   return 0;
- }
+#include "renderer.cuh"
+#include "chunk.cuh"
+#include "chunkgeneration.cuh"
+#include "Octree.cuh"
+#include "blocksdata.cuh"
+
+#define DB_PERLIN_IMPL
+#include "db_perlin.hpp"
+
+#include <cuda_runtime.h>
+#include <device_launch_parameters.h>
+
+using namespace std;
+
+SDL_Window* window;
+SDL_Renderer* renderer;
+SDL_Texture* texture;
+
+BlockTexture** blockTextures = nullptr;
+
+void initBlockTextures() {
+
+    int blockAmount = 3;
+
+    cudaMallocManaged(&blockTextures, size_t(blockAmount * sizeof(BlockTexture*)));
+
+    for (int i = 1; i < blockAmount + 1; i++) {
+
+        string currPathStr = pathStr + "/res/textures/" + to_string(i);
+
+        cudaMallocManaged(&blockTextures[i], sizeof(BlockTexture));
+        new (blockTextures[i]) BlockTexture(16, 16, currPathStr + "/top.png", currPathStr + "/bottom.png", currPathStr + "/left.png", currPathStr + "/right.png", currPathStr + "/front.png", currPathStr + "/back.png");
+    }
+
+    createBlocksData<<<1,1>>>(blockTextures);
+
+    cudaDeviceSynchronize();
+}
+
+void handleCameraMovement(int mouseX, int mouseY, int& prevMouseX, int& prevMouseY) {
+
+    mouseX -= SCREEN_WIDTH / 2;
+    mouseY -= SCREEN_HEIGHT / 2;
+
+    cameraAngle.y -= (prevMouseX - mouseX) * MOUSE_SENSITIVITY;
+    cameraAngle.x += (prevMouseY - mouseY) * MOUSE_SENSITIVITY;
+
+    if (cameraAngle.x < -M_PI / 2.0) {
+        cameraAngle.x = -M_PI / 2.0;
+    }
+    else if (cameraAngle.x > M_PI / 2.0) {
+        cameraAngle.x = M_PI / 2.0;
+    }
+
+    //cout << cameraAngle.x << endl;
+
+    prevMouseX = mouseX;
+    prevMouseY = mouseY;
+}
+
+int main(){
+    
+    ios_base::sync_with_stdio(false);
+    cin.tie(NULL);
+
+    int pow2 = 1024;
+    int pow2neg = pow2;
+
+    size_t sizeB = 16 * 1024 * 1024;
+
+    cudaDeviceSetLimit(cudaLimitMallocHeapSize, sizeB);
+
+    Octree* octree; // = new Octree(-pow2neg, pow2, -pow2neg, pow2, -pow2neg, pow2)
+    
+    cudaMallocManaged(&octree, sizeof(Octree));
+    octree->createOctree(0,0,0,1);
+
+    //octree = new Octree(-pow2neg, pow2, -pow2neg, pow2, -pow2neg, pow2);
+
+    size_t size = SCREEN_WIDTH * SCREEN_HEIGHT * 4;
+
+    unsigned char* pixels = new unsigned char[size]; // cpu
+    unsigned char* pixels_gpu; // gpu
+
+    cudaMalloc(&pixels_gpu, size * sizeof(unsigned char));
+
+    const int threadsPerBlock = 600;
+    const int blocksPerGrid = (SCREEN_WIDTH * SCREEN_HEIGHT + threadsPerBlock - 1) / threadsPerBlock;
+
+    initBlockTextures();
+
+    //cudaMemcpy(pixels, pixels_gpu, bytes, cudaMemcpyHostToDevice);
+
+    window = SDL_CreateWindow("voxel engine", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, SCREEN_WIDTH, SCREEN_HEIGHT, 0);
+    renderer = SDL_CreateRenderer(window, -1, SDL_RENDERER_ACCELERATED);
+    SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, "1");
+
+    texture = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_ARGB8888, SDL_TEXTUREACCESS_STREAMING, SCREEN_WIDTH, SCREEN_HEIGHT);
+
+    if (mouseControls) {
+        SDL_SetRelativeMouseMode(SDL_TRUE);
+    }
+
+    int texture_pitch = 0;
+    void* texture_pixels = NULL;
+
+    if (SDL_LockTexture(texture, NULL, &texture_pixels, &texture_pitch) != 0) {
+        SDL_Log("Unable to lock texture: %s", SDL_GetError());
+    }
+    else {
+        memcpy(texture_pixels, pixels, texture_pitch * SCREEN_HEIGHT);
+    }
+    SDL_UnlockTexture(texture);
+
+    TTF_Init();
+
+    string fontPath = pathStr + "/res/fonts/Arial.ttf";
+
+    TTF_Font* font = TTF_OpenFont(fontPath.c_str(), 28);
+
+    SDL_Color whiteColor = { 255, 255, 255 };
+
+    SDL_Surface* textSurface = TTF_RenderText_Blended(font, "text", whiteColor);
+
+    SDL_Texture* textTexture = SDL_CreateTextureFromSurface(renderer, textSurface);
+
+    SDL_Rect textRect;
+    textRect.x = 0;
+    textRect.y = 0;
+    textRect.w = textSurface->w;
+    textRect.h = textSurface->h;
+
+    SDL_FreeSurface(textSurface);
+
+    bool quit = false;
+
+    calculateFOV();
+
+    return 0;
+
+   //for (int x = -START_RENDER_DISTANCE; x < START_RENDER_DISTANCE; x++)
+   //     for (int z = -START_RENDER_DISTANCE; z < START_RENDER_DISTANCE; z++)
+   //         if ((x - cameraPos.x) * (x - cameraPos.x) + (z - cameraPos.z) * (z - cameraPos.z) <= START_RENDER_DISTANCE * START_RENDER_DISTANCE) {
+   //             GenerateChunk(x, z, octree);
+   //             //printf("%d / %d\n", (x + 1 + START_RENDER_DISTANCE) * (z + 1 + START_RENDER_DISTANCE) , START_RENDER_DISTANCE * START_RENDER_DISTANCE);
+   //         }
+
+    GenerateChunk(0, 0, octree);
+
+    //for (int x = 0; x < 10; x++)
+    //    GenerateChunk(x, 0, octree);
+
+    int prevMouseX = 0, prevMouseY = 0;
+
+    while (!quit) {
+
+        if(generateNewChunks)
+            GenerateVisibleChunks(octree);
+
+        Uint64 start = SDL_GetPerformanceCounter();
+
+        SDL_Event event_;
+
+        float offsetX, offsetZ;
+        int cubeSize;
+
+        if (doGravity) {
+
+            unsigned char check = octree->get((int)cameraPos.x, (int)(cameraPos.y + 2), (int)cameraPos.z);
+
+            cout << (int)check << endl;
+
+            if (check == 0 || check == 255)
+                cameraPos.y += 0.5;
+        }
+
+        while (SDL_PollEvent(&event_)) {
+
+            switch (event_.type) {
+
+                int x, y, z;
+
+                case SDL_MOUSEMOTION:
+                    if (mouseControls) {
+                        handleCameraMovement(event_.motion.x, event_.motion.y, prevMouseX, prevMouseY);
+                    }
+                    break;
+
+                case SDL_WINDOWEVENT:
+
+                    switch (event_.window.event) {
+
+                        case SDL_WINDOWEVENT_CLOSE:   // exit game
+                            goto end;
+                            break;
+
+                        default:
+                            break;
+                        }
+                    break;
+
+                case SDL_QUIT:
+                    goto end;
+
+                case SDL_KEYDOWN:
+
+                    switch (event_.key.keysym.sym) {
+
+                    case SDLK_1:
+
+                        for (int x = -START_RENDER_DISTANCE; x < START_RENDER_DISTANCE; x++)
+                            for (int z = -START_RENDER_DISTANCE; z < START_RENDER_DISTANCE; z++)
+                                if (x * x + z * z <= START_RENDER_DISTANCE * START_RENDER_DISTANCE) {
+                                    GenerateChunk(x, z, octree);
+                                }
+
+                        break;
+
+                    case SDLK_2:
+
+                        cubeSize = 100;
+
+                        for (int x = -cubeSize / 2; x < cubeSize / 2; x++) {
+                            for (int y = -cubeSize / 2; y < cubeSize / 2; y++) {
+                                for (int z = -cubeSize / 2; z < cubeSize / 2; z++) {
+                                    //octree->insert(x, y, z, rand() % 255 + 1);
+                                }
+                            }
+                        }
+
+                        break;
+
+                    case SDLK_3:
+
+                        cubeSize = 100;
+
+                        // for (int x = -cubeSize / 2; x < cubeSize / 2; x++) {
+                        //     for (int y = -cubeSize / 2; y < cubeSize / 2; y++) {
+                        //         for (int z = -cubeSize / 2; z < cubeSize / 2; z++) {
+                        //             if (rand() % 200 == 1)
+                        //                 //octree->insert(x, y, z, rand() % 400 + 1);
+                        //         }
+                        //     }
+                        // }
+
+                        break;
+
+                    case SDLK_4:
+
+                        cubeSize = 50;
+
+                        // for (int x = -cubeSize * 2; x < cubeSize * 2; x++) {
+                        //     for (int y = -cubeSize * 2; y < cubeSize * 2; y++) {
+                        //         for (int z = -cubeSize * 2; z < cubeSize * 2; z++) {
+                        //             if (x * x + y * y + z * z <= cubeSize * cubeSize)
+                        //                 //octree->insert(x, y, z, rand() % 700 + 1);
+                        //         }
+                        //     }
+                        // }
+
+                        break;
+
+                    case SDLK_5:
+
+                        break;
+
+                        case SDLK_UP:
+                            cameraPos.x += sin(cameraAngle.y) * PLAYER_SPEED;
+                            cameraPos.z += cos(cameraAngle.y) * PLAYER_SPEED;
+                            break;
+                        case SDLK_DOWN:
+                            cameraPos.x -= sin(cameraAngle.y) * PLAYER_SPEED;
+                            cameraPos.z -= cos(cameraAngle.y) * PLAYER_SPEED;
+                            break;
+
+                        case SDLK_LEFT:
+                            cameraPos.x -= sin(cameraAngle.y + M_PI/2) * PLAYER_SPEED;
+                            cameraPos.z -= cos(cameraAngle.y + M_PI/2) * PLAYER_SPEED;
+                            break;
+                        case SDLK_RIGHT:
+                            cameraPos.x += sin(cameraAngle.y + M_PI/2) * PLAYER_SPEED;
+                            cameraPos.z += cos(cameraAngle.y + M_PI/2) * PLAYER_SPEED;
+                            break;
+
+                        case SDLK_s:
+                            cameraPos.y += PLAYER_SPEED_FLYING;
+                            break;
+                        case SDLK_w:
+                            cameraPos.y -= PLAYER_SPEED_FLYING;
+                            break;
+
+                        case SDLK_q:
+                            cameraAngle.y -= PLAYER_TURN_Y_SPEED;
+                            break;
+                        case SDLK_e:
+                            cameraAngle.y += PLAYER_TURN_Y_SPEED;
+                            break;
+
+                        case SDLK_r:
+                            cameraAngle.x += 0.1;
+                            if (cameraAngle.x > 2 * M_PI)
+                                cameraAngle.x = 0;
+                            break;
+
+                        case SDLK_f:
+                            cameraAngle.x -= 0.1;
+                            if (cameraAngle.x < 0)
+                                cameraAngle.x = 2 * M_PI;
+                            break;
+
+                        case SDLK_i:
+                            x = rand() % 128 - 64;
+                            y = rand() % 128 - 64;
+                            z = rand() % 128 - 64;
+                            cout << x << " " << y << " " << z << endl;
+                            //octree->insert(x,y,z, rand() % 5);
+                            break;
+
+                        case SDLK_o:
+                            x = rand() % 256 - 128;
+                            y = rand() % 256 - 128;
+                            z = rand() % 256 - 128;
+                            cout << x << " " << y << " " << z << endl;
+                            //octree->insert(x, y, z, rand() % 5);
+                            break;
+
+                        case SDLK_t:
+                            doOldRendering = !doOldRendering;
+                            break;
+
+                        case SDLK_9:
+                            shiftX++;
+                            break;
+                        case SDLK_0:
+                            shiftX--;
+                            break;
+
+                        case SDLK_n:
+                            shiftY++;
+                            break;
+                        case SDLK_m:
+                            shiftY--;
+                            break;
+
+                        case SDLK_h:
+                            shiftZ++;
+                            break;
+                        case SDLK_j:
+                            shiftZ--;
+                            break;
+
+                        case SDLK_k:
+
+                            //shift--;
+
+                            offsetX = rand() % 100;
+                            offsetZ = rand() % 100;
+
+                            //for (int x = -START_RENDER_DISTANCE * 2; x < START_RENDER_DISTANCE * 2; x++)
+                             //   for (int z = -START_RENDER_DISTANCE * 2; z < START_RENDER_DISTANCE * 2; z++)
+                               //     if (x*x + z*z <= 4 * START_RENDER_DISTANCE * START_RENDER_DISTANCE)
+                                        GenerateChunk(0, 0, octree, offsetX, offsetZ);
+
+                            break;
+
+                        case SDLK_l:
+                            shift++;
+                            break;
+
+                        case SDLK_b:
+                            showBorder = !showBorder;
+                            break;
+
+                        default:
+                            break;
+                    }
+            }
+        }
+
+        if (!doOldRendering) {
+
+            // allocate space on device for the host octree (calculate the size)
+            // copy it
+
+            //-dc -G -lineinfo 
+
+            renderScreenCUDA <<<blocksPerGrid,threadsPerBlock>>> (SCREEN_WIDTH, SCREEN_HEIGHT, octree, cameraAngle.x, cameraAngle.y, cameraPos.x, cameraPos.y, cameraPos.z, pixels_gpu);
+            //DrawVisibleFaces(octree);
+
+            bool showCudaErrors = true;
+
+            if (showCudaErrors) {
+                cudaError_t err = cudaGetLastError();
+
+                //size_t freeMem, totalMem;
+                //cudaMemGetInfo(&freeMem, &totalMem);
+                //printf("Free memory: %zu bytes\n", freeMem);
+                //printf("Total memory: %zu bytes\n", totalMem);
+
+                if (err != cudaSuccess) {
+                    printf("%s\n", cudaGetErrorString(err));
+                    return 0;
+                }
+            }
+
+            /*size_t stackSize;
+            cudaDeviceGetLimit(&stackSize, cudaLimitStackSize);
+            printf("Stack size: %zu bytes\n", stackSize);*/
+        }
+        else {
+
+            //octree->display(octree->root, showBorder);
+        }
+
+        cudaDeviceSynchronize();
+
+        SDL_RenderClear(renderer);
+
+        //system("pause");
+
+        SDL_LockTexture(texture, NULL, &texture_pixels, &texture_pitch);
+
+        cudaMemcpy(texture_pixels, pixels_gpu, size, cudaMemcpyDeviceToHost);
+        //memcpy(texture_pixels, pixels, size * sizeof(unsigned char)); // texture_pitch * SCREEN_HEIGHT
+
+        SDL_UnlockTexture(texture);
+
+        //memset(pixels, 0, SCREEN_HEIGHT * texture_pitch);
+        SDL_RenderCopy(renderer, texture, NULL, NULL);
+
+        //system("pause");
+
+        if (showFps) {
+
+            Uint64 end = SDL_GetPerformanceCounter();
+            float elapsed = (end - start) / (float)SDL_GetPerformanceFrequency();
+
+            SDL_Surface* updatedSurface = TTF_RenderText_Blended(font, to_string(1.0 / elapsed).c_str(), whiteColor);
+            SDL_UpdateTexture(textTexture, nullptr, updatedSurface->pixels, updatedSurface->pitch);
+
+            SDL_RenderCopy(renderer, textTexture, nullptr, &textRect);
+
+            /*cout << "FPS: " << 1.0 / elapsed << ", " << threadsPerBlock << " threads per block , " << blocksPerGrid << " blocks" << "\n";
+            cout << blocksPerGrid * threadsPerBlock << " threads" << "\n";
+            cout << "octree taken size (KB): " << octree->memoryTakenBytes / 1024 << "\n";
+            cout << "octree available size (KB): " << octree->memoryAvailableBytes / 1024 << "\n\n";*/
+            SDL_RenderPresent(renderer);
+            SDL_FreeSurface(updatedSurface);
+        }
+        else {
+            SDL_RenderPresent(renderer);
+        }
+    }
+
+end:
+
+    delete octree;
+
+    SDL_FreeSurface(textSurface);
+    SDL_DestroyTexture(textTexture);
+    TTF_Quit();
+
+    SDL_DestroyRenderer(renderer);
+    SDL_DestroyWindow(window);
+    SDL_Quit();
+
+    cudaFree(pixels_gpu);
+
+    cudaDeviceReset();
+    exit(0);
+
+    delete[] pixels;
+    delete[] (char*)texture_pixels;
+
+    return 0;
+}
+
+//got = chunkPosIndex.find(make_pair((int)cameraPos.x / CHUNK_W + 1, (int)cameraPos.z / CHUNK_W + 1));
+//if (got == chunkPosIndex.end())
+//GenerateChunk((int)cameraPos.x / CHUNK_W + 1, (int)cameraPos.z / CHUNK_W + 1);
+//
+//got = chunkPosIndex.find(make_pair((int)cameraPos.x / CHUNK_W, (int)cameraPos.z / CHUNK_W + 1));
+//if (got == chunkPosIndex.end())
+//GenerateChunk((int)cameraPos.x / CHUNK_W, (int)cameraPos.z / CHUNK_W + 1);
+//
+//got = chunkPosIndex.find(make_pair((int)cameraPos.x / CHUNK_W + 1, (int)cameraPos.z / CHUNK_W));
+//if (got == chunkPosIndex.end())
+//GenerateChunk((int)cameraPos.x / CHUNK_W + 1, (int)cameraPos.z / CHUNK_W);
+//
+//got = chunkPosIndex.find(make_pair((int)cameraPos.x / CHUNK_W + 1, (int)cameraPos.z / CHUNK_W - 1));
+//if (got == chunkPosIndex.end())
+//GenerateChunk((int)cameraPos.x / CHUNK_W + 1, (int)cameraPos.z / CHUNK_W - 1);
+//
+//got = chunkPosIndex.find(make_pair((int)cameraPos.x / CHUNK_W - 1, (int)cameraPos.z / CHUNK_W + 1));
+//if (got == chunkPosIndex.end())
+//GenerateChunk((int)cameraPos.x / CHUNK_W - 1, (int)cameraPos.z / CHUNK_W + 1);
+//
+//got = chunkPosIndex.find(make_pair((int)cameraPos.x / CHUNK_W - 1, (int)cameraPos.z / CHUNK_W - 1));
+//if (got == chunkPosIndex.end())
+//GenerateChunk((int)cameraPos.x / CHUNK_W - 1, (int)cameraPos.z / CHUNK_W - 1);
+//
+//got = chunkPosIndex.find(make_pair((int)cameraPos.x / CHUNK_W - 1, (int)cameraPos.z / CHUNK_W));
+//if (got == chunkPosIndex.end())
+//GenerateChunk((int)cameraPos.x / CHUNK_W - 1, (int)cameraPos.z / CHUNK_W);
+//
+//got = chunkPosIndex.find(make_pair((int)cameraPos.x / CHUNK_W, (int)cameraPos.z / CHUNK_W - 1));
+//if (got == chunkPosIndex.end())
+//GenerateChunk((int)cameraPos.x / CHUNK_W, (int)cameraPos.z / CHUNK_W - 1);

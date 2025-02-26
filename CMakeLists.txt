@@ -2,7 +2,17 @@ cmake_minimum_required(VERSION 3.23.1 FATAL_ERROR)
 
 project(cuda-voxel-engineLANGUAGES CXX CUDA)
 
+file(GLOB SOURCES "src/*.cpp" "src/*.cu")
+file(GLOB HEADERS "include/*.h" "include/*.hpp" "include/*.cuh")
+
+# file(GLOB SOURCES "src1/*.cpp" "src1/*.cu")
+# file(GLOB HEADERS "include1/*.h" "include1/*.hpp" "include1/*.cuh")
+
 find_package(CUDAToolkit REQUIRED)
+find_package(SDL2 REQUIRED)
+find_package(SDL2_ttf REQUIRED)
+
+include_directories(${SDL2_INCLUDE_DIRS})
 
 include(cmake/CPM.cmake)
 
@@ -22,12 +32,16 @@ CPMAddPackage(
      "BUILD_EXAMPLES OFF"
 )
 
-set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} --expt-extended-lambda")
+set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} --expt-extended-lambda -rdc=true -w -Xcompiler -g")
 set(CMAKE_CUDA_ARCHITECTURES "75")
 
-add_executable(${PROJECT_NAME} src/main.cu)
+add_executable(${PROJECT_NAME} ${SOURCES} ${HEADERS})
 
 set_target_properties(${PROJECT_NAME} PROPERTIES OUTPUT_NAME "engine")
+set_target_properties(${PROJECT_NAME} PROPERTIES CUDA_RESOLVE_DEVICE_SYMBOLS ON)
+
+target_include_directories(${PROJECT_NAME} PRIVATE include)
 
 #target_link_libraries(${PROJECT_NAME} CCCL:CCCL)
-target_link_libraries(${PROJECT_NAME} cuco)
+target_link_libraries(${PROJECT_NAME} PRIVATE cuco)
+target_link_libraries(${PROJECT_NAME} PRIVATE SDL2::SDL2 SDL2_ttf::SDL2_ttf)
