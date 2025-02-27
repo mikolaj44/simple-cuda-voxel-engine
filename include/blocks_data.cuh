@@ -1,14 +1,13 @@
 #pragma once
 #include <string>
 #include <vector>
-#include "block.cuh"
-#include "pixeldrawing.cuh"
-#include "cudamath.cuh"
+#include "block_variant.cuh"
+#include "pixel_drawing.cuh"
+#include "cuda_math.cuh"
 
 using namespace std;
 
-extern __device__ Block** blocks;
-
+extern __device__ BlockVariant** blocks;
 
 __device__ void setPixelById(int sX, int sY, int blockX, int blockY, int blockZ, float x, float y, float z, unsigned char blockId, unsigned char* pixels);
 

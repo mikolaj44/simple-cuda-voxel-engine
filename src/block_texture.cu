@@ -1,5 +1,5 @@
 #include <iostream>
-#include "blocktexture.cuh"
+#include "block_texture.cuh"
 
 #define STB_IMAGE_IMPLEMENTATION
 #include "stb_image.h"

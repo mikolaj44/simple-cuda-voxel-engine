@@ -11,9 +11,9 @@
 
 #include "renderer.cuh"
 #include "chunk.cuh"
-#include "chunkgeneration.cuh"
-#include "Octree.cuh"
-#include "blocksdata.cuh"
+#include "chunk_generation.cuh"
+#include "octree.cuh"
+#include "blocks_data.cuh"
 
 #define DB_PERLIN_IMPL
 #include "db_perlin.hpp"
@@ -147,6 +147,11 @@ int main(){
 
     calculateFOV();
 
+    //insert(octree,0,0,0,44,1,1);
+    cudaDeviceSynchronize();
+
+    int c = getchar();
+
     return 0;
 
    //for (int x = -START_RENDER_DISTANCE; x < START_RENDER_DISTANCE; x++)
@@ -156,7 +161,7 @@ int main(){
    //             //printf("%d / %d\n", (x + 1 + START_RENDER_DISTANCE) * (z + 1 + START_RENDER_DISTANCE) , START_RENDER_DISTANCE * START_RENDER_DISTANCE);
    //         }
 
-    GenerateChunk(0, 0, octree);
+    generateChunk(octree, 0, 0, 0);
 
     //for (int x = 0; x < 10; x++)
     //    GenerateChunk(x, 0, octree);
@@ -165,8 +170,9 @@ int main(){
 
     while (!quit) {
 
-        if(generateNewChunks)
-            GenerateVisibleChunks(octree);
+        if(generateNewChunks){
+            generateVisibleChunks(octree);
+        }
 
         Uint64 start = SDL_GetPerformanceCounter();
 
@@ -222,7 +228,7 @@ int main(){
                         for (int x = -START_RENDER_DISTANCE; x < START_RENDER_DISTANCE; x++)
                             for (int z = -START_RENDER_DISTANCE; z < START_RENDER_DISTANCE; z++)
                                 if (x * x + z * z <= START_RENDER_DISTANCE * START_RENDER_DISTANCE) {
-                                    GenerateChunk(x, z, octree);
+                                    generateChunk(octree, x, 0, z);
                                 }
 
                         break;
@@ -370,7 +376,7 @@ int main(){
                             //for (int x = -START_RENDER_DISTANCE * 2; x < START_RENDER_DISTANCE * 2; x++)
                              //   for (int z = -START_RENDER_DISTANCE * 2; z < START_RENDER_DISTANCE * 2; z++)
                                //     if (x*x + z*z <= 4 * START_RENDER_DISTANCE * START_RENDER_DISTANCE)
-                                        GenerateChunk(0, 0, octree, offsetX, offsetZ);
+                                        generateChunk(octree, 0, 0, 0, offsetX, offsetZ);
 
                             break;
 
@@ -395,7 +401,7 @@ int main(){
 
             //-dc -G -lineinfo 
 
-            renderScreenCUDA <<<blocksPerGrid,threadsPerBlock>>> (SCREEN_WIDTH, SCREEN_HEIGHT, octree, cameraAngle.x, cameraAngle.y, cameraPos.x, cameraPos.y, cameraPos.z, pixels_gpu);
+            renderScreenCuda(octree, SCREEN_WIDTH, SCREEN_HEIGHT, cameraAngle.x, cameraAngle.y, cameraPos.x, cameraPos.y, cameraPos.z, pixels_gpu, blocksPerGrid, threadsPerBlock);
             //DrawVisibleFaces(octree);
 
             bool showCudaErrors = true;
