@@ -26,7 +26,7 @@ constexpr int START_RENDER_DISTANCE = 20; // (in chunks)
 // octree memory parameters
 constexpr size_t PREALLOCATE_MB_AMOUNT = 1000;
 constexpr size_t MEMORY_LIMIT_MB = 300;
-constexpr size_t NODE_MAP_CAPACITY = 1000; // 300 million is about 5 GB of VRAM used (4 byte Node)
+constexpr size_t NODE_MAP_CAPACITY = 1'000'000; // 300 million is about 5 GB of VRAM used (4 byte Node)
 
 // threading parameters
 //constexpr unsigned int MAX_THREADS_AMOUNT = 1;

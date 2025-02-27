@@ -7,13 +7,11 @@
 #include <cuda_runtime.h>
 #include <device_launch_parameters.h>
 
-#include <thrust/device_vector.h>
-
 void generateChunk(Octree* octree, int x_, int y_, int z_, unsigned int gridSize, unsigned int blockSize, int offsetX, int offsetY) {
 
     size_t numBlocks = CHUNK_W * CHUNK_W * CHUNK_H;
 
-    thrust::device_vector<Block> blocks(numBlocks);
+    thrust::device_vector<Block> chunkBlocks(numBlocks);
 
     for (int x = 0; x < CHUNK_W; x++) {
         for (int y = 0; y < CHUNK_H; y++) {
@@ -27,7 +25,7 @@ void generateChunk(Octree* octree, int x_, int y_, int z_, unsigned int gridSize
                 if (y >= val + 30) { //y >= val + 20
 
                     if(y <= val + 20.5 + 10){
-                        blocks[x + y * CHUNK_W + z * CHUNK_W * CHUNK_H] = Block(x, y, z, 1);
+                        chunkBlocks[x + y * CHUNK_W + z * CHUNK_W * CHUNK_H] = Block(x + x_ * CHUNK_W, y, z + z_ * CHUNK_W, 1); // TODO: change y to be relative too (cube chunks)
                     }
 
                     //     octree->insert(x + x_ * CHUNK_W, y, z + z_ * CHUNK_W, 1);
@@ -44,7 +42,7 @@ void generateChunk(Octree* octree, int x_, int y_, int z_, unsigned int gridSize
         }
     }
 
-    insert(octree, blocks.begin(), numBlocks, gridSize, blockSize);
+    insert(octree, chunkBlocks, numBlocks, gridSize, blockSize);
 
     // TODO: use morton codes for hashing
     generatedChunks.insert(make_pair(make_pair(x_, z_), true));

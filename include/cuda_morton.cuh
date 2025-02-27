@@ -91,23 +91,12 @@ __device__ __host__ inline uint64_t octree_morton3D_64_encode(const int x, const
 	uint64_t code;
 	morton3D_64_encode(code, absv(x), absv(y), absv(z));
 
-	if (x < 0) {
-		code |= (uint64_t(1) << 63); // (sizeof(uint64_t) * 8 - 1)
-	}
-	if (y < 0) {
-		code |= (uint64_t(1) << 62); // (sizeof(uint64_t) * 8 - 2)
-	}
-	if (z < 0) {
-		code |= (uint64_t(1) << 61); // (sizeof(uint64_t) * 8 - 3)
+	uint64_t shifted1 = 1;
+	for(int i = 0; i < level; i++){
+		shifted1 <<= 3;
 	}
 
-	#ifdef __CUDA_ARCH__
-		code |= (binaryNumbers[level] << (61 - OCTREE_DEPTH_BYTES));
-	#else
-		code |= (binaryNumbersHost[level] << (61 - OCTREE_DEPTH_BYTES));
-	#endif
-
-	return code + 1;
+	return code |= shifted1;
 }
 
 __device__ __host__ inline void octree_morton3D_64_decode(uint64_t code, int& x, int& y, int& z, unsigned int& level) {

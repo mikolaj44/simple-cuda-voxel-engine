@@ -84,7 +84,7 @@ int main(){
     Octree* octree; // = new Octree(-pow2neg, pow2, -pow2neg, pow2, -pow2neg, pow2)
     
     cudaMallocManaged(&octree, sizeof(Octree));
-    octree->createOctree(0,0,0,1);
+    octree->createOctree(-pow(2,19), -pow(2,19), -pow(2,19), 20);
 
     //octree = new Octree(-pow2neg, pow2, -pow2neg, pow2, -pow2neg, pow2);
 
@@ -147,21 +147,19 @@ int main(){
 
     calculateFOV();
 
-    //insert(octree,0,0,0,44,1,1);
-    cudaDeviceSynchronize();
+    // int c = getchar();
+    // return 0;
 
-    int c = getchar();
+    for (int x = -START_RENDER_DISTANCE; x < START_RENDER_DISTANCE; x++)
+         for (int z = -START_RENDER_DISTANCE; z < START_RENDER_DISTANCE; z++)
+             if ((x - cameraPos.x) * (x - cameraPos.x) + (z - cameraPos.z) * (z - cameraPos.z) <= START_RENDER_DISTANCE * START_RENDER_DISTANCE) {
+                 generateChunk(octree, x, 0, z);
+                 //printf("%d / %d\n", (x + 1 + START_RENDER_DISTANCE) * (z + 1 + START_RENDER_DISTANCE) , START_RENDER_DISTANCE * START_RENDER_DISTANCE);
+             }
 
-    return 0;
+    //generateChunk(octree, 0, 0, 0, CHUNK_W, CHUNK_W * CHUNK_H);
 
-   //for (int x = -START_RENDER_DISTANCE; x < START_RENDER_DISTANCE; x++)
-   //     for (int z = -START_RENDER_DISTANCE; z < START_RENDER_DISTANCE; z++)
-   //         if ((x - cameraPos.x) * (x - cameraPos.x) + (z - cameraPos.z) * (z - cameraPos.z) <= START_RENDER_DISTANCE * START_RENDER_DISTANCE) {
-   //             GenerateChunk(x, z, octree);
-   //             //printf("%d / %d\n", (x + 1 + START_RENDER_DISTANCE) * (z + 1 + START_RENDER_DISTANCE) , START_RENDER_DISTANCE * START_RENDER_DISTANCE);
-   //         }
-
-    generateChunk(octree, 0, 0, 0);
+    //return 0;
 
     //for (int x = 0; x < 10; x++)
     //    GenerateChunk(x, 0, octree);
@@ -181,15 +179,15 @@ int main(){
         float offsetX, offsetZ;
         int cubeSize;
 
-        if (doGravity) {
+        // if (doGravity) {
 
-            unsigned char check = octree->get((int)cameraPos.x, (int)(cameraPos.y + 2), (int)cameraPos.z);
+        //     unsigned char check = octree->get((int)cameraPos.x, (int)(cameraPos.y + 2), (int)cameraPos.z);
 
-            cout << (int)check << endl;
+        //     cout << (int)check << endl;
 
-            if (check == 0 || check == 255)
-                cameraPos.y += 0.5;
-        }
+        //     if (check == 0 || check == 255)
+        //         cameraPos.y += 0.5;
+        // }
 
         while (SDL_PollEvent(&event_)) {
 
@@ -425,8 +423,7 @@ int main(){
             printf("Stack size: %zu bytes\n", stackSize);*/
         }
         else {
-
-            //octree->display(octree->root, showBorder);
+            octree->display(showBorder);
         }
 
         cudaDeviceSynchronize();

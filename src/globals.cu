@@ -40,7 +40,7 @@ float halfVerFOV;
 bool mouseControls = true;
 bool doGravity = false;
 bool showFps = true;
-bool doOldRendering = false;
+bool doOldRendering = true;
 bool generateNewChunks = false;
 bool showBorder = true;
 

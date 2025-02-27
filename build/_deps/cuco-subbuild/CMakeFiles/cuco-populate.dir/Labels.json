@@ -1,0 +1,46 @@
+{
+	"sources" : 
+	[
+		{
+			"file" : "/home/mikolaj/Desktop/cuda-voxel-engine/build/_deps/cuco-subbuild/CMakeFiles/cuco-populate"
+		},
+		{
+			"file" : "/home/mikolaj/Desktop/cuda-voxel-engine/build/_deps/cuco-subbuild/CMakeFiles/cuco-populate.rule"
+		},
+		{
+			"file" : "/home/mikolaj/Desktop/cuda-voxel-engine/build/_deps/cuco-subbuild/CMakeFiles/cuco-populate-complete.rule"
+		},
+		{
+			"file" : "/home/mikolaj/Desktop/cuda-voxel-engine/build/_deps/cuco-subbuild/cuco-populate-prefix/src/cuco-populate-stamp/cuco-populate-build.rule"
+		},
+		{
+			"file" : "/home/mikolaj/Desktop/cuda-voxel-engine/build/_deps/cuco-subbuild/cuco-populate-prefix/src/cuco-populate-stamp/cuco-populate-configure.rule"
+		},
+		{
+			"file" : "/home/mikolaj/Desktop/cuda-voxel-engine/build/_deps/cuco-subbuild/cuco-populate-prefix/src/cuco-populate-stamp/cuco-populate-download.rule"
+		},
+		{
+			"file" : "/home/mikolaj/Desktop/cuda-voxel-engine/build/_deps/cuco-subbuild/cuco-populate-prefix/src/cuco-populate-stamp/cuco-populate-install.rule"
+		},
+		{
+			"file" : "/home/mikolaj/Desktop/cuda-voxel-engine/build/_deps/cuco-subbuild/cuco-populate-prefix/src/cuco-populate-stamp/cuco-populate-mkdir.rule"
+		},
+		{
+			"file" : "/home/mikolaj/Desktop/cuda-voxel-engine/build/_deps/cuco-subbuild/cuco-populate-prefix/src/cuco-populate-stamp/cuco-populate-patch.rule"
+		},
+		{
+			"file" : "/home/mikolaj/Desktop/cuda-voxel-engine/build/_deps/cuco-subbuild/cuco-populate-prefix/src/cuco-populate-stamp/cuco-populate-test.rule"
+		},
+		{
+			"file" : "/home/mikolaj/Desktop/cuda-voxel-engine/build/_deps/cuco-subbuild/cuco-populate-prefix/src/cuco-populate-stamp/cuco-populate-update.rule"
+		}
+	],
+	"target" : 
+	{
+		"labels" : 
+		[
+			"cuco-populate"
+		],
+		"name" : "cuco-populate"
+	}
+}
