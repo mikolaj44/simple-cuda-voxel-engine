@@ -226,6 +226,10 @@ void Octree::display(int xMin, int yMin, int zMin, unsigned int level, bool show
 
 	uint64_t index;
 
+	xMin -= Octree::xMin;
+	yMin -= Octree::yMin;
+	zMin -= Octree::zMin;
+
 	if (level >= Octree::level) {
 		level = Octree::level;
 		index = 0;
@@ -235,69 +239,76 @@ void Octree::display(int xMin, int yMin, int zMin, unsigned int level, bool show
 	}
 
 	//cout << bitset<64>(index) << endl;
-	
+
+	thrust::device_vector<uint64_t> key(1);
+	thrust::device_vector<Node> value(1);
+	key[0] = index;
+
+	nodeMap.find(key.begin(), key.end(), value.begin());
+	Node node = value[0];
+
 	int size = 1 << level;
 
-	//if (showBorder || nodes[index].blockId != 0) {
+	if (showBorder || node.blockId != 0) {
 
-	//	float coordinates[8][2];
-	//	float* coordinate;
+		float coordinates[8][2];
+		float* coordinate;
 
-	//	coordinate = _3d2dProjection(xMin, yMin, zMin);
-	//	coordinates[0][0] = coordinate[0];
-	//	coordinates[0][1] = coordinate[1];
+		coordinate = _3d2dProjection(xMin, yMin, zMin);
+		coordinates[0][0] = coordinate[0];
+		coordinates[0][1] = coordinate[1];
 
-	//	coordinate = _3d2dProjection((xMin + size), yMin, zMin);
-	//	coordinates[1][0] = coordinate[0];
-	//	coordinates[1][1] = coordinate[1];
+		coordinate = _3d2dProjection((xMin + size), yMin, zMin);
+		coordinates[1][0] = coordinate[0];
+		coordinates[1][1] = coordinate[1];
 
-	//	coordinate = _3d2dProjection((xMin + size), (yMin + size), zMin);
-	//	coordinates[2][0] = coordinate[0];
-	//	coordinates[2][1] = coordinate[1];
+		coordinate = _3d2dProjection((xMin + size), (yMin + size), zMin);
+		coordinates[2][0] = coordinate[0];
+		coordinates[2][1] = coordinate[1];
 
-	//	coordinate = _3d2dProjection(xMin, (yMin + size), zMin);
-	//	coordinates[3][0] = coordinate[0];
-	//	coordinates[3][1] = coordinate[1];
+		coordinate = _3d2dProjection(xMin, (yMin + size), zMin);
+		coordinates[3][0] = coordinate[0];
+		coordinates[3][1] = coordinate[1];
 
-	//	coordinate = _3d2dProjection(xMin, yMin, (zMin + size));
-	//	coordinates[4][0] = coordinate[0];
-	//	coordinates[4][1] = coordinate[1];
+		coordinate = _3d2dProjection(xMin, yMin, (zMin + size));
+		coordinates[4][0] = coordinate[0];
+		coordinates[4][1] = coordinate[1];
 
-	//	coordinate = _3d2dProjection((xMin + size), yMin, (zMin + size));
-	//	coordinates[5][0] = coordinate[0];
-	//	coordinates[5][1] = coordinate[1];
+		coordinate = _3d2dProjection((xMin + size), yMin, (zMin + size));
+		coordinates[5][0] = coordinate[0];
+		coordinates[5][1] = coordinate[1];
 
-	//	coordinate = _3d2dProjection((xMin + size), (yMin + size), (zMin + size));
-	//	coordinates[6][0] = coordinate[0];
-	//	coordinates[6][1] = coordinate[1];
+		coordinate = _3d2dProjection((xMin + size), (yMin + size), (zMin + size));
+		coordinates[6][0] = coordinate[0];
+		coordinates[6][1] = coordinate[1];
 
-	//	coordinate = _3d2dProjection(xMin, (yMin + size), (zMin + size));
-	//	coordinates[7][0] = coordinate[0];
-	//	coordinates[7][1] = coordinate[1];
+		coordinate = _3d2dProjection(xMin, (yMin + size), (zMin + size));
+		coordinates[7][0] = coordinate[0];
+		coordinates[7][1] = coordinate[1];
 
-	//	//unsigned char type = 0;
+		//unsigned char type = 0;
 
-	//	//if (node->blockId != 0)
-	//	//	type = node->blockId;
+		//if (node->blockId != 0)
+		//	type = node->blockId;
 
-	//	//unsigned char* color = BlockTypeToColor(type);
-	//	int color[3] = { 255,0,0 };
+		//unsigned char* color = BlockTypeToColor(type);
+		int color[3] = { 255,0,0 };
 
-	//	DrawLine((int)coordinates[0][0], (int)coordinates[0][1], (int)coordinates[1][0], (int)coordinates[1][1], color[0], color[1], color[2]);
-	//	DrawLine((int)coordinates[1][0], (int)coordinates[1][1], (int)coordinates[2][0], (int)coordinates[2][1], color[0], color[1], color[2]);
-	//	DrawLine((int)coordinates[2][0], (int)coordinates[2][1], (int)coordinates[3][0], (int)coordinates[3][1], color[0], color[1], color[2]);
-	//	DrawLine((int)coordinates[3][0], (int)coordinates[3][1], (int)coordinates[0][0], (int)coordinates[0][1], color[0], color[1], color[2]);
-	//	DrawLine((int)coordinates[4][0], (int)coordinates[4][1], (int)coordinates[5][0], (int)coordinates[5][1], color[0], color[1], color[2]);
-	//	DrawLine((int)coordinates[5][0], (int)coordinates[5][1], (int)coordinates[6][0], (int)coordinates[6][1], color[0], color[1], color[2]);
-	//	DrawLine((int)coordinates[6][0], (int)coordinates[6][1], (int)coordinates[7][0], (int)coordinates[7][1], color[0], color[1], color[2]);
-	//	DrawLine((int)coordinates[7][0], (int)coordinates[7][1], (int)coordinates[4][0], (int)coordinates[4][1], color[0], color[1], color[2]);
-	//	DrawLine((int)coordinates[0][0], (int)coordinates[0][1], (int)coordinates[4][0], (int)coordinates[4][1], color[0], color[1], color[2]);
-	//	DrawLine((int)coordinates[1][0], (int)coordinates[1][1], (int)coordinates[5][0], (int)coordinates[5][1], color[0], color[1], color[2]);
-	//	DrawLine((int)coordinates[2][0], (int)coordinates[2][1], (int)coordinates[6][0], (int)coordinates[6][1], color[0], color[1], color[2]);
-	//	DrawLine((int)coordinates[3][0], (int)coordinates[3][1], (int)coordinates[7][0], (int)coordinates[7][1], color[0], color[1], color[2]);
-	//}
+		DrawLine((int)coordinates[0][0], (int)coordinates[0][1], (int)coordinates[1][0], (int)coordinates[1][1], color[0], color[1], color[2]);
+		DrawLine((int)coordinates[1][0], (int)coordinates[1][1], (int)coordinates[2][0], (int)coordinates[2][1], color[0], color[1], color[2]);
+		DrawLine((int)coordinates[2][0], (int)coordinates[2][1], (int)coordinates[3][0], (int)coordinates[3][1], color[0], color[1], color[2]);
+		DrawLine((int)coordinates[3][0], (int)coordinates[3][1], (int)coordinates[0][0], (int)coordinates[0][1], color[0], color[1], color[2]);
+		DrawLine((int)coordinates[4][0], (int)coordinates[4][1], (int)coordinates[5][0], (int)coordinates[5][1], color[0], color[1], color[2]);
+		DrawLine((int)coordinates[5][0], (int)coordinates[5][1], (int)coordinates[6][0], (int)coordinates[6][1], color[0], color[1], color[2]);
+		DrawLine((int)coordinates[6][0], (int)coordinates[6][1], (int)coordinates[7][0], (int)coordinates[7][1], color[0], color[1], color[2]);
+		DrawLine((int)coordinates[7][0], (int)coordinates[7][1], (int)coordinates[4][0], (int)coordinates[4][1], color[0], color[1], color[2]);
+		DrawLine((int)coordinates[0][0], (int)coordinates[0][1], (int)coordinates[4][0], (int)coordinates[4][1], color[0], color[1], color[2]);
+		DrawLine((int)coordinates[1][0], (int)coordinates[1][1], (int)coordinates[5][0], (int)coordinates[5][1], color[0], color[1], color[2]);
+		DrawLine((int)coordinates[2][0], (int)coordinates[2][1], (int)coordinates[6][0], (int)coordinates[6][1], color[0], color[1], color[2]);
+		DrawLine((int)coordinates[3][0], (int)coordinates[3][1], (int)coordinates[7][0], (int)coordinates[7][1], color[0], color[1], color[2]);
+	}
 
-	if (level == 1) { // || !nodes[index].hasChildren
+	if (level == 1 || !node.hasChildren) {
 		return;
 	}
 
@@ -331,8 +342,12 @@ void Octree::display(int xMin, int yMin, int zMin, unsigned int level, bool show
 }
 
 void Octree::display(bool showBorder, unsigned int level) {
-
 	display(xMin, yMin, zMin, level, showBorder);
+}
+
+void insert(Octree* octree, thrust::device_vector<Block> blocks, size_t numBlocks, unsigned int gridSize, unsigned int blockSize){
+	insertKernel<<<gridSize, blockSize>>>(octree, octree->nodeMap.ref(cuco::insert), thrust::raw_pointer_cast(blocks.data()), numBlocks);
+	cudaDeviceSynchronize(); // maybe remove this later
 }
 
 __device__

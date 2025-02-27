@@ -62,6 +62,8 @@ public:
 	template<typename MapInsertRef>
 	__device__ void insert(MapInsertRef insertRef, Block block) {
 
+		//printf("%d\n", block.blockId);
+
 		int x = block.x;
 		int y = block.y;
 		int z = block.z;
@@ -177,23 +179,22 @@ __device__ unsigned char raycastDrawPixel(float oX, float oY, float oZ, float dX
 
 
 
+// calls the insertion kernel
+void insert(Octree* octree, thrust::device_vector<Block> blocks, size_t numBlocks, unsigned int gridSize, unsigned int blockSize);
+
 // the kernel for inserting nodes into the octree
-template<typename MapInsertRef, typename DeviceVecIterator>
-__global__ void insertKernel(Octree* octree, MapInsertRef ref, DeviceVecIterator blocks, size_t numBlocks){
+template<typename MapInsertRef>
+__global__ void insertKernel(Octree* octree, MapInsertRef insertRef, Block* blocks, size_t numBlocks){
 
 	unsigned int index = threadIdx.x + blockDim.x * blockIdx.x;
 
     if (index >= numBlocks)
         return;
 
-	octree->insert(ref, blocks[index]);
+	octree->insert(insertRef, blocks[index]);
 }
 
-// calls the insertion kernel
-template<typename DeviceVecIterator>
-void insert(Octree* octree, DeviceVecIterator blocksIterator, size_t numBlocks, unsigned int gridSize, unsigned int blockSize){
-	insertKernel<<<gridSize, blockSize>>>(octree, octree->nodeMap.ref(cuco::insert), blocksIterator, numBlocks);
-}
+
 
 template<typename MapInsertRef, typename MapFindRef>
 __device__ void performRaycast(Octree* octree, MapInsertRef insertRef, MapFindRef findRef, float oX, float oY, float oZ, float dX, float dY, float dZ, int sX, int sY, int minNodeSize, unsigned char* pixels){
