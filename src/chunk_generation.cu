@@ -1,38 +1,35 @@
-#include "chunkgeneration.cuh"
-#include "db_perlin.hpp"
+#include "chunk_generation.cuh"
+
 #include <iostream>
 
-void GenerateChunk(int x_, int z_, Octree* octree, float offsetX, float offsetZ) {
+#include "db_perlin.hpp"
+
+#include <cuda_runtime.h>
+#include <device_launch_parameters.h>
+
+#include <thrust/device_vector.h>
+
+void generateChunk(Octree* octree, int x_, int y_, int z_, unsigned int gridSize, unsigned int blockSize, int offsetX, int offsetY) {
+
+    size_t numBlocks = CHUNK_W * CHUNK_W * CHUNK_H;
+
+    thrust::device_vector<Block> blocks(numBlocks);
 
     for (int x = 0; x < CHUNK_W; x++) {
         for (int y = 0; y < CHUNK_H; y++) {
             for (int z = 0; z < CHUNK_W; z++) {
 
-                float val = db::perlin((float(x) + float(x_) * CHUNK_W) / smoothing+ offsetX, (float(z) + float(z_) * CHUNK_W) / smoothing + offsetZ) * amplify;
-                //val = 5;
-
-                //octree->insert(x,y,z, rand() % 5, octree->root);
-
-                //cout << x << " " << y << " " << z << '\n';
-
-                //if(y > 10)
-
-                /*if (x == 1 && y == 2 && z == 3) {
-                    octree->insert(x + x_ * CHUNK_W, y, z + z_ * CHUNK_W, rand() % 4 + 1, octree->root);
-                    return;
-                }
-                continue;*/
+                float val = db::perlin((float(x) + float(x_) * CHUNK_W) / smoothing + offsetX, (float(z) + float(z_) * CHUNK_W) / smoothing + offsetY) * amplify;
 
                 //octree->insert(x + x_ * CHUNK_W, y, z + z_ * CHUNK_W, 1, octree->root);
                 //return;
 
                 if (y >= val + 30) { //y >= val + 20
 
-                    //cout << val + 20 << endl;
+                    if(y <= val + 20.5 + 10){
+                        blocks[x + y * CHUNK_W + z * CHUNK_W * CHUNK_H] = Block(x, y, z, 1);
+                    }
 
-                    //int val1 = rand() % 5;
-
-                    // if(y <= val + 20.5 + 10)
                     //     octree->insert(x + x_ * CHUNK_W, y, z + z_ * CHUNK_W, 1);
                     // else if(y <= val + 20.9 + 10)
                     //     octree->insert(x + x_ * CHUNK_W, y, z + z_ * CHUNK_W, 3);
@@ -43,28 +40,23 @@ void GenerateChunk(int x_, int z_, Octree* octree, float offsetX, float offsetZ)
                     //else
                     //    octree->insert(x + x_ * CHUNK_W, y, z + z_ * CHUNK_W, 5, octree->root);
                 }
-
-                //if(y >= 20)
-                //    chunks[chunks.size() - 1].blocks[x][y][z].type = "grass";
-                //else
-                //    chunks[chunks.size() - 1].blocks[x][y][z].type = "air";
-
-                //else if(y > val + 5)
-                //    chunk.blocks[x][y][z].type = "stone";
             }
         }
     }
 
+    insert(octree, blocks.begin(), numBlocks, gridSize, blockSize);
+
+    // TODO: use morton codes for hashing
     generatedChunks.insert(make_pair(make_pair(x_, z_), true));
 }
 
-void GenerateVisibleChunks(Octree* octree) {
+void generateVisibleChunks(Octree* octree) {
 
     map<pair<int, int>, bool>::const_iterator got;
 
     got = generatedChunks.find(make_pair((int)cameraPos.x / CHUNK_W, (int)cameraPos.z / CHUNK_W));
     if (got == generatedChunks.end())
-        GenerateChunk((int)cameraPos.x % CHUNK_W, (int)cameraPos.z % CHUNK_W, octree);
+        generateChunk(octree, (int)cameraPos.x % CHUNK_W, 0, (int)cameraPos.z % CHUNK_W);
 
     float step = 0.5;
 
@@ -106,7 +98,7 @@ void GenerateVisibleChunks(Octree* octree) {
             got = generatedChunks.find(make_pair(points[i].first, points[i].second));
 
             if (got == generatedChunks.end())
-                GenerateChunk(points[i].first, points[i].second, octree);
+                generateChunk(octree, points[i].first, 0, points[i].second);
         }
 
         distance += step;

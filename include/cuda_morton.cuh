@@ -5,7 +5,7 @@
 #include <cuda_runtime.h>
 #include <device_launch_parameters.h>
 
-#include "cudamath.cuh"
+#include "cuda_math.cuh"
 
 using namespace std;
 

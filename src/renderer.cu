@@ -4,9 +4,9 @@
 #include <map>
 
 #include "renderer.cuh"
-#include "chunkgeneration.cuh"
+#include "chunk_generation.cuh"
 #include "chunk.cuh"
-#include "pixeldrawing.cuh"
+#include "pixel_drawing.cuh"
 
 using namespace std;
 
@@ -14,6 +14,10 @@ void calculateFOV() {
 
     halfHorFOV = atanf(SCREEN_WIDTH / (2.0 * FOCAL_LENGTH));
     halfVerFOV = atanf(SCREEN_HEIGHT / (2.0 * FOCAL_LENGTH));
+}
+
+void renderScreenCuda(Octree* octree, int width, int height, float cameraAngleX, float cameraAngleY, float oX, float oY, float oZ, unsigned char* pixels, unsigned int gridSize, unsigned int blockSize) {
+    renderScreenCudaKernel<<<gridSize,blockSize>>>(octree, octree->nodeMap.ref(cuco::insert), octree->nodeMap.ref(cuco::find), SCREEN_WIDTH, SCREEN_HEIGHT, cameraAngle.x, cameraAngle.y, cameraPos.x, cameraPos.y, cameraPos.z, pixels);
 }
 
 //void DrawVisibleScreenSection(int x1, int x2, int y1, int y2, Octree* octree) {
@@ -40,35 +44,6 @@ void calculateFOV() {
 //        }
 //    }
 //}
-
-__global__
-void renderScreenCUDA(int width, int height, Octree* octree, float cameraAngleX, float cameraAngleY, float oX, float oY, float oZ, unsigned char* pixels) {
-
-    int index = threadIdx.x + blockDim.x * blockIdx.x;
-
-    if (index >= width * height)
-        return;
-
-    int pX = index % width;
-    int pY = index / width;
-
-    //if (!(pX == 0 && pY == 0))
-    //    return;
-
-    //printf("%f %f %f\n", oX, oY, oZ);
-
-    float alpha;
-    float polar;
-
-    alpha = (atanf(-(pX - SCREEN_WIDTH  / 2) / FOCAL_LENGTH) - cameraAngleY + M_PI / 2); // horizontal angle
-    polar = (atanf(-(pY - SCREEN_HEIGHT / 2) / FOCAL_LENGTH) + cameraAngleX + M_PI / 2); // vertical angle
-
-    float sX = sin(polar) * cos(alpha);
-    float sZ = sin(polar) * sin(alpha);
-    float sY = cos(polar);
-
-    //rayParameter(octree, oX, oY, oZ, sX, sY, sZ, pX, pY, 1, pixels);
-}
 
 void DrawVisibleFaces(Octree* octree) {
 

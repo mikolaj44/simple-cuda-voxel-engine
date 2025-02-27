@@ -1,4 +1,4 @@
-#include "cudamorton.cuh"
+#include "cuda_morton.cuh"
 
 __constant__ uint_fast32_t morton3D_encode_x_256[256];
 __constant__ uint_fast32_t morton3D_encode_y_256[256];

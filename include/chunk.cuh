@@ -1,6 +1,6 @@
 #pragma once
-#include "block.cuh"
-#include "pixeldrawing.cuh"
+#include "block_variant.cuh"
+#include "pixel_drawing.cuh"
 
 #include <map>
 #include <vector>

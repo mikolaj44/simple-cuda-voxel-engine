@@ -1,4 +1,4 @@
-#include "pixeldrawing.cuh"
+#include "pixel_drawing.cuh"
 
 __device__ __host__
 void SetPixel(int x, int y, int r, int g, int b, int a, unsigned char* pixels) {

@@ -1,6 +1,6 @@
 #pragma once
 #include <string>
-#include "blocktexture.cuh"
+#include "block_texture.cuh"
 
 using namespace std;
 
@@ -10,11 +10,11 @@ enum BlockType {
     LIQUID
 };
 
-class Block {
+class BlockVariant {
 
 public:
     BlockType type = SOLID;
     BlockTexture* texture;
 
-    __device__ Block(BlockType type, BlockTexture* texture);
+    __device__ BlockVariant(BlockType type, BlockTexture* texture);
 };

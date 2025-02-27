@@ -1,6 +1,6 @@
-#include "blocksdata.cuh"
+#include "blocks_data.cuh"
 
-__device__ Block** blocks = nullptr;
+__device__ BlockVariant** blocks = nullptr;
 __constant__ int blocksAmount = 10;
 
 __constant__ float epsilon = 0.0001;
@@ -68,9 +68,9 @@ __device__ void setPixelById(int sX, int sY, int blockX, int blockY, int blockZ,
 
 __global__ void createBlocksData(BlockTexture** textures) {
 
-    cudaMalloc(&blocks, sizeof(Block*) * blocksAmount);
+    cudaMalloc(&blocks, sizeof(BlockVariant*) * blocksAmount);
 
     for (int i = 0; i < blocksAmount; i++) {
-        blocks[i] = new Block(SOLID, textures[i]);
+        blocks[i] = new BlockVariant(SOLID, textures[i]);
     }
 }
