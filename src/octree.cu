@@ -51,7 +51,7 @@ void Octree::createOctree(int xMin_, int yMin_, int zMin_, unsigned int level_) 
 	yMin = yMin_;
 	zMin = zMin_;
 	level = level_;
-
+	
 	//memoryAvailableBytes = size_t(PREALLOCATE_MB_AMOUNT * 1024 * 1024) / sizeof(Node);
 
 	nodeMap = cuco::static_map{cuco::extent<std::size_t, NODE_MAP_CAPACITY>{},
@@ -222,7 +222,7 @@ void Octree::getChildXYZ(int xMin, int yMin, int zMin, unsigned int level, int c
 	}
 }
 
-void Octree::display(int xMin, int yMin, int zMin, unsigned int level, bool showBorder) {
+void Octree::display(unsigned char* pixels, int xMin, int yMin, int zMin, unsigned int level, bool showBorder) {
 
 	uint64_t index;
 
@@ -294,18 +294,18 @@ void Octree::display(int xMin, int yMin, int zMin, unsigned int level, bool show
 		//unsigned char* color = BlockTypeToColor(type);
 		int color[3] = { 255,0,0 };
 
-		DrawLine((int)coordinates[0][0], (int)coordinates[0][1], (int)coordinates[1][0], (int)coordinates[1][1], color[0], color[1], color[2]);
-		DrawLine((int)coordinates[1][0], (int)coordinates[1][1], (int)coordinates[2][0], (int)coordinates[2][1], color[0], color[1], color[2]);
-		DrawLine((int)coordinates[2][0], (int)coordinates[2][1], (int)coordinates[3][0], (int)coordinates[3][1], color[0], color[1], color[2]);
-		DrawLine((int)coordinates[3][0], (int)coordinates[3][1], (int)coordinates[0][0], (int)coordinates[0][1], color[0], color[1], color[2]);
-		DrawLine((int)coordinates[4][0], (int)coordinates[4][1], (int)coordinates[5][0], (int)coordinates[5][1], color[0], color[1], color[2]);
-		DrawLine((int)coordinates[5][0], (int)coordinates[5][1], (int)coordinates[6][0], (int)coordinates[6][1], color[0], color[1], color[2]);
-		DrawLine((int)coordinates[6][0], (int)coordinates[6][1], (int)coordinates[7][0], (int)coordinates[7][1], color[0], color[1], color[2]);
-		DrawLine((int)coordinates[7][0], (int)coordinates[7][1], (int)coordinates[4][0], (int)coordinates[4][1], color[0], color[1], color[2]);
-		DrawLine((int)coordinates[0][0], (int)coordinates[0][1], (int)coordinates[4][0], (int)coordinates[4][1], color[0], color[1], color[2]);
-		DrawLine((int)coordinates[1][0], (int)coordinates[1][1], (int)coordinates[5][0], (int)coordinates[5][1], color[0], color[1], color[2]);
-		DrawLine((int)coordinates[2][0], (int)coordinates[2][1], (int)coordinates[6][0], (int)coordinates[6][1], color[0], color[1], color[2]);
-		DrawLine((int)coordinates[3][0], (int)coordinates[3][1], (int)coordinates[7][0], (int)coordinates[7][1], color[0], color[1], color[2]);
+		drawLine(pixels, (int)coordinates[0][0], (int)coordinates[0][1], (int)coordinates[1][0], (int)coordinates[1][1], color[0], color[1], color[2]);
+		drawLine(pixels, (int)coordinates[1][0], (int)coordinates[1][1], (int)coordinates[2][0], (int)coordinates[2][1], color[0], color[1], color[2]);
+		drawLine(pixels, (int)coordinates[2][0], (int)coordinates[2][1], (int)coordinates[3][0], (int)coordinates[3][1], color[0], color[1], color[2]);
+		drawLine(pixels, (int)coordinates[3][0], (int)coordinates[3][1], (int)coordinates[0][0], (int)coordinates[0][1], color[0], color[1], color[2]);
+		drawLine(pixels, (int)coordinates[4][0], (int)coordinates[4][1], (int)coordinates[5][0], (int)coordinates[5][1], color[0], color[1], color[2]);
+		drawLine(pixels, (int)coordinates[5][0], (int)coordinates[5][1], (int)coordinates[6][0], (int)coordinates[6][1], color[0], color[1], color[2]);
+		drawLine(pixels, (int)coordinates[6][0], (int)coordinates[6][1], (int)coordinates[7][0], (int)coordinates[7][1], color[0], color[1], color[2]);
+		drawLine(pixels, (int)coordinates[7][0], (int)coordinates[7][1], (int)coordinates[4][0], (int)coordinates[4][1], color[0], color[1], color[2]);
+		drawLine(pixels, (int)coordinates[0][0], (int)coordinates[0][1], (int)coordinates[4][0], (int)coordinates[4][1], color[0], color[1], color[2]);
+		drawLine(pixels, (int)coordinates[1][0], (int)coordinates[1][1], (int)coordinates[5][0], (int)coordinates[5][1], color[0], color[1], color[2]);
+		drawLine(pixels, (int)coordinates[2][0], (int)coordinates[2][1], (int)coordinates[6][0], (int)coordinates[6][1], color[0], color[1], color[2]);
+		drawLine(pixels, (int)coordinates[3][0], (int)coordinates[3][1], (int)coordinates[7][0], (int)coordinates[7][1], color[0], color[1], color[2]);
 	}
 
 	if (level == 1 || !node.hasChildren) {
@@ -318,7 +318,7 @@ void Octree::display(int xMin, int yMin, int zMin, unsigned int level, bool show
 
 	for (int i = 0; i < 8; i++) {
 		getChildXYZ(xMin, yMin, zMin, level, i, x, y, z);
-		display(x, y, z, level, showBorder);
+		display(pixels, x, y, z, level, showBorder);
 	}
 
 	// For now the octree isn't sparse
@@ -341,11 +341,12 @@ void Octree::display(int xMin, int yMin, int zMin, unsigned int level, bool show
 		display(node->children[7], showBorder, ++depth);*/
 }
 
-void Octree::display(bool showBorder, unsigned int level) {
-	display(xMin, yMin, zMin, level, showBorder);
+void Octree::display(unsigned char* pixels, bool showBorder, unsigned int level) {
+	display(pixels, xMin, yMin, zMin, level, showBorder);
 }
 
 void insert(Octree* octree, thrust::device_vector<Block> blocks, size_t numBlocks, unsigned int gridSize, unsigned int blockSize){
+
 	insertKernel<<<gridSize, blockSize>>>(octree, octree->nodeMap.ref(cuco::insert), thrust::raw_pointer_cast(blocks.data()), numBlocks);
 	cudaDeviceSynchronize(); // maybe remove this later
 }

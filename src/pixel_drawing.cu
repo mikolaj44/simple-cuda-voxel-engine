@@ -1,7 +1,6 @@
 #include "pixel_drawing.cuh"
 
-__device__ __host__
-void SetPixel(int x, int y, int r, int g, int b, int a, unsigned char* pixels) {
+__device__ __host__ void setPixel(unsigned char* pixels, int x, int y, int r, int g, int b, int a) {
 
     /*if (x < 0)
         x = 0;
@@ -18,7 +17,7 @@ void SetPixel(int x, int y, int r, int g, int b, int a, unsigned char* pixels) {
     pixels[(y * SCREEN_WIDTH + x) * 4 + 3] = a;
 }
 
-void plotLineLow(int x1, int y1, int x2, int y2, int r, int g, int b, int a) {
+void plotLineLow(unsigned char* pixels, int x1, int y1, int x2, int y2, int r, int g, int b, int a) {
 
     float dx = x2 - x1;
     float dy = y2 - y1;
@@ -52,7 +51,7 @@ void plotLineLow(int x1, int y1, int x2, int y2, int r, int g, int b, int a) {
         if (y >= SCREEN_HEIGHT)
             return;
 
-        //SetPixel(x, y, r, g, b, a);
+        setPixel(pixels, x, y, r, g, b, a);
 
         if (d > 0) {
             y = y + yi;
@@ -63,7 +62,7 @@ void plotLineLow(int x1, int y1, int x2, int y2, int r, int g, int b, int a) {
     }
 }
 
-void plotLineHigh(int x1, int y1, int x2, int y2, int r, int g, int b, int a) {
+void plotLineHigh(unsigned char* pixels, int x1, int y1, int x2, int y2, int r, int g, int b, int a) {
 
     float dx = x2 - x1;
     float dy = y2 - y1;
@@ -97,7 +96,7 @@ void plotLineHigh(int x1, int y1, int x2, int y2, int r, int g, int b, int a) {
         if (y >= SCREEN_HEIGHT)
             return;
 
-        //SetPixel(x, y, r, g, b, a);
+        setPixel(pixels, x, y, r, g, b, a);
 
         if (d > 0) {
             x = x + xi;
@@ -170,8 +169,8 @@ vector<pair<int, int>> plotLineHighPoints(int x1, int y1, int x2, int y2) {
     return v;
 }
 
-void DrawLine(int x1, int y1, int x2, int y2, int r, int g, int b, int a)
-{
+void drawLine(unsigned char* pixels, int x1, int y1, int x2, int y2, int r, int g, int b, int a){
+
     /*if (x1 < 0)
         x1 = 0;
     if (y1 < 0)
@@ -203,15 +202,15 @@ void DrawLine(int x1, int y1, int x2, int y2, int r, int g, int b, int a)
     if (abs(y2 - y1) < abs(x2 - x1)) {
 
         if (x1 > x2)
-            plotLineLow(x2, y2, x1, y1, r, g, b, a);
+            plotLineLow(pixels, x2, y2, x1, y1, r, g, b, a);
         else
-            plotLineLow(x1, y1, x2, y2, r, g, b, a);
+            plotLineLow(pixels, x1, y1, x2, y2, r, g, b, a);
     }
     else {
         if (y1 > y2)
-            plotLineHigh(x2, y2, x1, y1, r, g, b, a);
+            plotLineHigh(pixels, x2, y2, x1, y1, r, g, b, a);
         else
-            plotLineHigh(x1, y1, x2, y2, r, g, b, a);
+            plotLineHigh(pixels, x1, y1, x2, y2, r, g, b, a);
     }
 }
 
