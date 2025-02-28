@@ -21,37 +21,37 @@ __device__ void setPixelById(int sX, int sY, int blockX, int blockY, int blockZ,
     if (equals(y, (float)blockY, epsilon)) { // top
         imgX = (int)(absv(x - (int)x) * imgWidth);
         imgY = (int)(absv(z - (int)z) * imgHeight);
-        SetPixel(sX, sY, blockVariants[blockId]->texture->topImage[(imgY * imgWidth + imgX) * imgChannels], blockVariants[blockId]->texture->topImage[(imgY * imgWidth + imgX) * imgChannels + 1], blockVariants[blockId]->texture->topImage[(imgY * imgWidth + imgX) * imgChannels + 2], 255, pixels);
+        setPixel(pixels, sX, sY, blockVariants[blockId]->texture->topImage[(imgY * imgWidth + imgX) * imgChannels], blockVariants[blockId]->texture->topImage[(imgY * imgWidth + imgX) * imgChannels + 1], blockVariants[blockId]->texture->topImage[(imgY * imgWidth + imgX) * imgChannels + 2], 255);
         return;
     }
     else if (equals(y, (float)blockY + 1.0, epsilon)) { // bottom
         imgX = (int)(absv(x - (int)x) * imgWidth);
         imgY = (int)(absv(z - (int)z) * imgHeight);
-        SetPixel(sX, sY, blockVariants[blockId]->texture->bottomImage[(imgY * imgWidth + imgX) * imgChannels], blockVariants[blockId]->texture->bottomImage[(imgY * imgWidth + imgX) * imgChannels + 1], blockVariants[blockId]->texture->bottomImage[(imgY * imgWidth + imgX) * imgChannels + 2], 255, pixels);
+        setPixel(pixels, sX, sY, blockVariants[blockId]->texture->bottomImage[(imgY * imgWidth + imgX) * imgChannels], blockVariants[blockId]->texture->bottomImage[(imgY * imgWidth + imgX) * imgChannels + 1], blockVariants[blockId]->texture->bottomImage[(imgY * imgWidth + imgX) * imgChannels + 2], 255);
         return;
     }
     else if (equals(x, (float)blockX, epsilon)) { // left
         imgX = (int)(absv(z - (int)z) * imgWidth);
         imgY = (int)(absv(y - (int)y) * imgHeight);
-        SetPixel(sX, sY, blockVariants[blockId]->texture->leftImage[(imgY * imgWidth + imgX) * imgChannels], blockVariants[blockId]->texture->leftImage[(imgY * imgWidth + imgX) * imgChannels + 1], blockVariants[blockId]->texture->leftImage[(imgY * imgWidth + imgX) * imgChannels + 2], 255, pixels);
+        setPixel(pixels, sX, sY, blockVariants[blockId]->texture->leftImage[(imgY * imgWidth + imgX) * imgChannels], blockVariants[blockId]->texture->leftImage[(imgY * imgWidth + imgX) * imgChannels + 1], blockVariants[blockId]->texture->leftImage[(imgY * imgWidth + imgX) * imgChannels + 2], 255);
         return;
     }
     else if (equals(x, (float)blockX + 1.0, epsilon)) { // right
         imgX = (int)(absv(z - (int)z) * imgWidth);
         imgY = (int)(absv(y - (int)y) * imgHeight);
-        SetPixel(sX, sY, blockVariants[blockId]->texture->rightImage[(imgY * imgWidth + imgX) * imgChannels], blockVariants[blockId]->texture->rightImage[(imgY * imgWidth + imgX) * imgChannels + 1], blockVariants[blockId]->texture->rightImage[(imgY * imgWidth + imgX) * imgChannels + 2], 255, pixels);
+        setPixel(pixels, sX, sY, blockVariants[blockId]->texture->rightImage[(imgY * imgWidth + imgX) * imgChannels], blockVariants[blockId]->texture->rightImage[(imgY * imgWidth + imgX) * imgChannels + 1], blockVariants[blockId]->texture->rightImage[(imgY * imgWidth + imgX) * imgChannels + 2], 255);
         return;
     }
     else if (equals(z, (float)blockZ, epsilon)) { // front
         imgX = (int)(absv(x - (int)x) * imgWidth);
         imgY = (int)(absv(y - (int)y) * imgHeight);
-        SetPixel(sX, sY, blockVariants[blockId]->texture->frontImage[(imgY * imgWidth + imgX) * imgChannels], blockVariants[blockId]->texture->frontImage[(imgY * imgWidth + imgX) * imgChannels + 1], blockVariants[blockId]->texture->frontImage[(imgY * imgWidth + imgX) * imgChannels + 2], 255, pixels);
+        setPixel(pixels, sX, sY, blockVariants[blockId]->texture->frontImage[(imgY * imgWidth + imgX) * imgChannels], blockVariants[blockId]->texture->frontImage[(imgY * imgWidth + imgX) * imgChannels + 1], blockVariants[blockId]->texture->frontImage[(imgY * imgWidth + imgX) * imgChannels + 2], 255);
         return;
     }
     else if (equals(z, (float)blockZ + 1.0, epsilon)) { // back
         imgX = (int)(absv(x - (int)x) * imgWidth);
         imgY = (int)(absv(y - (int)y) * imgHeight);
-        SetPixel(sX, sY, blockVariants[blockId]->texture->backImage[(imgY * imgWidth + imgX) * imgChannels], blockVariants[blockId]->texture->backImage[(imgY * imgWidth + imgX) * imgChannels + 1], blockVariants[blockId]->texture->backImage[(imgY * imgWidth + imgX) * imgChannels + 2], 255, pixels);
+        setPixel(pixels, sX, sY, blockVariants[blockId]->texture->backImage[(imgY * imgWidth + imgX) * imgChannels], blockVariants[blockId]->texture->backImage[(imgY * imgWidth + imgX) * imgChannels + 1], blockVariants[blockId]->texture->backImage[(imgY * imgWidth + imgX) * imgChannels + 2], 255);
         return;
     }
 

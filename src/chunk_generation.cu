@@ -17,27 +17,29 @@ void generateChunk(Octree* octree, int x_, int y_, int z_, unsigned int gridSize
         for (int y = 0; y < CHUNK_H; y++) {
             for (int z = 0; z < CHUNK_W; z++) {
 
-                float val = db::perlin((float(x) + float(x_) * CHUNK_W) / smoothing + offsetX, (float(z) + float(z_) * CHUNK_W) / smoothing + offsetY) * amplify;
+                //float val = db::perlin((float(x) + float(x_) * CHUNK_W) / smoothing + offsetX, (float(z) + float(z_) * CHUNK_W) / smoothing + offsetY) * amplify;
+
+                chunkBlocks[x + y * CHUNK_W + z * CHUNK_W * CHUNK_H] = Block(x + x_ * CHUNK_W, y, z + z_ * CHUNK_W, 1); // TODO: change y to be relative too (cube chunks)
 
                 //octree->insert(x + x_ * CHUNK_W, y, z + z_ * CHUNK_W, 1, octree->root);
                 //return;
 
-                if (y >= val + 30) { //y >= val + 20
+                // if (y >= val + 30) { //y >= val + 20
 
-                    if(y <= val + 20.5 + 10){
-                        chunkBlocks[x + y * CHUNK_W + z * CHUNK_W * CHUNK_H] = Block(x + x_ * CHUNK_W, y, z + z_ * CHUNK_W, 1); // TODO: change y to be relative too (cube chunks)
-                    }
+                //     if(y <= val + 20.5 + 10){
+                //         chunkBlocks[x + y * CHUNK_W + z * CHUNK_W * CHUNK_H] = Block(x + x_ * CHUNK_W, y, z + z_ * CHUNK_W, 1); // TODO: change y to be relative too (cube chunks)
+                //     }
 
-                    //     octree->insert(x + x_ * CHUNK_W, y, z + z_ * CHUNK_W, 1);
-                    // else if(y <= val + 20.9 + 10)
-                    //     octree->insert(x + x_ * CHUNK_W, y, z + z_ * CHUNK_W, 3);
-                    // else if (y <= val + 22 + 10)
-                    //     octree->insert(x + x_ * CHUNK_W, y, z + z_ * CHUNK_W, 2);
-                    // else if (y <= val + 45 + 10)
-                    //     octree->insert(x + x_ * CHUNK_W, y, z + z_ * CHUNK_W, 2);
-                    //else
-                    //    octree->insert(x + x_ * CHUNK_W, y, z + z_ * CHUNK_W, 5, octree->root);
-                }
+                //     //     octree->insert(x + x_ * CHUNK_W, y, z + z_ * CHUNK_W, 1);
+                //     // else if(y <= val + 20.9 + 10)
+                //     //     octree->insert(x + x_ * CHUNK_W, y, z + z_ * CHUNK_W, 3);
+                //     // else if (y <= val + 22 + 10)
+                //     //     octree->insert(x + x_ * CHUNK_W, y, z + z_ * CHUNK_W, 2);
+                //     // else if (y <= val + 45 + 10)
+                //     //     octree->insert(x + x_ * CHUNK_W, y, z + z_ * CHUNK_W, 2);
+                //     //else
+                //     //    octree->insert(x + x_ * CHUNK_W, y, z + z_ * CHUNK_W, 5, octree->root);
+                // }
             }
         }
     }

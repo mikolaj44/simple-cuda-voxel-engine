@@ -62,8 +62,6 @@ public:
 	template<typename MapInsertRef>
 	__device__ void insert(MapInsertRef insertRef, Block block) {
 
-		//printf("%d\n", block.blockId);
-
 		int x = block.x;
 		int y = block.y;
 		int z = block.z;
@@ -73,24 +71,23 @@ public:
 		y -= yMin;
 		z -= zMin;
 
+		int level = Octree::level;
+		int size = 1 << level;
+
+		//printf("%d %d %d %d\n", x, y, z, xMin);
+
 		// If the voxel is out of bounds (we don't grow the octree)
-		if(x < 0 || y < 0 || z < 0 || x >= xMin || y >= yMin || z >= zMin){
+		if(x < 0 || y < 0 || z < 0 || x >= xMin + size || y >= yMin + size || z >= zMin + size){
 			return;
 		}
 
-		int level = Octree::level;
 		uint64_t index = 1; // root node index
-
-		int nodeX = xMin;
-		int nodeY = yMin;
-		int nodeZ = zMin;
-
-		int size = 1 << level;
-
 		int numShifts = 0;
 
 		// Iterate over all node levels up until the leaf node
 		do{
+
+			printf("%d\n", level);
 
 			if(numShifts >= sizeof(uint64_t) * 8){ // Detect index overflow
 				return;
@@ -100,42 +97,33 @@ public:
 
 			if (level == 1) {
 
+				printf("%d\n", 1);
+
 				// Get the node at index (to insert the right block data)
 				// auto iterator = nodeMapRef.find(index);
 				// iterator->second
 
 				//nodeMapInsertRef
 
-				insertRef.insert(cuco::pair{index, Node{block.blockId, false}});
+				//insertRef.insert(cuco::pair{index, Node{block.blockId, false}});
 				return;
 			}
 
 			// We are still assuming that the octree is not sparse
 			
-			insertRef.insert(cuco::pair{index, Node{block.blockId, true}});
+			//insertRef.insert(cuco::pair{index, Node{block.blockId, true}});
 
 			// Get the midpoint
-			int xM = (2 * nodeX + size) / 2;
-			int yM = (2 * nodeY + size) / 2;
-			int zM = (2 * nodeZ + size) / 2;
+			int xM = (2 * xMin + size) / 2;
+			int yM = (2 * yMin + size) / 2;
+			int zM = (2 * zMin + size) / 2;
 
 			numShifts += 3;
 			index <<= 3;
 
 			// Compute the coordinates and morton code of the child node
 
-			if (x >= xM) {
-				nodeX += size / 2;
-				index |= (1 << 2);
-			}
-			if (y >= yM) {
-				nodeY += size / 2;
-				index |= (1 << 1);
-			}
-			if (z >= zM) {	
-				nodeZ += size / 2;
-				index |= 1;
-			}
+			
 
 			level--;
 			size = 1 << level;
@@ -146,9 +134,9 @@ public:
 
 	unsigned char get(int x, int y, int z);
 
-	void display(bool showBorder = true, unsigned int level = INT_MAX);
+	void display(unsigned char* pixels, bool showBorder = true, unsigned int level = INT_MAX);
 
-	void display(int xMin, int yMin, int zMin, unsigned int level = INT_MAX, bool showBorder = true);
+	void display(unsigned char* pixels, int xMin, int yMin, int zMin, unsigned int level = INT_MAX, bool showBorder = true);
 
 
 	static void getChildXYZ(int xMin, int yMin, int zMin, unsigned int level, int childIndex, int& x, int& y, int& z);
@@ -250,7 +238,7 @@ __device__ void performRaycast(Octree* octree, MapInsertRef insertRef, MapFindRe
 
 		if (result == 0) {
 
-			SetPixel(sX, sY, 0, 0, 0, 255, pixels); //30 30 255
+			setPixel(pixels, sX, sY, 0, 0, 0, 255); //30 30 255
 		}
 
 	}

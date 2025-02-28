@@ -423,19 +423,21 @@ int main(){
             printf("Stack size: %zu bytes\n", stackSize);*/
         }
         else {
-            octree->display(showBorder);
+            octree->display(pixels, showBorder);
         }
 
         cudaDeviceSynchronize();
 
         SDL_RenderClear(renderer);
 
-        //system("pause");
-
         SDL_LockTexture(texture, NULL, &texture_pixels, &texture_pitch);
 
-        cudaMemcpy(texture_pixels, pixels_gpu, size, cudaMemcpyDeviceToHost);
-        //memcpy(texture_pixels, pixels, size * sizeof(unsigned char)); // texture_pitch * SCREEN_HEIGHT
+        if(!doOldRendering){
+            cudaMemcpy(texture_pixels, pixels_gpu, size, cudaMemcpyDeviceToHost);
+        }
+        else{
+            memcpy(texture_pixels, pixels, size * sizeof(unsigned char));
+        }
 
         SDL_UnlockTexture(texture);
 
