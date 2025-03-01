@@ -31,7 +31,6 @@ class Node {
 public:
 	unsigned char blockId = 0; // air
 	bool hasChildren = false; // for the regular octree, not an SVO - either has 0 or 8 children
-	uint8_t padding[2]; // 2 bytes padding
 
 	//unsigned char childMask = 0; // which children are present, indexed according to Figure 1: http://wscg.zcu.cz/wscg2000/Papers_2000/X31.pdf
 
@@ -40,11 +39,15 @@ public:
 	__host__ __device__ Node(unsigned char blockId_, bool hasChildren_) : blockId(blockId_), hasChildren(hasChildren_) {};
 
 	//__host__ __device__ Node(unsigned char blockId_, bool hasChildren_, uint64_t mortonCode_) : blockId(blockId_), hasChildren(hasChildren_), mortonCode(mortonCode_) {};
+private:
+	uint8_t padding[2]; // 2 bytes padding
 };
 
 class Octree {
 
 public:
+
+	enum OctreeSpecialPosition { CENTERED };
 
 	static size_t memoryTakenBytes;
 	static size_t memoryAvailableBytes;
@@ -58,90 +61,17 @@ public:
 
 	void createOctree(int xMin, int yMin, int zMin, unsigned int level);
 
-	// the actual device insert function
-	template<typename MapInsertRef>
-	__device__ void insert(MapInsertRef insertRef, Block block) {
-
-		int x = block.x;
-		int y = block.y;
-		int z = block.z;
-
-		// Octree coordinate system is positive only, convert the coordinates to this system
-		x -= xMin;
-		y -= yMin;
-		z -= zMin;
-
-		int level = Octree::level;
-		int size = 1 << level;
-
-		//printf("%d %d %d %d\n", x, y, z, xMin);
-
-		// If the voxel is out of bounds (we don't grow the octree)
-		if(x < 0 || y < 0 || z < 0 || x >= xMin + size || y >= yMin + size || z >= zMin + size){
-			return;
-		}
-
-		uint64_t index = 1; // root node index
-		int numShifts = 0;
-
-		// Iterate over all node levels up until the leaf node
-		do{
-
-			printf("%d\n", level);
-
-			if(numShifts >= sizeof(uint64_t) * 8){ // Detect index overflow
-				return;
-			}
-
-			//cout << level << " " << bitset<64>(index) << endl;
-
-			if (level == 1) {
-
-				printf("%d\n", 1);
-
-				// Get the node at index (to insert the right block data)
-				// auto iterator = nodeMapRef.find(index);
-				// iterator->second
-
-				//nodeMapInsertRef
-
-				//insertRef.insert(cuco::pair{index, Node{block.blockId, false}});
-				return;
-			}
-
-			// We are still assuming that the octree is not sparse
-			
-			//insertRef.insert(cuco::pair{index, Node{block.blockId, true}});
-
-			// Get the midpoint
-			int xM = (2 * xMin + size) / 2;
-			int yM = (2 * yMin + size) / 2;
-			int zM = (2 * zMin + size) / 2;
-
-			numShifts += 3;
-			index <<= 3;
-
-			// Compute the coordinates and morton code of the child node
-
-			
-
-			level--;
-			size = 1 << level;
-
-		} while (level >= 1);
-		
-	}
+	void createOctree(OctreeSpecialPosition position, unsigned int level);
 
 	unsigned char get(int x, int y, int z);
 
-	void display(unsigned char* pixels, bool showBorder = true, unsigned int level = INT_MAX);
+	void display(unsigned char* pixels, bool showBorder = true);
 
-	void display(unsigned char* pixels, int xMin, int yMin, int zMin, unsigned int level = INT_MAX, bool showBorder = true);
-
-
-	static void getChildXYZ(int xMin, int yMin, int zMin, unsigned int level, int childIndex, int& x, int& y, int& z);
+	static void getChildXYZindex(int& x, int& y, int& z, uint64_t& index, unsigned int level, unsigned int childIndex);
 	
 private:
+
+	void display(unsigned char* pixels, uint64_t index = 1, bool showBorder = true, int x = 0, int y = 0, int z = 0, unsigned int level = 0);
 
 	void subdivide(Node* node); // Will be used later for the SVO
 
@@ -165,8 +95,94 @@ __device__ void performRaycast(Octree* octree, float oX, float oY, float oZ, flo
 
 __device__ unsigned char raycastDrawPixel(float oX, float oY, float oZ, float dX, float dY, float dZ, float tx0, float ty0, float tz0, float tx1, float ty1, float tz1, unsigned char a, int minNodeSize, int sX, int sY, unsigned char* pixels, float origOX, float origOY, float origOZ, bool negativeDX, bool negativeDY, bool negativeDZ);
 
+// the actual device insert function
+template<typename MapInsertRef>
+__device__ void insert(Octree* octree, MapInsertRef insertRef, Block block) {
 
+	int x = block.x;
+	int y = block.y;
+	int z = block.z;
 
+	//printf("%d %d %d\n", x, y, z);
+
+	int level = octree->level;
+	int size = 1 << level;
+
+	// Octree coordinate system is positive only, convert the coordinates to this system
+	x += size / 2;
+	y += size / 2;
+	z += size / 2;
+
+	int xMin = 0;
+	int yMin = 0;
+	int zMin = 0;
+
+	//printf("%d\n", x, y, z, xMin + size, yMin + size, zMin + size);
+
+	// If the voxel is out of bounds (we don't grow the octree)
+	if(x < 0 || y < 0 || z < 0 || x >= size || y >= size || z >= size){
+		return;
+	}
+
+	uint64_t index = 1; // root node index
+	int numShifts = 0;
+
+	// Iterate over all node levels up until the leaf node
+	do{
+		// if(level == 17){
+		// 	printf("%d %llu\n", level, index);
+		// }
+
+		if(numShifts >= 21){ // Detect index overflow
+			return;
+		}
+
+		//cout << level << " " << bitset<64>(index) << endl;
+
+		if (level == 1) {
+
+			//printf("%d\n", 1);
+
+			// Get the node at index (to insert the right block data)
+			// auto iterator = nodeMapRef.find(index);
+			// iterator->second
+
+			insertRef.insert(cuco::pair{index, Node{block.blockId, false}});
+			return;
+		}
+
+		// We are still assuming that the octree is not sparse
+		insertRef.insert(cuco::pair{index, Node{block.blockId, true}});
+
+		// Get the midpoint
+		int xM = (2 * xMin + size) / 2;
+		int yM = (2 * yMin + size) / 2;
+		int zM = (2 * zMin + size) / 2;
+
+		numShifts += 1;
+		index <<= 3;
+
+		// Compute the coordinates and morton code of the child node
+		if (x >= xM) {
+			xMin += size / 2;
+			index |= 1;
+		}
+		
+		if (y >= yM) {
+			yMin += size / 2;
+			index |= (1 << 1);
+		}
+
+		if (z >= zM) {	
+			zMin += size / 2;
+			index |= (1 << 2);
+		}
+
+		level--;
+		size = 1 << level;
+
+	} while (level >= 1);
+}
 // calls the insertion kernel
 void insert(Octree* octree, thrust::device_vector<Block> blocks, size_t numBlocks, unsigned int gridSize, unsigned int blockSize);
 
@@ -176,10 +192,11 @@ __global__ void insertKernel(Octree* octree, MapInsertRef insertRef, Block* bloc
 
 	unsigned int index = threadIdx.x + blockDim.x * blockIdx.x;
 
-    if (index >= numBlocks)
-        return;
-
-	octree->insert(insertRef, blocks[index]);
+	if(index >= numBlocks || blocks[index].blockId == 0){
+		return;
+	}
+	
+	insert(octree, insertRef, blocks[index]);
 }
 
 

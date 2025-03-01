@@ -10,8 +10,8 @@
 extern std::string pathStr;
 
 // screen size
-constexpr int SCREEN_WIDTH = 800;
-constexpr int SCREEN_HEIGHT = 600;
+constexpr int SCREEN_WIDTH = 1920;
+constexpr int SCREEN_HEIGHT = 1080;
 
 // viewing parameters
 constexpr float FOCAL_LENGTH = 4000; //350 //1200
@@ -21,12 +21,12 @@ constexpr float MOUSE_SENSITIVITY = 0.004;
 
 // rendering parameters
 constexpr int RENDER_DISTANCE = 3; // (in chunks)
-constexpr int START_RENDER_DISTANCE = 20; // (in chunks)
+constexpr int START_RENDER_DISTANCE = 2; // (in chunks)
 
 // octree memory parameters
 constexpr size_t PREALLOCATE_MB_AMOUNT = 1000;
 constexpr size_t MEMORY_LIMIT_MB = 300;
-constexpr size_t NODE_MAP_CAPACITY = 1'000'000; // 300 million is about 5 GB of VRAM used (4 byte Node)
+constexpr size_t NODE_MAP_CAPACITY = 10'000'000; // 300 million is about 5 GB of VRAM used (4 byte Node)
 
 // threading parameters
 //constexpr unsigned int MAX_THREADS_AMOUNT = 1;
@@ -47,9 +47,9 @@ constexpr float amplify = 50;
 constexpr float PLAYER_HEIGHT = 1.75;
 constexpr float CAMERA_HEIGHT = 2;
 
-constexpr float PLAYER_SPEED = 1;
-constexpr float PLAYER_SPEED_FLYING = 0.2;
-constexpr float PLAYER_TURN_Y_SPEED = 0.1;
+extern float PLAYER_SPEED; // 1
+extern float PLAYER_SPEED_FLYING ; // 0.2
+extern float PLAYER_TURN_Y_SPEED;
 
 // ui parameters
 extern bool mouseControls;

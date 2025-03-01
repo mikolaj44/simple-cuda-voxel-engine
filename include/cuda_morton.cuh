@@ -1,6 +1,7 @@
 #pragma once
 
 #include <stdint.h>
+#include <cstdio>
 
 #include <cuda_runtime.h>
 #include <device_launch_parameters.h>
@@ -87,16 +88,29 @@ __device__ __host__ inline void morton3D_64_decode(const uint64_t m, unsigned in
 	#endif
 }
 
-__device__ __host__ inline uint64_t octree_morton3D_64_encode(const int x, const int y, const int z, const unsigned int level) {
-	uint64_t code;
-	morton3D_64_encode(code, absv(x), absv(y), absv(z));
+__device__ __host__ inline uint64_t mortonEncode_for(unsigned int x, unsigned int y, unsigned int z){
+    uint64_t answer = 0;
+    for (uint64_t i = 0; i < (sizeof(uint64_t)* CHAR_BIT)/3; ++i) {
+    	answer |= ((x & ((uint64_t)1 << i)) << 2*i) | ((y & ((uint64_t)1 << i)) << (2*i + 1)) | ((z & ((uint64_t)1 << i)) << (2*i + 2));
+    }
+    return answer;
+}
 
-	uint64_t shifted1 = 1;
-	for(int i = 0; i < level; i++){
-		shifted1 <<= 3;
-	}
+//__device__ __host__ 
+inline uint64_t octree_morton3D_64_encode(unsigned int x, unsigned int y, unsigned int z, unsigned int level, unsigned int octreeX, unsigned int octreeY, unsigned int octreeZ, unsigned int octreeLevel) {
 
-	return code |= shifted1;
+	uint64_t code = mortonEncode_for(x - octreeX, y - octreeY, z - octreeZ);
+	return code;
+
+	// code >>= level * 3;
+
+	// uint64_t shifted_1 = 1;
+
+	// for(int i = 0; i < octreeLevel - level; i++){
+	// 	shifted_1 <<= 3;
+	// }
+
+	// return code |= shifted_1;
 }
 
 __device__ __host__ inline void octree_morton3D_64_decode(uint64_t code, int& x, int& y, int& z, unsigned int& level) {

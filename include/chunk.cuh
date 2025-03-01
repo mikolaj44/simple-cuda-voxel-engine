@@ -7,17 +7,14 @@
 
 using namespace std;
 
-//struct Chunk {
-//
-//    int x;
-//    int z;
-//    Block blocks[CHUNK_W][CHUNK_H][CHUNK_W];
-//
-//    Chunk(int x_, int z_);
-//
-//    Chunk(int x_, int z_, Block blocks_[CHUNK_W][CHUNK_H][CHUNK_W]);
-//
-//    static int coordBlockToChunkSpace(int coord);
-//};
+class Chunk {
+
+public:
+   int x, y, z;
+
+   Chunk() {};
+
+   Chunk(int x_, int y_, int z_) : x(x_), y(y_), z(z_) {};
+};
 
 extern map<pair<int, int>, bool> generatedChunks;

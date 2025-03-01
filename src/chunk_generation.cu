@@ -7,47 +7,40 @@
 #include <cuda_runtime.h>
 #include <device_launch_parameters.h>
 
-void generateChunk(Octree* octree, int x_, int y_, int z_, unsigned int gridSize, unsigned int blockSize, int offsetX, int offsetY) {
+void generateChunks(Octree* octree, vector<Chunk> chunks, unsigned int gridSize, unsigned int blockSize, int offsetX, int offsetY) {
 
-    size_t numBlocks = CHUNK_W * CHUNK_W * CHUNK_H;
+    size_t numBlocks = CHUNK_W * CHUNK_W * CHUNK_H * chunks.size();
+    vector<Block> blocksHost(numBlocks);
 
-    thrust::device_vector<Block> chunkBlocks(numBlocks);
+    for(int i = 0; i < chunks.size(); i++){
 
-    for (int x = 0; x < CHUNK_W; x++) {
-        for (int y = 0; y < CHUNK_H; y++) {
-            for (int z = 0; z < CHUNK_W; z++) {
+        for (int x = 0; x < CHUNK_W; x++) {
+            for (int y = 0; y < CHUNK_H; y++) {
+                for (int z = 0; z < CHUNK_W; z++) {
 
-                //float val = db::perlin((float(x) + float(x_) * CHUNK_W) / smoothing + offsetX, (float(z) + float(z_) * CHUNK_W) / smoothing + offsetY) * amplify;
+                    int xPos = chunks[i].x * CHUNK_W + x;
+                    int yPos = chunks[i].y * CHUNK_H + y;
+                    int zPos = chunks[i].z * CHUNK_W + z;
 
-                chunkBlocks[x + y * CHUNK_W + z * CHUNK_W * CHUNK_H] = Block(x + x_ * CHUNK_W, y, z + z_ * CHUNK_W, 1); // TODO: change y to be relative too (cube chunks)
+                    float val = db::perlin(float(xPos) / smoothing + offsetX, float(zPos) / smoothing + offsetY) * amplify;
 
-                //octree->insert(x + x_ * CHUNK_W, y, z + z_ * CHUNK_W, 1, octree->root);
-                //return;
-
-                // if (y >= val + 30) { //y >= val + 20
-
-                //     if(y <= val + 20.5 + 10){
-                //         chunkBlocks[x + y * CHUNK_W + z * CHUNK_W * CHUNK_H] = Block(x + x_ * CHUNK_W, y, z + z_ * CHUNK_W, 1); // TODO: change y to be relative too (cube chunks)
-                //     }
-
-                //     //     octree->insert(x + x_ * CHUNK_W, y, z + z_ * CHUNK_W, 1);
-                //     // else if(y <= val + 20.9 + 10)
-                //     //     octree->insert(x + x_ * CHUNK_W, y, z + z_ * CHUNK_W, 3);
-                //     // else if (y <= val + 22 + 10)
-                //     //     octree->insert(x + x_ * CHUNK_W, y, z + z_ * CHUNK_W, 2);
-                //     // else if (y <= val + 45 + 10)
-                //     //     octree->insert(x + x_ * CHUNK_W, y, z + z_ * CHUNK_W, 2);
-                //     //else
-                //     //    octree->insert(x + x_ * CHUNK_W, y, z + z_ * CHUNK_W, 5, octree->root);
-                // }
+                    if(y >= val + 30 && y <= val + 20.5 + 10){
+                        blocksHost[x + y * CHUNK_W + z * CHUNK_W * CHUNK_H + i * CHUNK_W * CHUNK_W * CHUNK_H] = Block(xPos, yPos, zPos, 1); // TODO: change y to be relative too (cube chunks)
+                    }
+                }
             }
         }
+
+        //blocksHost[0] = Block(0,0,0,1); // TODO: change y to be relative too (cube chunks)
+
+        // TODO: use morton codes for hashing
+        generatedChunks.insert(make_pair(make_pair(chunks[i].x, chunks[i].z), true));
     }
 
-    insert(octree, chunkBlocks, numBlocks, gridSize, blockSize);
+    thrust::device_vector<Block> blocks(numBlocks);
+    blocks = blocksHost;
 
-    // TODO: use morton codes for hashing
-    generatedChunks.insert(make_pair(make_pair(x_, z_), true));
+    insert(octree, blocks, numBlocks, gridSize, blockSize);
 }
 
 void generateVisibleChunks(Octree* octree) {
@@ -55,8 +48,8 @@ void generateVisibleChunks(Octree* octree) {
     map<pair<int, int>, bool>::const_iterator got;
 
     got = generatedChunks.find(make_pair((int)cameraPos.x / CHUNK_W, (int)cameraPos.z / CHUNK_W));
-    if (got == generatedChunks.end())
-        generateChunk(octree, (int)cameraPos.x % CHUNK_W, 0, (int)cameraPos.z % CHUNK_W);
+    //if (got == generatedChunks.end())
+    //    generateChunk(octree, (int)cameraPos.x % CHUNK_W, 0, (int)cameraPos.z % CHUNK_W);
 
     float step = 0.5;
 
@@ -97,8 +90,8 @@ void generateVisibleChunks(Octree* octree) {
 
             got = generatedChunks.find(make_pair(points[i].first, points[i].second));
 
-            if (got == generatedChunks.end())
-                generateChunk(octree, points[i].first, 0, points[i].second);
+            //if (got == generatedChunks.end())
+            //    generateChunk(octree, points[i].first, 0, points[i].second);
         }
 
         distance += step;
