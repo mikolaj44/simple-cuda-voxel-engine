@@ -8,12 +8,14 @@
 #include <map>
 #include <string>
 #include <algorithm>
+#include <bitset>
 
 #include "renderer.cuh"
 #include "chunk.cuh"
 #include "chunk_generation.cuh"
 #include "octree.cuh"
 #include "blocks_data.cuh"
+#include "cuda_morton.cuh"
 
 #define DB_PERLIN_IMPL
 #include "db_perlin.hpp"
@@ -84,7 +86,13 @@ int main(){
     Octree* octree; // = new Octree(-pow2neg, pow2, -pow2neg, pow2, -pow2neg, pow2)
     
     cudaMallocManaged(&octree, sizeof(Octree));
-    octree->createOctree(-pow(2,19), -pow(2,19), -pow(2,19), 20);
+    octree->createOctree(Octree::CENTERED, 18);
+
+    // cout << bitset<64>(octree_morton3D_64_encode(0,0,0,0,octree->xMin, octree->yMin, octree->zMin, octree->level)) << endl;
+    // cout << bitset<64>(octree_morton3D_64_encode(1 << 17,0,0, 0,octree->xMin, octree->yMin, octree->zMin, octree->level)) << endl;
+    // cout << bitset<64>(octree_morton3D_64_encode(0,1 << 17,0, 0,octree->xMin, octree->yMin, octree->zMin, octree->level)) << endl;
+    // //cout << bitset<64>(octree_morton3D_64_encode(1 << 18 - 5,1 << 18 - 6,1 << 18 - 7,0,18)) << endl;
+    // return 0;
 
     //octree = new Octree(-pow2neg, pow2, -pow2neg, pow2, -pow2neg, pow2);
 
@@ -150,19 +158,21 @@ int main(){
     // int c = getchar();
     // return 0;
 
-    for (int x = -START_RENDER_DISTANCE; x < START_RENDER_DISTANCE; x++)
-         for (int z = -START_RENDER_DISTANCE; z < START_RENDER_DISTANCE; z++)
-             if ((x - cameraPos.x) * (x - cameraPos.x) + (z - cameraPos.z) * (z - cameraPos.z) <= START_RENDER_DISTANCE * START_RENDER_DISTANCE) {
-                 generateChunk(octree, x, 0, z);
-                 //printf("%d / %d\n", (x + 1 + START_RENDER_DISTANCE) * (z + 1 + START_RENDER_DISTANCE) , START_RENDER_DISTANCE * START_RENDER_DISTANCE);
-             }
+    vector<Chunk> chunks(1);
 
-    //generateChunk(octree, 0, 0, 0, CHUNK_W, CHUNK_W * CHUNK_H);
+       for (int x = -START_RENDER_DISTANCE; x < START_RENDER_DISTANCE; x++)
+            for (int z = -START_RENDER_DISTANCE; z < START_RENDER_DISTANCE; z++)
+                if ((x - cameraPos.x) * (x - cameraPos.x) + (z - cameraPos.z) * (z - cameraPos.z) <= START_RENDER_DISTANCE * START_RENDER_DISTANCE) {
+
+                   chunks.push_back(Chunk(x, 0, z));
+                    //generateChunk(octree, x, 0, z, CHUNK_W, CHUNK_W * CHUNK_H);
+                }
+
+    //chunks.push_back(Chunk(0, 0, 0));
+
+    generateChunks(octree, chunks, 30000, 500);
 
     //return 0;
-
-    //for (int x = 0; x < 10; x++)
-    //    GenerateChunk(x, 0, octree);
 
     int prevMouseX = 0, prevMouseY = 0;
 
@@ -226,10 +236,17 @@ int main(){
                         for (int x = -START_RENDER_DISTANCE; x < START_RENDER_DISTANCE; x++)
                             for (int z = -START_RENDER_DISTANCE; z < START_RENDER_DISTANCE; z++)
                                 if (x * x + z * z <= START_RENDER_DISTANCE * START_RENDER_DISTANCE) {
-                                    generateChunk(octree, x, 0, z);
+                                    //generateChunk(octree, x, 0, z);
                                 }
 
                         break;
+
+                    case SDLK_z:
+                        PLAYER_SPEED /= 2;
+                        break;
+                    case SDLK_x:
+                        PLAYER_SPEED *= 2;
+                        break; 
 
                     case SDLK_2:
 
@@ -298,10 +315,10 @@ int main(){
                             break;
 
                         case SDLK_s:
-                            cameraPos.y += PLAYER_SPEED_FLYING;
+                            cameraPos.y += PLAYER_SPEED;
                             break;
                         case SDLK_w:
-                            cameraPos.y -= PLAYER_SPEED_FLYING;
+                            cameraPos.y -= PLAYER_SPEED;
                             break;
 
                         case SDLK_q:
@@ -374,7 +391,7 @@ int main(){
                             //for (int x = -START_RENDER_DISTANCE * 2; x < START_RENDER_DISTANCE * 2; x++)
                              //   for (int z = -START_RENDER_DISTANCE * 2; z < START_RENDER_DISTANCE * 2; z++)
                                //     if (x*x + z*z <= 4 * START_RENDER_DISTANCE * START_RENDER_DISTANCE)
-                                        generateChunk(octree, 0, 0, 0, offsetX, offsetZ);
+                                        //generateChunk(octree, 0, 0, 0, offsetX, offsetZ);
 
                             break;
 
@@ -426,6 +443,9 @@ int main(){
             octree->display(pixels, showBorder);
         }
 
+        //cout << cameraPos.x << " " << cameraPos.y << " " << cameraPos.z << endl;
+        //cout << PLAYER_SPEED << endl;
+
         cudaDeviceSynchronize();
 
         SDL_RenderClear(renderer);
@@ -441,7 +461,7 @@ int main(){
 
         SDL_UnlockTexture(texture);
 
-        //memset(pixels, 0, SCREEN_HEIGHT * texture_pitch);
+        memset(pixels, 0, SCREEN_HEIGHT * texture_pitch);
         SDL_RenderCopy(renderer, texture, NULL, NULL);
 
         //system("pause");

@@ -3,7 +3,6 @@
 #include <cuda_runtime.h>
 #include <device_launch_parameters.h>
 
-
 __device__ __host__ inline float maxv(float a, float b) {
 	if (a > b)
 		return a;

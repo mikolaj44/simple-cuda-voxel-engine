@@ -29,10 +29,14 @@ void Vector3::scale(float val) {
 }
 
 Vector3 unitCubeCoords[8] = { Vector3(0,0,0), Vector3(1,0,0), Vector3(1,1,0), Vector3(0,1,0), Vector3(0,0,1), Vector3(1,0,1), Vector3(1,1,1), Vector3(0,1,1) };
-Vector3 cameraPos(-10, 10, -2);
+Vector3 cameraPos(0, 0, 0);
 Vector3 cameraAngle(0, 0, 0);
 
 std::string pathStr = getPathStr();
+
+float PLAYER_SPEED = 1; // 1
+float PLAYER_SPEED_FLYING = 0.2; // 0.2
+float PLAYER_TURN_Y_SPEED = 0.1;
 
 float halfHorFOV;
 float halfVerFOV;
@@ -42,7 +46,7 @@ bool doGravity = false;
 bool showFps = false;
 bool doOldRendering = true;
 bool generateNewChunks = false;
-bool showBorder = true;
+bool showBorder = false;
 
 int shift = 0;
 int shiftX = 0;

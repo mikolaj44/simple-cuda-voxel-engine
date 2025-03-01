@@ -5,9 +5,6 @@ project(cuda-voxel-engineLANGUAGES CXX CUDA)
 file(GLOB SOURCES "src/*.cpp" "src/*.cu")
 file(GLOB HEADERS "include/*.h" "include/*.hpp" "include/*.cuh")
 
-# file(GLOB SOURCES "src1/*.cpp" "src1/*.cu")
-# file(GLOB HEADERS "include1/*.h" "include1/*.hpp" "include1/*.cuh")
-
 find_package(CUDAToolkit REQUIRED)
 find_package(SDL2 REQUIRED)
 find_package(SDL2_ttf REQUIRED)
@@ -32,8 +29,11 @@ CPMAddPackage(
      "BUILD_EXAMPLES OFF"
 )
 
-set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} --expt-extended-lambda -rdc=true -w -Xcompiler -g")
+set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} --expt-extended-lambda -rdc=true -use_fast_math -w -Xcompiler -w -g")
 set(CMAKE_CUDA_ARCHITECTURES "75")
+
+set(CMAKE_CUDA_FLAGS_RELEASE "-O3 -Xptxas -O3")
+set(CMAKE_CUDA_FLAGS_RELWITHDEBINFO "-O2 -g -Xptxas -O2")
 
 add_executable(${PROJECT_NAME} ${SOURCES} ${HEADERS})
 

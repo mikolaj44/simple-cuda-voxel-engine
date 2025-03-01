@@ -67,6 +67,13 @@ void Octree::createOctree(int xMin_, int yMin_, int zMin_, unsigned int level_) 
 	//insertNode<<<1,1>>>(nodeMapFindRef, nodeMapInsertRef, 1, Node(44, false));
 }
 
+void Octree::createOctree(OctreeSpecialPosition position, unsigned int level){
+
+	if(position == CENTERED){
+		createOctree(-(1 << (level - 1)), -(1 << (level - 1)), -(1 << (level - 1)), level);
+	}
+}
+
 //void Octree::subdivide(Node* node) {
 //
 //	int xM = (2 * node->xMin + node->size) / 2;
@@ -172,72 +179,66 @@ void Octree::createOctree(int xMin_, int yMin_, int zMin_, unsigned int level_) 
 //	return get(x, y, z, root);
 //}
 
-void Octree::getChildXYZ(int xMin, int yMin, int zMin, unsigned int level, int childIndex, int& x, int& y, int& z) {
+void Octree::getChildXYZindex(int& x, int& y, int& z, uint64_t& index, unsigned int level, unsigned int childIndex) {
 
 	int size = 1 << level;
+	index <<= 3;
 
 	switch (childIndex) {
 		case 0:
-			x = xMin;
-			y = yMin;
-			z = zMin;
 			break;
 		case 1:
-			x = xMin;
-			y = yMin;
-			z = zMin + size;
+			z += size / 2;
+			index |= (1 << 2);
 			break;
 		case 2:
-			x = xMin;
-			y = yMin + size;
-			z = zMin;
+			y += size / 2;
+			index |= (1 << 1);
 			break;
 		case 3:
-			x = xMin;
-			y = yMin + size;
-			z = zMin + size;
+			y += size / 2;
+			z += size / 2;
+			index |= (1 << 1);
+			index |= (1 << 2);
 			break;
 		case 4:
-			x = xMin + size;
-			y = yMin;
-			z = zMin;
+			x += size / 2;
+			index |= 1;
 			break;
 		case 5:
-			x = xMin + size;
-			y = yMin;
-			z = zMin + size;
+			x += size / 2;
+			z += size / 2;
+			index |= 1;
+			index |= (1 << 2);
 			break;
 		case 6:
-			x = xMin + size;
-			y = yMin + size;
-			z = zMin;
+			x += size / 2;
+			y += size / 2;
+			index |= 1;
+			index |= (1 << 1);
 			break;
 		case 7:
-			x = xMin + size;
-			y = yMin + size;
-			z = zMin + size;
+			x += size / 2;
+			y += size / 2;
+			z += size / 2;
+			index |= (1 << 1);
+			index |= (1 << 2);
+			index |= 1;
 			break;
 		default:
 			break;
 	}
 }
 
-void Octree::display(unsigned char* pixels, int xMin, int yMin, int zMin, unsigned int level, bool showBorder) {
+void Octree::display(unsigned char* pixels, uint64_t index, bool showBorder, int x, int y, int z, unsigned int level){
 
-	uint64_t index;
-
-	xMin -= Octree::xMin;
-	yMin -= Octree::yMin;
-	zMin -= Octree::zMin;
-
-	if (level >= Octree::level) {
+	if(index == 1){
+		x = xMin;
+		y = yMin;
+		z = zMin;
 		level = Octree::level;
-		index = 0;
 	}
-	else {
-		index = octree_morton3D_64_encode(xMin, yMin, zMin, level);
-	}
-
+	
 	//cout << bitset<64>(index) << endl;
 
 	thrust::device_vector<uint64_t> key(1);
@@ -245,7 +246,13 @@ void Octree::display(unsigned char* pixels, int xMin, int yMin, int zMin, unsign
 	key[0] = index;
 
 	nodeMap.find(key.begin(), key.end(), value.begin());
+
 	Node node = value[0];
+
+	//cout << (int)node.blockId << " " << node.hasChildren << endl;
+
+	//if(level == 17)
+	//	cout << (int)node.blockId << " " << node.hasChildren << " " << index << " " << level << endl;
 
 	int size = 1 << level;
 
@@ -254,35 +261,35 @@ void Octree::display(unsigned char* pixels, int xMin, int yMin, int zMin, unsign
 		float coordinates[8][2];
 		float* coordinate;
 
-		coordinate = _3d2dProjection(xMin, yMin, zMin);
+		coordinate = _3d2dProjection(x, y, z);
 		coordinates[0][0] = coordinate[0];
 		coordinates[0][1] = coordinate[1];
 
-		coordinate = _3d2dProjection((xMin + size), yMin, zMin);
+		coordinate = _3d2dProjection(x + size, y, z);
 		coordinates[1][0] = coordinate[0];
 		coordinates[1][1] = coordinate[1];
 
-		coordinate = _3d2dProjection((xMin + size), (yMin + size), zMin);
+		coordinate = _3d2dProjection(x + size, y + size, z);
 		coordinates[2][0] = coordinate[0];
 		coordinates[2][1] = coordinate[1];
 
-		coordinate = _3d2dProjection(xMin, (yMin + size), zMin);
+		coordinate = _3d2dProjection(x, y + size, z);
 		coordinates[3][0] = coordinate[0];
 		coordinates[3][1] = coordinate[1];
 
-		coordinate = _3d2dProjection(xMin, yMin, (zMin + size));
+		coordinate = _3d2dProjection(x, y, z + size);
 		coordinates[4][0] = coordinate[0];
 		coordinates[4][1] = coordinate[1];
 
-		coordinate = _3d2dProjection((xMin + size), yMin, (zMin + size));
+		coordinate = _3d2dProjection(x + size, y, z + size);
 		coordinates[5][0] = coordinate[0];
 		coordinates[5][1] = coordinate[1];
 
-		coordinate = _3d2dProjection((xMin + size), (yMin + size), (zMin + size));
+		coordinate = _3d2dProjection(x + size, y + size, z + size);
 		coordinates[6][0] = coordinate[0];
 		coordinates[6][1] = coordinate[1];
 
-		coordinate = _3d2dProjection(xMin, (yMin + size), (zMin + size));
+		coordinate = _3d2dProjection(x, y + size, z + size);
 		coordinates[7][0] = coordinate[0];
 		coordinates[7][1] = coordinate[1];
 
@@ -292,7 +299,8 @@ void Octree::display(unsigned char* pixels, int xMin, int yMin, int zMin, unsign
 		//	type = node->blockId;
 
 		//unsigned char* color = BlockTypeToColor(type);
-		int color[3] = { 255,0,0 };
+		//int color[3] = { rand() % 255, rand() % 255, rand() % 255 };
+		int color[3] = { 0, 255, 0 };
 
 		drawLine(pixels, (int)coordinates[0][0], (int)coordinates[0][1], (int)coordinates[1][0], (int)coordinates[1][1], color[0], color[1], color[2]);
 		drawLine(pixels, (int)coordinates[1][0], (int)coordinates[1][1], (int)coordinates[2][0], (int)coordinates[2][1], color[0], color[1], color[2]);
@@ -308,45 +316,44 @@ void Octree::display(unsigned char* pixels, int xMin, int yMin, int zMin, unsign
 		drawLine(pixels, (int)coordinates[3][0], (int)coordinates[3][1], (int)coordinates[7][0], (int)coordinates[7][1], color[0], color[1], color[2]);
 	}
 
-	if (level == 1 || !node.hasChildren) {
+	if (level <= 1 || !node.hasChildren) {
 		return;
 	}
 
-	level--;
-
-	int x, y, z;
-
 	for (int i = 0; i < 8; i++) {
-		getChildXYZ(xMin, yMin, zMin, level, i, x, y, z);
-		display(pixels, x, y, z, level, showBorder);
+		int x_ = x;
+		int y_ = y;
+		int z_ = z;
+		uint64_t index_ = index;
+		getChildXYZindex(x_, y_, z_, index_, level, i);
+		display(pixels, index_, showBorder, x_, y_, z_, level - 1);
 	}
 
-	// For now the octree isn't sparse
+	// // For now the octree isn't sparse
 
-	/*if (node->children[0] != nullptr)
-		display(node->children[0], showBorder, ++depth);
-	if (node->children[1] != nullptr)
-		display(node->children[1], showBorder, ++depth);
-	if (node->children[2] != nullptr)
-		display(node->children[2], showBorder, ++depth);
-	if (node->children[3] != nullptr)
-		display(node->children[3], showBorder, ++depth);
-	if (node->children[4] != nullptr)
-		display(node->children[4], showBorder, ++depth);
-	if (node->children[5] != nullptr)
-		display(node->children[5], showBorder, ++depth);
-	if (node->children[6] != nullptr)
-		display(node->children[6], showBorder, ++depth);
-	if (node->children[7] != nullptr)
-		display(node->children[7], showBorder, ++depth);*/
+	// /*if (node->children[0] != nullptr)
+	// 	display(node->children[0], showBorder, ++depth);
+	// if (node->children[1] != nullptr)
+	// 	display(node->children[1], showBorder, ++depth);
+	// if (node->children[2] != nullptr)
+	// 	display(node->children[2], showBorder, ++depth);
+	// if (node->children[3] != nullptr)
+	// 	display(node->children[3], showBorder, ++depth);
+	// if (node->children[4] != nullptr)
+	// 	display(node->children[4], showBorder, ++depth);
+	// if (node->children[5] != nullptr)
+	// 	display(node->children[5], showBorder, ++depth);
+	// if (node->children[6] != nullptr)
+	// 	display(node->children[6], showBorder, ++depth);
+	// if (node->children[7] != nullptr)
+	// 	display(node->children[7], showBorder, ++depth);*/
 }
 
-void Octree::display(unsigned char* pixels, bool showBorder, unsigned int level) {
-	display(pixels, xMin, yMin, zMin, level, showBorder);
+void Octree::display(unsigned char* pixels, bool showBorder){
+	display(pixels, 1, showBorder);
 }
 
 void insert(Octree* octree, thrust::device_vector<Block> blocks, size_t numBlocks, unsigned int gridSize, unsigned int blockSize){
-
 	insertKernel<<<gridSize, blockSize>>>(octree, octree->nodeMap.ref(cuco::insert), thrust::raw_pointer_cast(blocks.data()), numBlocks);
 	cudaDeviceSynchronize(); // maybe remove this later
 }
