@@ -158,17 +158,17 @@ int main(){
     // int c = getchar();
     // return 0;
 
-    vector<Chunk> chunks(1);
+    vector<Chunk> chunks;
 
-       for (int x = -START_RENDER_DISTANCE; x < START_RENDER_DISTANCE; x++)
-            for (int z = -START_RENDER_DISTANCE; z < START_RENDER_DISTANCE; z++)
-                if ((x - cameraPos.x) * (x - cameraPos.x) + (z - cameraPos.z) * (z - cameraPos.z) <= START_RENDER_DISTANCE * START_RENDER_DISTANCE) {
+    //    for (int x = -START_RENDER_DISTANCE; x < START_RENDER_DISTANCE; x++)
+    //         for (int z = -START_RENDER_DISTANCE; z < START_RENDER_DISTANCE; z++)
+    //             if ((x - cameraPos.x) * (x - cameraPos.x) + (z - cameraPos.z) * (z - cameraPos.z) <= START_RENDER_DISTANCE * START_RENDER_DISTANCE) {
 
-                   chunks.push_back(Chunk(x, 0, z));
-                    //generateChunk(octree, x, 0, z, CHUNK_W, CHUNK_W * CHUNK_H);
-                }
+    //                chunks.push_back(Chunk(x, 0, z));
+    //                 //generateChunk(octree, x, 0, z, CHUNK_W, CHUNK_W * CHUNK_H);
+    //             }
 
-    //chunks.push_back(Chunk(0, 0, 0));
+    chunks.push_back(Chunk(0, 0, 0));
 
     generateChunks(octree, chunks, 30000, 500);
 

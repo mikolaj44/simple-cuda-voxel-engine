@@ -79,17 +79,11 @@ private:
 
 };
 
-__device__ inline unsigned int nodeLevel(unsigned int octreeLevel, uint64_t mortonCode){
-	return octreeLevel - 44; // count how many zeros after the last '1' and divive by 3 (subtract 1?) or sth
-}
-
-__device__ inline unsigned int nodeSize(unsigned int octreeLevel, uint64_t mortonCode){
-	return 1 << nodeLevel(octreeLevel, mortonCode);
-}
-
 __device__ int firstNode(float tx0, float ty0, float tz0, float txm, float tym, float tzm);
 
 __device__ int newNode(float tx, int i1, float ty, int i2, float tz, int i3);
+
+__device__ uint64_t childMortonRevelles(uint64_t mortonCode, unsigned char revellesChildIndex);
 
 __device__ void performRaycast(Octree* octree, float oX, float oY, float oZ, float dX, float dY, float dZ, int sX, int sY, int minNodeSize = 1, unsigned char* pixels = nullptr);
 
@@ -251,7 +245,7 @@ __device__ void performRaycast(Octree* octree, MapInsertRef insertRef, MapFindRe
 
 		//printf("%f %f %f\n",tx0, ty0, tz0);
 
-		unsigned char result = raycastDrawPixel(octree, insertRef, findRef, oX, oY, oZ, dX, dY, dZ, tx0, ty0, tz0, tx1, ty1, tz1, a, minNodeSize, sX, sY, pixels, origOX, origOY, origOZ, negativeDX, negativeDY, negativeDZ);
+		unsigned char result = raycastDrawPixel(octree, findRef, oX, oY, oZ, dX, dY, dZ, tx0, ty0, tz0, tx1, ty1, tz1, a, minNodeSize, sX, sY, pixels, origOX, origOY, origOZ, negativeDX, negativeDY, negativeDZ);
 
 		if (result == 0) {
 
@@ -261,14 +255,22 @@ __device__ void performRaycast(Octree* octree, MapInsertRef insertRef, MapFindRe
 	}
 }
 
+__device__ inline unsigned int nodeLevel(uint64_t mortonCode, unsigned int octreeLevel){
+	return octreeLevel - log2f(mortonCode) / 3; // count how many zeros after the last '1' and divive by 3 (subtract 1?) or sth
+}
+
+__device__ inline unsigned int nodeSize(uint64_t mortonCode, unsigned int octreeLevel){
+	return 1 << nodeLevel(mortonCode, octreeLevel);
+}
+
 struct frame {
 	float tx0, ty0, tz0, tx1, ty1, tz1, txm, tym, tzm; unsigned char nodeIndex; uint64_t mortonCode;
 };
 
 __device__ void drawTexturePixel(int blockX, int blockY, int blockZ, float oX, float oY, float oZ, float dX, float dY, float dZ, int sX, int sY, unsigned char blockId, unsigned char* pixels, bool negativeDX, bool negativeDY, bool negativeDZ);
 
-template<typename MapInsertRef, typename MapFindRef>
-__device__ unsigned char raycastDrawPixel(Octree* octree, MapInsertRef insertRef, MapFindRef findRef, float oX, float oY, float oZ, float dX, float dY, float dZ, float tx0, float ty0, float tz0, float tx1, float ty1, float tz1, unsigned char a, int minNodeSize, int sX, int sY, unsigned char* pixels, float origOX, float origOY, float origOZ, bool negativeDX, bool negativeDY, bool negativeDZ) {
+template<typename MapFindRef>
+__device__ unsigned char raycastDrawPixel(Octree* octree, MapFindRef findRef, float oX, float oY, float oZ, float dX, float dY, float dZ, float tx0, float ty0, float tz0, float tx1, float ty1, float tz1, unsigned char a, int minNodeSize, int sX, int sY, unsigned char* pixels, float origOX, float origOY, float origOZ, bool negativeDX, bool negativeDY, bool negativeDZ) {
 
 	frame stack[MAX_THREAD_STACK_SIZE];
 
@@ -282,6 +284,16 @@ __device__ unsigned char raycastDrawPixel(Octree* octree, MapInsertRef insertRef
 
 	start:
 
+		auto found = findRef.find(stack[currIndex].mortonCode);
+		Node node;
+
+		if(found == findRef.end()){
+			printf("huh\n");
+			goto end;
+		}
+
+		node = found->second;
+
 		if (stack[currIndex].mortonCode == 0) {
 			goto end;
 		}
@@ -289,65 +301,64 @@ __device__ unsigned char raycastDrawPixel(Octree* octree, MapInsertRef insertRef
 		//printf("%d - %f\n", currIndex, stack[currIndex].tx0);
 
 		// terminal (leaf) node (but not air)
-		if (nodeSize(octree->level, stack[currIndex].mortonCode) <= minNodeSize) {
+		if (node.blockId != 0 && nodeSize(stack[currIndex].mortonCode, octree->level) <= minNodeSize) {
 
-			//if(&& stack[currIndex].node->blockId != 0)
-
+			printf("%d %llu\n", nodeSize(stack[currIndex].mortonCode, octree->level), stack[currIndex].mortonCode);
 			//printf("%f %f %f %f\n", absv(stack[currIndex].tx1 - (-256 - oX) / dX), absv(stack[currIndex].ty1 * dY + oY), absv(stack[currIndex].tz1 * dZ + oZ), oX);
 
-			//drawTexturePixel(stack[currIndex].node->xMin, stack[currIndex].node->yMin, stack[currIndex].node->zMin, origOX, origOY, origOZ, dX, dY, dZ, sX, sY, stack[currIndex].node->blockId, pixels, negativeDX, negativeDY, negativeDZ);
+			// ! drawTexturePixel(node->xMin, stack[currIndex].node->yMin, stack[currIndex].node->zMin, origOX, origOY, origOZ, dX, dY, dZ, sX, sY, stack[currIndex].node->blockId, pixels, negativeDX, negativeDY, negativeDZ);
 
-			/*unsigned char* color = BlockTypeToColor(stack[currIndex].node->blockId);
-			SetPixel(sX, sY, color[0], color[1], color[2], 255, pixels);*/
+			//unsigned char* color = BlockTypeToColor(stack[currIndex].node->blockId);
+			setPixel(pixels, sX, sY, 0, 255, 0);
 
-			//return stack[currIndex].node->blockId;
+			return node.blockId;
 		}
 
 		// out of the octree
-		// else if (stack[currIndex].node->children[0] == nullptr || stack[currIndex].tx1 < 0 || stack[currIndex].ty1 < 0 || stack[currIndex].tz1 < 0) {
+		else if (!node.hasChildren || stack[currIndex].tx1 < 0 || stack[currIndex].ty1 < 0 || stack[currIndex].tz1 < 0) {
 
 		end:
-		// 	currIndex--;
+			currIndex--;
 
-		// 	if (currIndex < 0)
-		// 		return 0;
+			if (currIndex < 0)
+				return 0;
 
-		// 	unsigned char prevIndex;
+			unsigned char prevIndex;
 
-		// 	// set node index of the previous stack frame
-		// 	switch (stack[currIndex].nodeIndex) {
+			// set node index of the previous stack frame
+			switch (stack[currIndex].nodeIndex) {
 
-		// 		prevIndex = stack[currIndex].nodeIndex;
+				prevIndex = stack[currIndex].nodeIndex;
 
-		// 		case 0:
-		// 			stack[currIndex].nodeIndex = newNode(stack[currIndex].txm, 4, stack[currIndex].tym, 2, stack[currIndex].tzm, 1);
-		// 			break;
-		// 		case 1:
-		// 			stack[currIndex].nodeIndex = newNode(stack[currIndex].txm, 5, stack[currIndex].tym, 3, stack[currIndex].tz1, 8);
-		// 			break;
-		// 		case 2:
-		// 			stack[currIndex].nodeIndex = newNode(stack[currIndex].txm, 6, stack[currIndex].ty1, 8, stack[currIndex].tzm, 3);
-		// 			break;
-		// 		case 3:
-		// 			stack[currIndex].nodeIndex = newNode(stack[currIndex].txm, 7, stack[currIndex].ty1, 8, stack[currIndex].tz1, 8);
-		// 			break;
-		// 		case 4:
-		// 			stack[currIndex].nodeIndex = newNode(stack[currIndex].tx1, 8, stack[currIndex].tym, 6, stack[currIndex].tzm, 5);
-		// 			break;
-		// 		case 5:
-		// 			stack[currIndex].nodeIndex = newNode(stack[currIndex].tx1, 8, stack[currIndex].tym, 7, stack[currIndex].tz1, 8);
-		// 			break;
-		// 		case 6:
-		// 			stack[currIndex].nodeIndex = newNode(stack[currIndex].tx1, 8, stack[currIndex].ty1, 8, stack[currIndex].tzm, 7);
-		// 			break;
-		// 		case 7:
-		// 			stack[currIndex].nodeIndex = 8;
-		// 			break;
-		// 	}
+				case 0:
+					stack[currIndex].nodeIndex = newNode(stack[currIndex].txm, 4, stack[currIndex].tym, 2, stack[currIndex].tzm, 1);
+					break;
+				case 1:
+					stack[currIndex].nodeIndex = newNode(stack[currIndex].txm, 5, stack[currIndex].tym, 3, stack[currIndex].tz1, 8);
+					break;
+				case 2:
+					stack[currIndex].nodeIndex = newNode(stack[currIndex].txm, 6, stack[currIndex].ty1, 8, stack[currIndex].tzm, 3);
+					break;
+				case 3:
+					stack[currIndex].nodeIndex = newNode(stack[currIndex].txm, 7, stack[currIndex].ty1, 8, stack[currIndex].tz1, 8);
+					break;
+				case 4:
+					stack[currIndex].nodeIndex = newNode(stack[currIndex].tx1, 8, stack[currIndex].tym, 6, stack[currIndex].tzm, 5);
+					break;
+				case 5:
+					stack[currIndex].nodeIndex = newNode(stack[currIndex].tx1, 8, stack[currIndex].tym, 7, stack[currIndex].tz1, 8);
+					break;
+				case 6:
+					stack[currIndex].nodeIndex = newNode(stack[currIndex].tx1, 8, stack[currIndex].ty1, 8, stack[currIndex].tzm, 7);
+					break;
+				case 7:
+					stack[currIndex].nodeIndex = 8;
+					break;
+			}
 
 		// 	//printf("%d - %d\n", prevIndex, stack[currIndex].nodeIndex);
-		// 	goto loop;
-		// }
+		 	goto loop;
+		}
 
 		stack[currIndex].txm = (stack[currIndex].tx0 + stack[currIndex].tx1) / 2.0;
 		stack[currIndex].tym = (stack[currIndex].ty0 + stack[currIndex].ty1) / 2.0;
@@ -357,66 +368,67 @@ __device__ unsigned char raycastDrawPixel(Octree* octree, MapInsertRef insertRef
 	loop:
 			
 		//printf("%d\n", stack[currIndex].nodeIndex);
+		//printf("%d\n", stack[currIndex].mortonCode);
 
-		// switch (stack[currIndex].nodeIndex) {
+		switch (stack[currIndex].nodeIndex) {
 
-		// 	case 0: {
-		// 		if (currIndex >= MAX_THREAD_STACK_SIZE - 1)
-		// 			return 0;
-		// 		currIndex++;
-		// 		stack[currIndex].tx0 = stack[currIndex - 1].tx0; stack[currIndex].ty0 = stack[currIndex - 1].ty0; stack[currIndex].tz0 = stack[currIndex - 1].tz0; stack[currIndex].tx1 = stack[currIndex - 1].txm; stack[currIndex].ty1 = stack[currIndex - 1].tym; stack[currIndex].tz1 = stack[currIndex - 1].tzm; stack[currIndex].nodeIndex = 0; stack[currIndex].node = stack[currIndex - 1].node->children[a];
-		// 		goto start;
-		// 	}
-		// 	case 1: {
-		// 		if (currIndex >= MAX_THREAD_STACK_SIZE - 1)
-		// 			return 0;
-		// 		currIndex++;
-		// 		stack[currIndex].tx0 = stack[currIndex - 1].tx0; stack[currIndex].ty0 = stack[currIndex - 1].ty0; stack[currIndex].tz0 = stack[currIndex - 1].tzm; stack[currIndex].tx1 = stack[currIndex - 1].txm; stack[currIndex].ty1 = stack[currIndex - 1].tym; stack[currIndex].tz1 = stack[currIndex - 1].tz1; stack[currIndex].nodeIndex = 1; stack[currIndex].node = stack[currIndex - 1].node->children[1 ^ a];
-		// 		goto start;
-		// 	}
-		// 	case 2: {
-		// 		if (currIndex >= MAX_THREAD_STACK_SIZE - 1)
-		// 			return 0;
-		// 		currIndex++;
-		// 		stack[currIndex].tx0 = stack[currIndex - 1].tx0; stack[currIndex].ty0 = stack[currIndex - 1].tym; stack[currIndex].tz0 = stack[currIndex - 1].tz0; stack[currIndex].tx1 = stack[currIndex - 1].txm; stack[currIndex].ty1 = stack[currIndex - 1].ty1; stack[currIndex].tz1 = stack[currIndex - 1].tzm; stack[currIndex].nodeIndex = 2; stack[currIndex].node = stack[currIndex - 1].node->children[2 ^ a];
-		// 		goto start;
-		// 	}
-		// 	case 3: {
-		// 		if (currIndex >= MAX_THREAD_STACK_SIZE - 1)
-		// 			return 0;
-		// 		currIndex++;
-		// 		stack[currIndex].tx0 = stack[currIndex - 1].tx0; stack[currIndex].ty0 = stack[currIndex - 1].tym; stack[currIndex].tz0 = stack[currIndex - 1].tzm; stack[currIndex].tx1 = stack[currIndex - 1].txm; stack[currIndex].ty1 = stack[currIndex - 1].ty1; stack[currIndex].tz1 = stack[currIndex - 1].tz1; stack[currIndex].nodeIndex = 3; stack[currIndex].node = stack[currIndex - 1].node->children[3 ^ a];
-		// 		goto start;
-		// 	}
-		// 	case 4: {
-		// 		if (currIndex >= MAX_THREAD_STACK_SIZE - 1)
-		// 			return 0;
-		// 		currIndex++;
-		// 		stack[currIndex].tx0 = stack[currIndex - 1].txm; stack[currIndex].ty0 = stack[currIndex - 1].ty0; stack[currIndex].tz0 = stack[currIndex - 1].tz0; stack[currIndex].tx1 = stack[currIndex - 1].tx1; stack[currIndex].ty1 = stack[currIndex - 1].tym; stack[currIndex].tz1 = stack[currIndex - 1].tzm; stack[currIndex].nodeIndex = 4; stack[currIndex].node = stack[currIndex - 1].node->children[4 ^ a];
-		// 		goto start;
-		// 	}
-		// 	case 5: {
-		// 		if (currIndex >= MAX_THREAD_STACK_SIZE - 1)
-		// 			return 0;
-		// 		currIndex++;
-		// 		stack[currIndex].tx0 = stack[currIndex - 1].txm; stack[currIndex].ty0 = stack[currIndex - 1].ty0; stack[currIndex].tz0 = stack[currIndex - 1].tzm; stack[currIndex].tx1 = stack[currIndex - 1].tx1; stack[currIndex].ty1 = stack[currIndex - 1].tym; stack[currIndex].tz1 = stack[currIndex - 1].tz1; stack[currIndex].nodeIndex = 5; stack[currIndex].node = stack[currIndex - 1].node->children[5 ^ a];
-		// 		goto start;
-		// 	}
-		// 	case 6: {
-		// 		if (currIndex >= MAX_THREAD_STACK_SIZE - 1)
-		// 			return 0;
-		// 		currIndex++;
-		// 		stack[currIndex].tx0 = stack[currIndex - 1].txm; stack[currIndex].ty0 = stack[currIndex - 1].tym; stack[currIndex].tz0 = stack[currIndex - 1].tz0; stack[currIndex].tx1 = stack[currIndex - 1].tx1; stack[currIndex].ty1 = stack[currIndex - 1].ty1; stack[currIndex].tz1 = stack[currIndex - 1].tzm; stack[currIndex].nodeIndex = 6; stack[currIndex].node = stack[currIndex - 1].node->children[6 ^ a];
-		// 		goto start;
-		// 	}
-		// 	case 7: {
-		// 		if (currIndex >= MAX_THREAD_STACK_SIZE - 1)
-		// 			return 0;
-		// 		currIndex++;
-		// 		stack[currIndex].tx0 = stack[currIndex - 1].txm; stack[currIndex].ty0 = stack[currIndex - 1].tym; stack[currIndex].tz0 = stack[currIndex - 1].tzm; stack[currIndex].tx1 = stack[currIndex - 1].tx1; stack[currIndex].ty1 = stack[currIndex - 1].ty1; stack[currIndex].tz1 = stack[currIndex - 1].tz1; stack[currIndex].nodeIndex = 7; stack[currIndex].node = stack[currIndex - 1].node->children[7 ^ a];
-		// 		goto start;
-		// 	}
-		// }
+			case 0: {
+				if (currIndex >= MAX_THREAD_STACK_SIZE - 1)
+					return 0;
+				currIndex++;
+				stack[currIndex].tx0 = stack[currIndex - 1].tx0; stack[currIndex].ty0 = stack[currIndex - 1].ty0; stack[currIndex].tz0 = stack[currIndex - 1].tz0; stack[currIndex].tx1 = stack[currIndex - 1].txm; stack[currIndex].ty1 = stack[currIndex - 1].tym; stack[currIndex].tz1 = stack[currIndex - 1].tzm; stack[currIndex].nodeIndex = 0; stack[currIndex].mortonCode = childMortonRevelles(stack[currIndex - 1].mortonCode, a);
+				goto start;
+			}
+			case 1: {
+				if (currIndex >= MAX_THREAD_STACK_SIZE - 1)
+					return 0;
+				currIndex++;
+				stack[currIndex].tx0 = stack[currIndex - 1].tx0; stack[currIndex].ty0 = stack[currIndex - 1].ty0; stack[currIndex].tz0 = stack[currIndex - 1].tzm; stack[currIndex].tx1 = stack[currIndex - 1].txm; stack[currIndex].ty1 = stack[currIndex - 1].tym; stack[currIndex].tz1 = stack[currIndex - 1].tz1; stack[currIndex].nodeIndex = 1; stack[currIndex].mortonCode = childMortonRevelles(stack[currIndex - 1].mortonCode, 1 ^ a);
+				goto start;
+			}
+			case 2: {
+				if (currIndex >= MAX_THREAD_STACK_SIZE - 1)
+					return 0;
+				currIndex++;
+				stack[currIndex].tx0 = stack[currIndex - 1].tx0; stack[currIndex].ty0 = stack[currIndex - 1].tym; stack[currIndex].tz0 = stack[currIndex - 1].tz0; stack[currIndex].tx1 = stack[currIndex - 1].txm; stack[currIndex].ty1 = stack[currIndex - 1].ty1; stack[currIndex].tz1 = stack[currIndex - 1].tzm; stack[currIndex].nodeIndex = 2; stack[currIndex].mortonCode = childMortonRevelles(stack[currIndex - 1].mortonCode, 2 ^ a);
+				goto start;
+			}
+			case 3: {
+				if (currIndex >= MAX_THREAD_STACK_SIZE - 1)
+					return 0;
+				currIndex++;
+				stack[currIndex].tx0 = stack[currIndex - 1].tx0; stack[currIndex].ty0 = stack[currIndex - 1].tym; stack[currIndex].tz0 = stack[currIndex - 1].tzm; stack[currIndex].tx1 = stack[currIndex - 1].txm; stack[currIndex].ty1 = stack[currIndex - 1].ty1; stack[currIndex].tz1 = stack[currIndex - 1].tz1; stack[currIndex].nodeIndex = 3; stack[currIndex].mortonCode = childMortonRevelles(stack[currIndex - 1].mortonCode, 3 ^ a);
+				goto start;
+			}
+			case 4: {
+				if (currIndex >= MAX_THREAD_STACK_SIZE - 1)
+					return 0;
+				currIndex++;
+				stack[currIndex].tx0 = stack[currIndex - 1].txm; stack[currIndex].ty0 = stack[currIndex - 1].ty0; stack[currIndex].tz0 = stack[currIndex - 1].tz0; stack[currIndex].tx1 = stack[currIndex - 1].tx1; stack[currIndex].ty1 = stack[currIndex - 1].tym; stack[currIndex].tz1 = stack[currIndex - 1].tzm; stack[currIndex].nodeIndex = 4; stack[currIndex].mortonCode = childMortonRevelles(stack[currIndex - 1].mortonCode, 4 ^ a);
+				goto start;
+			}
+			case 5: {
+				if (currIndex >= MAX_THREAD_STACK_SIZE - 1)
+					return 0;
+				currIndex++;
+				stack[currIndex].tx0 = stack[currIndex - 1].txm; stack[currIndex].ty0 = stack[currIndex - 1].ty0; stack[currIndex].tz0 = stack[currIndex - 1].tzm; stack[currIndex].tx1 = stack[currIndex - 1].tx1; stack[currIndex].ty1 = stack[currIndex - 1].tym; stack[currIndex].tz1 = stack[currIndex - 1].tz1; stack[currIndex].nodeIndex = 5; stack[currIndex].mortonCode = childMortonRevelles(stack[currIndex - 1].mortonCode, 5 ^ a);
+				goto start;
+			}
+			case 6: {
+				if (currIndex >= MAX_THREAD_STACK_SIZE - 1)
+					return 0;
+				currIndex++;
+				stack[currIndex].tx0 = stack[currIndex - 1].txm; stack[currIndex].ty0 = stack[currIndex - 1].tym; stack[currIndex].tz0 = stack[currIndex - 1].tz0; stack[currIndex].tx1 = stack[currIndex - 1].tx1; stack[currIndex].ty1 = stack[currIndex - 1].ty1; stack[currIndex].tz1 = stack[currIndex - 1].tzm; stack[currIndex].nodeIndex = 6; stack[currIndex].mortonCode = childMortonRevelles(stack[currIndex - 1].mortonCode, 6 ^ a);
+				goto start;
+			}
+			case 7: {
+				if (currIndex >= MAX_THREAD_STACK_SIZE - 1)
+					return 0;
+				currIndex++;
+				stack[currIndex].tx0 = stack[currIndex - 1].txm; stack[currIndex].ty0 = stack[currIndex - 1].tym; stack[currIndex].tz0 = stack[currIndex - 1].tzm; stack[currIndex].tx1 = stack[currIndex - 1].tx1; stack[currIndex].ty1 = stack[currIndex - 1].ty1; stack[currIndex].tz1 = stack[currIndex - 1].tz1; stack[currIndex].nodeIndex = 7; stack[currIndex].mortonCode = childMortonRevelles(stack[currIndex - 1].mortonCode, 7 ^ a);
+				goto start;
+			}
+		}
 
 		if (stack[currIndex].nodeIndex >= 8)
 			goto end;
