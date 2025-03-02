@@ -76,12 +76,9 @@ int main(){
     ios_base::sync_with_stdio(false);
     cin.tie(NULL);
 
-    int pow2 = 1024;
-    int pow2neg = pow2;
-
     size_t sizeB = 16 * 1024 * 1024;
-
     cudaDeviceSetLimit(cudaLimitMallocHeapSize, sizeB);
+    cudaDeviceSetLimit(cudaLimitStackSize, 2048);
 
     Octree* octree; // = new Octree(-pow2neg, pow2, -pow2neg, pow2, -pow2neg, pow2)
     
@@ -246,6 +243,9 @@ int main(){
                         break;
                     case SDLK_x:
                         PLAYER_SPEED *= 2;
+                        break;
+                    case SDLK_c:
+                        doOldRendering = !doOldRendering;
                         break; 
 
                     case SDLK_2:

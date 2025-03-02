@@ -25,7 +25,7 @@ void generateChunks(Octree* octree, vector<Chunk> chunks, unsigned int gridSize,
                     float val = db::perlin(float(xPos) / smoothing + offsetX, float(zPos) / smoothing + offsetY) * amplify;
 
                     if(y >= val + 30 && y <= val + 20.5 + 10){
-                        blocksHost[x + y * CHUNK_W + z * CHUNK_W * CHUNK_H + i * CHUNK_W * CHUNK_W * CHUNK_H] = Block(xPos, yPos, zPos, 1); // TODO: change y to be relative too (cube chunks)
+                        blocksHost[x + CHUNK_H * (y + CHUNK_W * z) + i * CHUNK_W * CHUNK_W * CHUNK_H] = Block(xPos, yPos, zPos, 1); // TODO: change y to be relative too (cube chunks)
                     }
                 }
             }

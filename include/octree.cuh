@@ -4,6 +4,7 @@
 #include "pixel_drawing.cuh"
 #include "blocks_data.cuh"
 #include "cuda_math.cuh"
+#include <cmath>
 #include <iostream>
 
 #include <cuda_runtime.h>
@@ -79,6 +80,27 @@ private:
 
 };
 
+// __device__ __host__ inline unsigned int nodeLevel(uint64_t mortonCode, unsigned int octreeLevel){
+// 	#ifdef CUDA_ARCH
+// 		return minv(octreeLevel - log2f(mortonCode) / 3, 1);
+// 	#else
+// 		return std::min(int(octreeLevel - log2f(mortonCode) / 3), 1);
+// 	#endif
+// }
+
+__device__ __host__ inline unsigned int nodeLevel(uint64_t mortonCode, unsigned int octreeLevel){
+
+	int depth = 0;
+
+	for (uint64_t code = mortonCode; code != 1; code >>= 3, depth++);
+
+    return octreeLevel - depth;
+}
+
+__device__ __host__ inline unsigned int nodeSize(uint64_t mortonCode, unsigned int octreeLevel){
+	return 1 << nodeLevel(mortonCode, octreeLevel);
+}
+
 __device__ int firstNode(float tx0, float ty0, float tz0, float txm, float tym, float tzm);
 
 __device__ int newNode(float tx, int i1, float ty, int i2, float tz, int i3);
@@ -127,15 +149,9 @@ __device__ void insert(Octree* octree, MapInsertRef insertRef, Block block) {
 		// 	printf("%d %llu\n", level, index);
 		// }
 
-		if(numShifts >= 21){ // Detect index overflow
-			return;
-		}
-
 		//cout << level << " " << bitset<64>(index) << endl;
 
-		if (level == 1) {
-
-			//printf("%d\n", 1);
+		if (level == 0) {
 
 			// Get the node at index (to insert the right block data)
 			// auto iterator = nodeMapRef.find(index);
@@ -144,6 +160,10 @@ __device__ void insert(Octree* octree, MapInsertRef insertRef, Block block) {
 			insertRef.insert(cuco::pair{index, Node{block.blockId, false}});
 			return;
 		}
+
+		// if(numShifts >= 21){ // Detect index overflow
+		// 	return;
+		// }
 
 		// We are still assuming that the octree is not sparse
 		insertRef.insert(cuco::pair{index, Node{block.blockId, true}});
@@ -175,7 +195,7 @@ __device__ void insert(Octree* octree, MapInsertRef insertRef, Block block) {
 		level--;
 		size = 1 << level;
 
-	} while (level >= 1);
+	} while (level >= 0);
 }
 // calls the insertion kernel
 void insert(Octree* octree, thrust::device_vector<Block> blocks, size_t numBlocks, unsigned int gridSize, unsigned int blockSize);
@@ -255,14 +275,6 @@ __device__ void performRaycast(Octree* octree, MapInsertRef insertRef, MapFindRe
 	}
 }
 
-__device__ inline unsigned int nodeLevel(uint64_t mortonCode, unsigned int octreeLevel){
-	return octreeLevel - log2f(mortonCode) / 3; // count how many zeros after the last '1' and divive by 3 (subtract 1?) or sth
-}
-
-__device__ inline unsigned int nodeSize(uint64_t mortonCode, unsigned int octreeLevel){
-	return 1 << nodeLevel(mortonCode, octreeLevel);
-}
-
 struct frame {
 	float tx0, ty0, tz0, tx1, ty1, tz1, txm, tym, tzm; unsigned char nodeIndex; uint64_t mortonCode;
 };
@@ -288,22 +300,26 @@ __device__ unsigned char raycastDrawPixel(Octree* octree, MapFindRef findRef, fl
 		Node node;
 
 		if(found == findRef.end()){
-			printf("huh\n");
+			//printf("%d\n", stack[currIndex].mortonCode);
 			goto end;
 		}
+		// else if(nodeSize(stack[currIndex].mortonCode, octree->level) <= 2){
+		// 	printf("%d %llu\n", nodeSize(stack[currIndex].mortonCode, octree->level), stack[currIndex].mortonCode);
+		// }
+		// else{
+		// 	printf("%d %d %llu\n", nodeSize(stack[currIndex].mortonCode, octree->level), octree->level, stack[currIndex].mortonCode);
+		// }
 
 		node = found->second;
 
-		if (stack[currIndex].mortonCode == 0) {
-			goto end;
-		}
-
 		//printf("%d - %f\n", currIndex, stack[currIndex].tx0);
+		//if(nodeSize(stack[currIndex].mortonCode, octree->level) < 8)
+		//	printf("%d\n", nodeSize(stack[currIndex].mortonCode, octree->level));
 
 		// terminal (leaf) node (but not air)
-		if (node.blockId != 0 && nodeSize(stack[currIndex].mortonCode, octree->level) <= minNodeSize) {
+		if (nodeSize(stack[currIndex].mortonCode, octree->level) <= 1 /*&& node.blockId != 0*/) {
 
-			printf("%d %llu\n", nodeSize(stack[currIndex].mortonCode, octree->level), stack[currIndex].mortonCode);
+			//printf("%d %llu\n", nodeSize(stack[currIndex].mortonCode, octree->level), stack[currIndex].mortonCode);
 			//printf("%f %f %f %f\n", absv(stack[currIndex].tx1 - (-256 - oX) / dX), absv(stack[currIndex].ty1 * dY + oY), absv(stack[currIndex].tz1 * dZ + oZ), oX);
 
 			// ! drawTexturePixel(node->xMin, stack[currIndex].node->yMin, stack[currIndex].node->zMin, origOX, origOY, origOZ, dX, dY, dZ, sX, sY, stack[currIndex].node->blockId, pixels, negativeDX, negativeDY, negativeDZ);

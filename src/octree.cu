@@ -256,7 +256,11 @@ void Octree::display(unsigned char* pixels, uint64_t index, bool showBorder, int
 
 	int size = 1 << level;
 
-	if (showBorder || node.blockId != 0) {
+	if ((showBorder /*&& level < 8*/) || (size == 1 && node.blockId != 0)) {
+
+		// if(size == 1){
+		// 	cout << nodeLevel(index, Octree::level) << " " << index << " " << Octree::level << endl;
+		// }
 
 		float coordinates[8][2];
 		float* coordinate;
@@ -302,6 +306,10 @@ void Octree::display(unsigned char* pixels, uint64_t index, bool showBorder, int
 		//int color[3] = { rand() % 255, rand() % 255, rand() % 255 };
 		int color[3] = { 0, 255, 0 };
 
+		if(level == 0){
+			color[0] = 255;
+		}
+
 		drawLine(pixels, (int)coordinates[0][0], (int)coordinates[0][1], (int)coordinates[1][0], (int)coordinates[1][1], color[0], color[1], color[2]);
 		drawLine(pixels, (int)coordinates[1][0], (int)coordinates[1][1], (int)coordinates[2][0], (int)coordinates[2][1], color[0], color[1], color[2]);
 		drawLine(pixels, (int)coordinates[2][0], (int)coordinates[2][1], (int)coordinates[3][0], (int)coordinates[3][1], color[0], color[1], color[2]);
@@ -316,7 +324,7 @@ void Octree::display(unsigned char* pixels, uint64_t index, bool showBorder, int
 		drawLine(pixels, (int)coordinates[3][0], (int)coordinates[3][1], (int)coordinates[7][0], (int)coordinates[7][1], color[0], color[1], color[2]);
 	}
 
-	if (level <= 1 || !node.hasChildren) {
+	if (level <= 0 || !node.hasChildren) {
 		return;
 	}
 
