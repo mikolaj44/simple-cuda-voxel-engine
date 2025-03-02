@@ -238,7 +238,7 @@ void Octree::display(unsigned char* pixels, uint64_t index, bool showBorder, int
 		z = zMin;
 		level = Octree::level;
 	}
-	
+
 	//cout << bitset<64>(index) << endl;
 
 	thrust::device_vector<uint64_t> key(1);
@@ -402,6 +402,44 @@ int newNode(float tx, int i1, float ty, int i2, float tz, int i3) {
 		return i2;
 	}
 	return i3;
+}
+
+__device__ uint64_t childMortonRevelles(uint64_t mortonCode, unsigned char revellesChildIndex){
+
+	uint64_t code = mortonCode << 3;
+
+	switch (revellesChildIndex){
+		case 0:
+			return code;
+		case 1:
+			code |= (1 << 2);
+			return code;
+		case 2:
+			code |= (1 << 1);
+			return code;
+		case 3:
+			code |= (1 << 1);
+			code |= (1 << 2);
+			return code;
+		case 4:
+			code |= 1;
+			return code;
+		case 5:
+			code |= 1;
+			code |= (1 << 2);
+			return code;
+		case 6:
+			code |= 1;
+			code |= (1 << 1);
+			return code;
+		case 7:
+			code |= 1;
+			code |= (1 << 1);
+			code |= (1 << 2);
+			return code;
+		default:
+			return code;
+	}
 }
 
 __device__ void drawTexturePixel(int blockX, int blockY, int blockZ, float oX, float oY, float oZ, float dX, float dY, float dZ, int sX, int sY, unsigned char blockId, unsigned char* pixels, bool negativeDX, bool negativeDY, bool negativeDZ) {
