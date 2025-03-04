@@ -9,6 +9,7 @@
 #include <string>
 #include <algorithm>
 #include <bitset>
+#include <chrono>
 
 #include "renderer.cuh"
 #include "chunk.cuh"
@@ -71,19 +72,35 @@ void handleCameraMovement(int mouseX, int mouseY, int& prevMouseX, int& prevMous
     prevMouseY = mouseY;
 }
 
+Octree* octree;
+vector<Chunk> chunks(START_RENDER_DISTANCE * START_RENDER_DISTANCE * 4);
+
+inline void reinsertGeometry(){
+
+    octree->clear();
+
+    int index = 0;
+
+    for (int x = cameraPos.x / CHUNK_W - START_RENDER_DISTANCE; x < START_RENDER_DISTANCE + cameraPos.x / CHUNK_W; x++)
+        for (int z = cameraPos.z / CHUNK_W - START_RENDER_DISTANCE; z < START_RENDER_DISTANCE + cameraPos.z / CHUNK_W; z++){
+                chunks[index] = Chunk(x, 0, z);
+                index++;
+        }
+
+    generateChunks(octree, chunks, 30000, 500, true);
+}
+
 int main(){
     
     ios_base::sync_with_stdio(false);
     cin.tie(NULL);
 
-    size_t sizeB = 16 * 1024 * 1024;
+    size_t sizeB = 64 * 1024 * 1024;
     cudaDeviceSetLimit(cudaLimitMallocHeapSize, sizeB);
     cudaDeviceSetLimit(cudaLimitStackSize, 2048);
-
-    Octree* octree; // = new Octree(-pow2neg, pow2, -pow2neg, pow2, -pow2neg, pow2)
     
     cudaMallocManaged(&octree, sizeof(Octree));
-    octree->createOctree(Octree::CENTERED, 18);
+    octree->createOctree(Octree::CENTERED, 12);
 
     // cout << bitset<64>(octree_morton3D_64_encode(0,0,0,0,octree->xMin, octree->yMin, octree->zMin, octree->level)) << endl;
     // cout << bitset<64>(octree_morton3D_64_encode(1 << 17,0,0, 0,octree->xMin, octree->yMin, octree->zMin, octree->level)) << endl;
@@ -152,32 +169,24 @@ int main(){
 
     calculateFOV();
 
-    // int c = getchar();
-    // return 0;
-
-    vector<Chunk> chunks;
-
-    //    for (int x = -START_RENDER_DISTANCE; x < START_RENDER_DISTANCE; x++)
-    //         for (int z = -START_RENDER_DISTANCE; z < START_RENDER_DISTANCE; z++)
-    //             if ((x - cameraPos.x) * (x - cameraPos.x) + (z - cameraPos.z) * (z - cameraPos.z) <= START_RENDER_DISTANCE * START_RENDER_DISTANCE) {
-
-    //                chunks.push_back(Chunk(x, 0, z));
-    //                 //generateChunk(octree, x, 0, z, CHUNK_W, CHUNK_W * CHUNK_H);
-    //             }
-
-    chunks.push_back(Chunk(0, 0, 0));
-
-    generateChunks(octree, chunks, 30000, 500);
-
-    //return 0;
-
     int prevMouseX = 0, prevMouseY = 0;
+    
+    while(true){
+        clock_t start_ = clock();
+
+        reinsertGeometry();
+
+        clock_t end_ = clock();
+
+        double elapsed = double(end_ - start_) / CLOCKS_PER_SEC;
+        std::cout << "Execution time: " << elapsed << " seconds" << std::endl;
+    }
 
     while (!quit) {
 
-        if(generateNewChunks){
-            generateVisibleChunks(octree);
-        }
+        // if(generateNewChunks){
+        //     generateVisibleChunks(octree);
+        // }
 
         Uint64 start = SDL_GetPerformanceCounter();
 
@@ -430,7 +439,7 @@ int main(){
                 //printf("Total memory: %zu bytes\n", totalMem);
 
                 if (err != cudaSuccess) {
-                    printf("%s\n", cudaGetErrorString(err));
+                    printf("%s |\n", cudaGetErrorString(err));
                     return 0;
                 }
             }

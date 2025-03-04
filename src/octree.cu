@@ -69,10 +69,18 @@ void Octree::createOctree(int xMin_, int yMin_, int zMin_, unsigned int level_) 
 
 void Octree::createOctree(OctreeSpecialPosition position, unsigned int level){
 
-	if(position == CENTERED){
-		createOctree(-(1 << (level - 1)), -(1 << (level - 1)), -(1 << (level - 1)), level);
+	switch(position){
+
+		case CENTERED:
+			createOctree(-(1 << (level - 1)), -(1 << (level - 1)), -(1 << (level - 1)), level);
+			break;
 	}
 }
+
+void Octree::createOctree(){
+	createOctree(0, 0, 0, 1);
+}
+
 
 //void Octree::subdivide(Node* node) {
 //
@@ -230,6 +238,49 @@ void Octree::getChildXYZindex(int& x, int& y, int& z, uint64_t& index, unsigned 
 	}
 }
 
+__device__ void Octree::morton3Ddecode(uint64_t mortonCode, int& x, int& y, int& z){
+
+	const uint64_t mostSignificant1 = uint64_t(1) << 63;
+	int index = 0;
+	uint64_t code = mortonCode;
+
+	while(code >>= 1){
+		index++;
+	}
+
+	//printf("%d %llu %llu\n",index, mortonCode, code);
+
+	mortonCode <<= (64 - index);
+
+	x = xMin;
+	y = yMin;
+	z = zMin;
+	
+	int level = Octree::level;
+	int size;
+
+	while(index > 0){
+
+		size = 1 << level;
+		
+		if(mortonCode & mostSignificant1){
+			z += size / 2;
+		}
+		if(mortonCode & (mostSignificant1 >> 1)){
+			y += size / 2;
+		}
+		if(mortonCode & (mostSignificant1 >> 2)){
+			x += size / 2;
+		}
+
+		mortonCode <<= 3;
+		index -= 3;
+
+		level--;
+	}
+
+}
+
 void Octree::display(unsigned char* pixels, uint64_t index, bool showBorder, int x, int y, int z, unsigned int level){
 
 	if(index == 1){
@@ -309,6 +360,9 @@ void Octree::display(unsigned char* pixels, uint64_t index, bool showBorder, int
 		if(level == 0){
 			color[0] = 255;
 		}
+		// else if(level == 1){
+		// 	color[2] = 255;
+		// }
 
 		drawLine(pixels, (int)coordinates[0][0], (int)coordinates[0][1], (int)coordinates[1][0], (int)coordinates[1][1], color[0], color[1], color[2]);
 		drawLine(pixels, (int)coordinates[1][0], (int)coordinates[1][1], (int)coordinates[2][0], (int)coordinates[2][1], color[0], color[1], color[2]);
@@ -364,6 +418,10 @@ void Octree::display(unsigned char* pixels, bool showBorder){
 void insert(Octree* octree, thrust::device_vector<Block> blocks, size_t numBlocks, unsigned int gridSize, unsigned int blockSize){
 	insertKernel<<<gridSize, blockSize>>>(octree, octree->nodeMap.ref(cuco::insert), thrust::raw_pointer_cast(blocks.data()), numBlocks);
 	cudaDeviceSynchronize(); // maybe remove this later
+}
+
+void Octree::clear(){
+	nodeMap.clear();
 }
 
 __device__

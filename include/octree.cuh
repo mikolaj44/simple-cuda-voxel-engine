@@ -64,9 +64,15 @@ public:
 
 	void createOctree(OctreeSpecialPosition position, unsigned int level);
 
+	void createOctree();
+
 	unsigned char get(int x, int y, int z);
 
+	void clear();
+
 	void display(unsigned char* pixels, bool showBorder = true);
+
+	__device__ void morton3Ddecode(uint64_t mortonCode, int&x, int& y, int& z);
 
 	static void getChildXYZindex(int& x, int& y, int& z, uint64_t& index, unsigned int level, unsigned int childIndex);
 	
@@ -77,7 +83,6 @@ private:
 	void subdivide(Node* node); // Will be used later for the SVO
 
 	void grow(int x, int y, int z);
-
 };
 
 // __device__ __host__ inline unsigned int nodeLevel(uint64_t mortonCode, unsigned int octreeLevel){
@@ -125,9 +130,9 @@ __device__ void insert(Octree* octree, MapInsertRef insertRef, Block block) {
 	int size = 1 << level;
 
 	// Octree coordinate system is positive only, convert the coordinates to this system
-	x += size / 2;
-	y += size / 2;
-	z += size / 2;
+	x -= octree->xMin;
+	y -= octree->yMin;
+	z -= octree->zMin;
 
 	int xMin = 0;
 	int yMin = 0;
@@ -268,8 +273,7 @@ __device__ void performRaycast(Octree* octree, MapInsertRef insertRef, MapFindRe
 		unsigned char result = raycastDrawPixel(octree, findRef, oX, oY, oZ, dX, dY, dZ, tx0, ty0, tz0, tx1, ty1, tz1, a, minNodeSize, sX, sY, pixels, origOX, origOY, origOZ, negativeDX, negativeDY, negativeDZ);
 
 		if (result == 0) {
-
-			setPixel(pixels, sX, sY, 0, 0, 0, 255); //30 30 255
+			setPixel(pixels, sX, sY, 30, 30, 30, 255); //30 30 255
 		}
 
 	}
@@ -284,7 +288,9 @@ __device__ void drawTexturePixel(int blockX, int blockY, int blockZ, float oX, f
 template<typename MapFindRef>
 __device__ unsigned char raycastDrawPixel(Octree* octree, MapFindRef findRef, float oX, float oY, float oZ, float dX, float dY, float dZ, float tx0, float ty0, float tz0, float tx1, float ty1, float tz1, unsigned char a, int minNodeSize, int sX, int sY, unsigned char* pixels, float origOX, float origOY, float origOZ, bool negativeDX, bool negativeDY, bool negativeDZ) {
 
-	frame stack[MAX_THREAD_STACK_SIZE];
+	unsigned int MAX_THREAD_STACK_SIZE = octree->level + 1;
+
+	frame stack[21];
 
 	for (int i = 0; i < MAX_THREAD_STACK_SIZE; i++) {
 		stack[i].tx0 = tx0; stack[i].ty0 = ty0; stack[i].tz0 = tz0; stack[i].tx1 = tx1; stack[i].ty1 = ty1; stack[i].tz1 = tz1; stack[i].nodeIndex = 0; stack[i].mortonCode = 1; stack[i].txm = -1; stack[i].tym = -1; stack[i].tzm = -1;
@@ -300,7 +306,6 @@ __device__ unsigned char raycastDrawPixel(Octree* octree, MapFindRef findRef, fl
 		Node node;
 
 		if(found == findRef.end()){
-			//printf("%d\n", stack[currIndex].mortonCode);
 			goto end;
 		}
 		// else if(nodeSize(stack[currIndex].mortonCode, octree->level) <= 2){
@@ -317,15 +322,15 @@ __device__ unsigned char raycastDrawPixel(Octree* octree, MapFindRef findRef, fl
 		//	printf("%d\n", nodeSize(stack[currIndex].mortonCode, octree->level));
 
 		// terminal (leaf) node (but not air)
-		if (nodeSize(stack[currIndex].mortonCode, octree->level) <= 1 /*&& node.blockId != 0*/) {
+		if (nodeLevel(stack[currIndex].mortonCode, octree->level) <= 1 /*&& node.blockId != 0*/) {
 
-			//printf("%d %llu\n", nodeSize(stack[currIndex].mortonCode, octree->level), stack[currIndex].mortonCode);
-			//printf("%f %f %f %f\n", absv(stack[currIndex].tx1 - (-256 - oX) / dX), absv(stack[currIndex].ty1 * dY + oY), absv(stack[currIndex].tz1 * dZ + oZ), oX);
+			int blockX, blockY, blockZ;
+			octree->morton3Ddecode(stack[currIndex].mortonCode, blockX, blockY, blockZ);
 
-			// ! drawTexturePixel(node->xMin, stack[currIndex].node->yMin, stack[currIndex].node->zMin, origOX, origOY, origOZ, dX, dY, dZ, sX, sY, stack[currIndex].node->blockId, pixels, negativeDX, negativeDY, negativeDZ);
+			drawTexturePixel(blockX, blockY, blockZ, origOX, origOY, origOZ, dX, dY, dZ, sX, sY, node.blockId, pixels, negativeDX, negativeDY, negativeDZ);
 
 			//unsigned char* color = BlockTypeToColor(stack[currIndex].node->blockId);
-			setPixel(pixels, sX, sY, 0, 255, 0);
+			//setPixel(pixels, sX, sY, 0, 255, 0);
 
 			return node.blockId;
 		}

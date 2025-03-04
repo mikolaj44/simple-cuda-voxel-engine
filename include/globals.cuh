@@ -21,7 +21,7 @@ constexpr float MOUSE_SENSITIVITY = 0.004;
 
 // rendering parameters
 constexpr int RENDER_DISTANCE = 3; // (in chunks)
-constexpr int START_RENDER_DISTANCE = 2; // (in chunks)
+constexpr int START_RENDER_DISTANCE = 16; // (in chunks)
 
 // octree memory parameters
 constexpr size_t PREALLOCATE_MB_AMOUNT = 1000;
@@ -63,8 +63,6 @@ extern int shift;
 extern int shiftX;
 extern int shiftY;
 extern int shiftZ;
-
-constexpr int MAX_THREAD_STACK_SIZE = 15;
 
 std::string getPathStr();
 
