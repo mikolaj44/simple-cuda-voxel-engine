@@ -7,6 +7,6 @@
 
 using namespace std;
 
-void generateChunks(Octree* octree, vector<Chunk> chunks, unsigned int gridSize = 1, unsigned int blockSize = 1, int offsetX = 0, int offsetY = 0);
+void generateChunks(Octree* octree, vector<Chunk> chunks, unsigned int gridSize = 1, unsigned int blockSize = 1, int offsetX = 0, int offsetY = 0, bool adaptOctree = true);
 
 void generateVisibleChunks(Octree* octree);

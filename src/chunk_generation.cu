@@ -7,10 +7,13 @@
 #include <cuda_runtime.h>
 #include <device_launch_parameters.h>
 
-void generateChunks(Octree* octree, vector<Chunk> chunks, unsigned int gridSize, unsigned int blockSize, int offsetX, int offsetY) {
+void generateChunks(Octree* octree, vector<Chunk> chunks, unsigned int gridSize, unsigned int blockSize, int offsetX, int offsetY, bool adaptOctree) {
 
     size_t numBlocks = CHUNK_W * CHUNK_W * CHUNK_H * chunks.size();
     vector<Block> blocksHost(numBlocks);
+
+    // int xMin = INT_MAX, yMin = INT_MAX, zMin = INT_MAX;
+    // int xMax = INT_MIN, yMax = INT_MIN, zMax = INT_MIN;
 
     for(int i = 0; i < chunks.size(); i++){
 
@@ -24,8 +27,31 @@ void generateChunks(Octree* octree, vector<Chunk> chunks, unsigned int gridSize,
 
                     float val = db::perlin(float(xPos) / smoothing + offsetX, float(zPos) / smoothing + offsetY) * amplify;
 
-                    if(y >= val + 30 && y <= val + 20.5 + 10){
-                        blocksHost[x + CHUNK_H * (y + CHUNK_W * z) + i * CHUNK_W * CHUNK_W * CHUNK_H] = Block(xPos, yPos, zPos, 1); // TODO: change y to be relative too (cube chunks)
+                    //cout << CHUNK_H * CHUNK_W * z + CHUNK_W * y + x + i * CHUNK_W * CHUNK_W * CHUNK_H << " " << numBlocks << endl;
+
+                    if(yPos >= val + 30 && yPos <= val + 20.5 + 10){
+                        blocksHost[CHUNK_H * CHUNK_W * z + CHUNK_W * y + x + i * CHUNK_W * CHUNK_W * CHUNK_H] = Block(xPos, yPos, zPos, 1); // TODO: change y to be relative too (cube chunks)
+
+                        // if(xPos < xMin){
+                        //     xMin = xPos;
+                        // }
+                        // else if(xPos > xMax){
+                        //     xMax = xPos;
+                        // }
+
+                        // if(yPos < yMin){
+                        //     yMin = yPos;
+                        // }
+                        // else if(yPos > yMax){
+                        //     yMax = yPos;
+                        // }
+
+                        // if(zPos < zMin){
+                        //     zMin = zPos;
+                        // }
+                        // else if(zPos > zMax){
+                        //     zMax = zPos;
+                        // }
                     }
                 }
             }
@@ -39,6 +65,14 @@ void generateChunks(Octree* octree, vector<Chunk> chunks, unsigned int gridSize,
 
     thrust::device_vector<Block> blocks(numBlocks);
     blocks = blocksHost;
+
+    // int maxSpan = max(max(xMax - xMin, yMax - yMin), zMax - zMin);
+    // int level = log2(maxSpan);
+
+    // octree->level = 12;
+    // octree->xMin = -(1 << 12) / 2;
+    // octree->yMin = -(1 << 12) / 2;
+    // octree->zMin = -(1 << 12) / 2;
 
     insert(octree, blocks, numBlocks, gridSize, blockSize);
 }
