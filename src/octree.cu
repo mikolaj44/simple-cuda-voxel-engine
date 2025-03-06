@@ -415,11 +415,6 @@ void Octree::display(unsigned char* pixels, bool showBorder){
 	display(pixels, 1, showBorder);
 }
 
-void insert(Octree* octree, thrust::device_vector<Block> blocks, size_t numBlocks, unsigned int gridSize, unsigned int blockSize){
-	insertKernel<<<gridSize, blockSize>>>(octree, octree->nodeMap.ref(cuco::insert), thrust::raw_pointer_cast(blocks.data()), numBlocks);
-	cudaDeviceSynchronize(); // maybe remove this later
-}
-
 void Octree::clear(){
 	nodeMap.clear();
 }

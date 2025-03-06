@@ -1,0 +1,14 @@
+# ninja log v6
+2	3297	1741117006267082835	CMakeFiles/cuda-voxel-engineLANGUAGES.dir/src/block_variant.cu.o	36a102806bb71fa2
+3	3398	1741117006268082862	CMakeFiles/cuda-voxel-engineLANGUAGES.dir/src/cuda_morton.cu.o	ab9949278c70d20c
+8	3356	1741119019320134782	CMakeFiles/cuda-voxel-engineLANGUAGES.dir/src/blocks_data.cu.o	7818b350a8f1f3b8
+10	11914	1741120704719340129	CMakeFiles/cuda-voxel-engineLANGUAGES.dir/src/main.cu.o	1ac24755a76ac6d4
+9	3046	1741119019320134782	CMakeFiles/cuda-voxel-engineLANGUAGES.dir/src/globals.cu.o	6ae78f4f301bdeaa
+9	3339	1741119019320134782	CMakeFiles/cuda-voxel-engineLANGUAGES.dir/src/chunk.cu.o	93d1d7bdc4fe07d7
+10	3457	1741119019321134808	CMakeFiles/cuda-voxel-engineLANGUAGES.dir/src/pixel_drawing.cu.o	60abbc589aa3e822
+1	9525	1741117006266082807	CMakeFiles/cuda-voxel-engineLANGUAGES.dir/src/block_texture.cu.o	55abccbc725f7094
+11	10232	1741120704720340155	CMakeFiles/cuda-voxel-engineLANGUAGES.dir/src/renderer.cu.o	4ccfcf92af701ca0
+10	13942	1741119019321134808	CMakeFiles/cuda-voxel-engineLANGUAGES.dir/src/octree.cu.o	d7c5ef4286d1c7db
+9726	9855	1741120809806058082	CMakeFiles/cuda-voxel-engineLANGUAGES.dir/cmake_device_link.o	67eb6949c3251ca0
+9	9726	1741120800088806623	CMakeFiles/cuda-voxel-engineLANGUAGES.dir/src/chunk_generation.cu.o	b26f461960a935eb
+9855	10306	1741120809935061421	engine	14680d621ebfbd1a

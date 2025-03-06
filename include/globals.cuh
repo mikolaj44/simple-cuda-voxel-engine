@@ -20,8 +20,8 @@ extern float halfVerFOV, halfHorFOV;
 constexpr float MOUSE_SENSITIVITY = 0.004;
 
 // rendering parameters
-constexpr int RENDER_DISTANCE = 3; // (in chunks)
-constexpr int START_RENDER_DISTANCE = 16; // (in chunks)
+constexpr int RENDER_DISTANCE_CHUNKS = 32; // (in chunks)
+constexpr int START_RENDER_DISTANCE_CHUNKS = 16; // (in chunks)
 
 // octree memory parameters
 constexpr size_t PREALLOCATE_MB_AMOUNT = 1000;
@@ -36,7 +36,6 @@ constexpr float EPSILON = 0.00001;
 
 // chunk parameters (block amount)
 constexpr int CHUNK_W = 16;
-constexpr int CHUNK_H = 50;
 
 // world generation parameters
 
