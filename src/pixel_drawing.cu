@@ -317,8 +317,8 @@ float* _3d2dProjection(float x_, float y_, float z_) {
         coords[1] = INT_MAX;
     }
     else {
-        coords[0] = dX * FOCAL_LENGTH / dZ * SCALE_V + SCREEN_WIDTH / 2;
-        coords[1] = dY * FOCAL_LENGTH / dZ * SCALE_V + SCREEN_HEIGHT / 2;
+        coords[0] = int(dX * FOCAL_LENGTH / dZ * SCALE_V + SCREEN_WIDTH  / 2);
+        coords[1] = int(dY * FOCAL_LENGTH / dZ * SCALE_V + SCREEN_HEIGHT / 2);
 
         //coords[0] = (FOCAL_LENGTH * x) / (z + FOCAL_LENGTH) * 100 + SCREEN_WIDTH / 2;
         //coords[1] = (FOCAL_LENGTH * y) / (z + FOCAL_LENGTH) * 100 + SCREEN_HEIGHT / 2;

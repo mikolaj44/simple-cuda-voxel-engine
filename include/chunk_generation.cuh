@@ -22,15 +22,15 @@ __global__ void generateChunksKernel(Octree* octree, MapInsertRef insertRef, Vec
 		return;
 	}
 
-    x += cameraPos.x - CHUNK_W;
-    y += cameraPos.y - CHUNK_W;
-    z += cameraPos.z - CHUNK_W;
+    x += cameraPos.x - CHUNK_W * RENDER_DISTANCE_CHUNKS / 2;
+    y += cameraPos.y - CHUNK_W * RENDER_DISTANCE_CHUNKS / 2;
+    z += cameraPos.z - CHUNK_W * RENDER_DISTANCE_CHUNKS / 2;
 
     float val = cudaNoise::perlinNoise(make_float3(float(x) / smoothing, 0, float(z) / smoothing), 1, 0) * amplify;
 
     // calculate blockId using perlin noise or some other user-defined lambda function
 	
-    if(y >= val + 30 && y <= val + 20.5 + 10){
+    if(y >= val + 30 /*&& y <= val + 20.5 + 10*/){
 	    insert(octree, insertRef, Block(x,y,z,1));
     }
 }

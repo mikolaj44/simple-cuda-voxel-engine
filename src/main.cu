@@ -79,9 +79,16 @@ dim3 gridSize(10,10,10);
 
 inline void reinsertGeometry(){
 
+    //clock_t start_ = clock();
+
     octree->clear();
     generateChunks(octree, cameraPos, blockSize, gridSize);
-    cudaDeviceSynchronize();
+    //cudaDeviceSynchronize();
+
+    //clock_t end_ = clock();
+
+    //double elapsed = double(end_ - start_) / CLOCKS_PER_SEC;
+    //std::cout << "Execution time: " << elapsed << " seconds" << std::endl;
 }
 
 int main(){
@@ -168,15 +175,6 @@ int main(){
     reinsertGeometry();
 
     while (!quit) {
-
-        //clock_t start_ = clock();
-
-
-
-        // clock_t end_ = clock();
-
-        // double elapsed = double(end_ - start_) / CLOCKS_PER_SEC;
-        // std::cout << "Execution time: " << elapsed << " seconds" << std::endl;
 
         Uint64 start = SDL_GetPerformanceCounter();
 
