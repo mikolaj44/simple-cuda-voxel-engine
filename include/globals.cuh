@@ -14,13 +14,13 @@ constexpr int SCREEN_WIDTH = 1920;
 constexpr int SCREEN_HEIGHT = 1080;
 
 // viewing parameters
-constexpr float FOCAL_LENGTH = 4000; //350 //1200
-constexpr int SCALE_V = 1;
+constexpr float FOCAL_LENGTH = 10000; //350 //1200 //4000
+constexpr float SCALE_V = 1;
 extern float halfVerFOV, halfHorFOV;
 constexpr float MOUSE_SENSITIVITY = 0.004;
 
 // rendering parameters
-constexpr int RENDER_DISTANCE_CHUNKS = 8; // (in chunks)
+constexpr int RENDER_DISTANCE_CHUNKS = 20; // (in chunks)
 
 // octree memory parameters
 constexpr size_t PREALLOCATE_MB_AMOUNT = 1000;

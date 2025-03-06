@@ -297,9 +297,6 @@ void Octree::display(unsigned char* pixels, uint64_t index, bool showBorder, int
 
 	Node node = value[0];
 
-	 if(node.childMask != 0)
-	 	cout << (int)node.childMask << endl;
-
 	//cout << (int)node.blockId << " " << node.hasChildren << endl;
 
 	//if(level == 17)
@@ -378,7 +375,7 @@ void Octree::display(unsigned char* pixels, uint64_t index, bool showBorder, int
 		drawLine(pixels, (int)coordinates[3][0], (int)coordinates[3][1], (int)coordinates[7][0], (int)coordinates[7][1], color[0], color[1], color[2]);
 	}
 
-	if (level <= 0 || !node.childMask) {
+	if (level <= 0 || node.childMask == 0) {
 		return;
 	}
 

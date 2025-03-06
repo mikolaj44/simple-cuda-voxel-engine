@@ -30,12 +30,12 @@ public:
 class Node {
 
 public:
-	unsigned char blockId = 0; // air
-	bool childMask = 0; // which children are present, indexed according to Figure 1: http://wscg.zcu.cz/wscg2000/Papers_2000/X31.pdf
+	unsigned char blockId = 0; // air TODO: CHANGE TO uint8_t
+	uint8_t childMask = 0; // which children are present, indexed according to Figure 1: http://wscg.zcu.cz/wscg2000/Papers_2000/X31.pdf
 
 	__host__ __device__ Node() {};
 
-	__host__ __device__ Node(unsigned char blockId_, bool childMask_) : blockId(blockId_), childMask(childMask_) {};
+	__host__ __device__ Node(unsigned char blockId_, uint8_t childMask_) : blockId(blockId_), childMask(childMask_) {};
 
 	//__host__ __device__ Node(unsigned char blockId_, bool hasChildren_, uint64_t mortonCode_) : blockId(blockId_), hasChildren(hasChildren_), mortonCode(mortonCode_) {};
 private:
@@ -134,7 +134,7 @@ __device__ void insert(Octree* octree, MapInsertRef insertRef, Block block) {
 	int zMin = 0;
 
 	int xM, yM, zM;
-	unsigned char childMask;
+	uint8_t childMask;
 
 	//printf("%d\n", x, y, z, xMin + size, yMin + size, zMin + size);
 
@@ -144,6 +144,7 @@ __device__ void insert(Octree* octree, MapInsertRef insertRef, Block block) {
 	}
 
 	uint64_t index = 1; // root node index
+	uint64_t prevIndex = 1;
 	int numShifts = 0;
 
 	// Iterate over all node levels up until the leaf node
@@ -169,6 +170,7 @@ __device__ void insert(Octree* octree, MapInsertRef insertRef, Block block) {
 		// }
 
 		childMask = 0;
+		prevIndex = index;
 
 		// Get the midpoint
 		int xM = (2 * xMin + size) / 2;
@@ -182,22 +184,58 @@ __device__ void insert(Octree* octree, MapInsertRef insertRef, Block block) {
 		if (x >= xM) {
 			xMin += size / 2;
 			index |= 1;
-			childMask |= 4;
+
+			if (y >= yM) {
+				yMin += size / 2;
+				index |= 2;
+
+				if (z >= zM) {	
+					zMin += size / 2;
+					index |= 4;
+					childMask |= 128; // child 7
+				}
+				else{
+					childMask |= 64; // child 6
+				}
+			}
+			else{
+				if (z >= zM) {	
+					zMin += size / 2;
+					index |= 4;
+					childMask |= 32; // child 5
+				}
+				else{
+					childMask |= 16; // child 4
+				}
+			}
 		}
-		
-		if (y >= yM) {
-			yMin += size / 2;
-			index |= 2;
-			childMask |= 2;
+		else{
+			if (y >= yM) {
+				yMin += size / 2;
+				index |= 2;
+
+				if (z >= zM) {	
+					zMin += size / 2;
+					index |= 4;
+					childMask |= 8; // child 3
+				}
+				else{
+					childMask |= 4; // child 2
+				}
+			}
+			else{
+				if (z >= zM) {	
+					zMin += size / 2;
+					index |= 4;
+					childMask |= 2; // child 1
+				}
+				else{
+					childMask |= 1; // child 0
+				}
+			}
 		}
 
-		if (z >= zM) {	
-			zMin += size / 2;
-			index |= 4;
-			childMask |= 1;
-		}
-
-		insertRef.insert(cuco::pair{index, Node{block.blockId, 1}});
+		insertRef.insert(cuco::pair{prevIndex, Node{block.blockId, childMask}});
 
 		level--;
 		size = 1 << level;
