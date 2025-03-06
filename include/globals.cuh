@@ -20,8 +20,7 @@ extern float halfVerFOV, halfHorFOV;
 constexpr float MOUSE_SENSITIVITY = 0.004;
 
 // rendering parameters
-constexpr int RENDER_DISTANCE_CHUNKS = 32; // (in chunks)
-constexpr int START_RENDER_DISTANCE_CHUNKS = 16; // (in chunks)
+constexpr int RENDER_DISTANCE_CHUNKS = 8; // (in chunks)
 
 // octree memory parameters
 constexpr size_t PREALLOCATE_MB_AMOUNT = 1000;
