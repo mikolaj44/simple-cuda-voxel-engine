@@ -73,21 +73,15 @@ void handleCameraMovement(int mouseX, int mouseY, int& prevMouseX, int& prevMous
 }
 
 Octree* octree;
-vector<Chunk> chunks(START_RENDER_DISTANCE * START_RENDER_DISTANCE * 4);
+
+dim3 blockSize(40,40,40);
+dim3 gridSize(10,10,10);
 
 inline void reinsertGeometry(){
 
     octree->clear();
-
-    int index = 0;
-
-    for (int x = cameraPos.x / CHUNK_W - START_RENDER_DISTANCE; x < START_RENDER_DISTANCE + cameraPos.x / CHUNK_W; x++)
-        for (int z = cameraPos.z / CHUNK_W - START_RENDER_DISTANCE; z < START_RENDER_DISTANCE + cameraPos.z / CHUNK_W; z++){
-                chunks[index] = Chunk(x, 0, z);
-                index++;
-        }
-
-    generateChunks(octree, chunks, 30000, 500, true);
+    generateChunks(octree, cameraPos, blockSize, gridSize);
+    cudaDeviceSynchronize();
 }
 
 int main(){
@@ -100,7 +94,7 @@ int main(){
     cudaDeviceSetLimit(cudaLimitStackSize, 2048);
     
     cudaMallocManaged(&octree, sizeof(Octree));
-    octree->createOctree(Octree::CENTERED, 12);
+    octree->createOctree();
 
     // cout << bitset<64>(octree_morton3D_64_encode(0,0,0,0,octree->xMin, octree->yMin, octree->zMin, octree->level)) << endl;
     // cout << bitset<64>(octree_morton3D_64_encode(1 << 17,0,0, 0,octree->xMin, octree->yMin, octree->zMin, octree->level)) << endl;
@@ -170,23 +164,17 @@ int main(){
     calculateFOV();
 
     int prevMouseX = 0, prevMouseY = 0;
-    
-    while(true){
-        clock_t start_ = clock();
-
-        reinsertGeometry();
-
-        clock_t end_ = clock();
-
-        double elapsed = double(end_ - start_) / CLOCKS_PER_SEC;
-        std::cout << "Execution time: " << elapsed << " seconds" << std::endl;
-    }
 
     while (!quit) {
 
-        // if(generateNewChunks){
-        //     generateVisibleChunks(octree);
-        // }
+        //clock_t start_ = clock();
+
+        reinsertGeometry();
+
+        // clock_t end_ = clock();
+
+        // double elapsed = double(end_ - start_) / CLOCKS_PER_SEC;
+        // std::cout << "Execution time: " << elapsed << " seconds" << std::endl;
 
         Uint64 start = SDL_GetPerformanceCounter();
 
@@ -239,13 +227,13 @@ int main(){
 
                     case SDLK_1:
 
-                        for (int x = -START_RENDER_DISTANCE; x < START_RENDER_DISTANCE; x++)
-                            for (int z = -START_RENDER_DISTANCE; z < START_RENDER_DISTANCE; z++)
-                                if (x * x + z * z <= START_RENDER_DISTANCE * START_RENDER_DISTANCE) {
-                                    //generateChunk(octree, x, 0, z);
-                                }
+                        // for (int x = -START_RENDER_DISTANCE; x < START_RENDER_DISTANCE; x++)
+                        //     for (int z = -START_RENDER_DISTANCE; z < START_RENDER_DISTANCE; z++)
+                        //         if (x * x + z * z <= START_RENDER_DISTANCE * START_RENDER_DISTANCE) {
+                        //             //generateChunk(octree, x, 0, z);
+                        //         }
 
-                        break;
+                        // break;
 
                     case SDLK_z:
                         PLAYER_SPEED /= 2;

@@ -22,9 +22,9 @@ public:
 	int x, y, z;
 	unsigned char blockId;
 
-	Block() {};
+	__device__ __host__ Block() {};
 
-	Block(int x_, int y_, int z_, unsigned char blockId_) : x(x_), y(y_), z(z_), blockId(blockId_) {};
+	__device__ __host__ Block(int x_, int y_, int z_, unsigned char blockId_) : x(x_), y(y_), z(z_), blockId(blockId_) {};
 };
 
 class Node {
@@ -202,23 +202,6 @@ __device__ void insert(Octree* octree, MapInsertRef insertRef, Block block) {
 
 	} while (level >= 0);
 }
-// calls the insertion kernel
-void insert(Octree* octree, thrust::device_vector<Block> blocks, size_t numBlocks, unsigned int gridSize, unsigned int blockSize);
-
-// the kernel for inserting nodes into the octree
-template<typename MapInsertRef>
-__global__ void insertKernel(Octree* octree, MapInsertRef insertRef, Block* blocks, size_t numBlocks){
-
-	unsigned int index = threadIdx.x + blockDim.x * blockIdx.x;
-
-	if(index >= numBlocks || blocks[index].blockId == 0){
-		return;
-	}
-	
-	insert(octree, insertRef, blocks[index]);
-}
-
-
 
 template<typename MapInsertRef, typename MapFindRef>
 __device__ void performRaycast(Octree* octree, MapInsertRef insertRef, MapFindRef findRef, float oX, float oY, float oZ, float dX, float dY, float dZ, int sX, int sY, int minNodeSize, unsigned char* pixels){
