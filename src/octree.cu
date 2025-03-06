@@ -30,9 +30,6 @@
 
 using namespace std;
 
-size_t Octree::memoryAvailableBytes = 0;
-size_t Octree::memoryTakenBytes = 0;
-
 
 // template<typename MapFindRef, typename MapInsertRef>
 // __global__ void insertNode(MapFindRef mapFindRef, MapInsertRef mapInsertRef, uint64_t key, Node node){
@@ -71,7 +68,7 @@ void Octree::createOctree(OctreeSpecialPosition position, unsigned int level){
 
 	switch(position){
 
-		case CENTERED:
+		case OctreeSpecialPosition::CENTERED:
 			createOctree(-(1 << (level - 1)), -(1 << (level - 1)), -(1 << (level - 1)), level);
 			break;
 	}
@@ -300,6 +297,9 @@ void Octree::display(unsigned char* pixels, uint64_t index, bool showBorder, int
 
 	Node node = value[0];
 
+	 if(node.childMask != 0)
+	 	cout << (int)node.childMask << endl;
+
 	//cout << (int)node.blockId << " " << node.hasChildren << endl;
 
 	//if(level == 17)
@@ -378,7 +378,7 @@ void Octree::display(unsigned char* pixels, uint64_t index, bool showBorder, int
 		drawLine(pixels, (int)coordinates[3][0], (int)coordinates[3][1], (int)coordinates[7][0], (int)coordinates[7][1], color[0], color[1], color[2]);
 	}
 
-	if (level <= 0 || !node.hasChildren) {
+	if (level <= 0 || !node.childMask) {
 		return;
 	}
 
@@ -465,6 +465,7 @@ int newNode(float tx, int i1, float ty, int i2, float tz, int i3) {
 	return i3;
 }
 
+// TODO: OPTIMIZE THIS - IT SHOULD NEED ONLY 3 IF'S, NOT 8
 __device__ uint64_t childMortonRevelles(uint64_t mortonCode, unsigned char revellesChildIndex){
 
 	uint64_t code = mortonCode << 3;

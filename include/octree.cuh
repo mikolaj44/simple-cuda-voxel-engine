@@ -31,13 +31,11 @@ class Node {
 
 public:
 	unsigned char blockId = 0; // air
-	bool hasChildren = false; // for the regular octree, not an SVO - either has 0 or 8 children
-
-	//unsigned char childMask = 0; // which children are present, indexed according to Figure 1: http://wscg.zcu.cz/wscg2000/Papers_2000/X31.pdf
+	bool childMask = 0; // which children are present, indexed according to Figure 1: http://wscg.zcu.cz/wscg2000/Papers_2000/X31.pdf
 
 	__host__ __device__ Node() {};
 
-	__host__ __device__ Node(unsigned char blockId_, bool hasChildren_) : blockId(blockId_), hasChildren(hasChildren_) {};
+	__host__ __device__ Node(unsigned char blockId_, bool childMask_) : blockId(blockId_), childMask(childMask_) {};
 
 	//__host__ __device__ Node(unsigned char blockId_, bool hasChildren_, uint64_t mortonCode_) : blockId(blockId_), hasChildren(hasChildren_), mortonCode(mortonCode_) {};
 private:
@@ -48,10 +46,7 @@ class Octree {
 
 public:
 
-	enum OctreeSpecialPosition { CENTERED };
-
-	static size_t memoryTakenBytes;
-	static size_t memoryAvailableBytes;
+	enum class OctreeSpecialPosition { CENTERED };
 
 	map_type nodeMap;
 
@@ -138,6 +133,9 @@ __device__ void insert(Octree* octree, MapInsertRef insertRef, Block block) {
 	int yMin = 0;
 	int zMin = 0;
 
+	int xM, yM, zM;
+	unsigned char childMask;
+
 	//printf("%d\n", x, y, z, xMin + size, yMin + size, zMin + size);
 
 	// If the voxel is out of bounds (we don't grow the octree)
@@ -162,7 +160,7 @@ __device__ void insert(Octree* octree, MapInsertRef insertRef, Block block) {
 			// auto iterator = nodeMapRef.find(index);
 			// iterator->second
 
-			insertRef.insert(cuco::pair{index, Node{block.blockId, false}});
+			insertRef.insert(cuco::pair{index, Node{block.blockId, 0}});
 			return;
 		}
 
@@ -170,8 +168,7 @@ __device__ void insert(Octree* octree, MapInsertRef insertRef, Block block) {
 		// 	return;
 		// }
 
-		// We are still assuming that the octree is not sparse
-		insertRef.insert(cuco::pair{index, Node{block.blockId, true}});
+		childMask = 0;
 
 		// Get the midpoint
 		int xM = (2 * xMin + size) / 2;
@@ -185,17 +182,22 @@ __device__ void insert(Octree* octree, MapInsertRef insertRef, Block block) {
 		if (x >= xM) {
 			xMin += size / 2;
 			index |= 1;
+			childMask |= 4;
 		}
 		
 		if (y >= yM) {
 			yMin += size / 2;
-			index |= (1 << 1);
+			index |= 2;
+			childMask |= 2;
 		}
 
 		if (z >= zM) {	
 			zMin += size / 2;
-			index |= (1 << 2);
+			index |= 4;
+			childMask |= 1;
 		}
+
+		insertRef.insert(cuco::pair{index, Node{block.blockId, 1}});
 
 		level--;
 		size = 1 << level;
@@ -276,7 +278,7 @@ __device__ unsigned char raycastDrawPixel(Octree* octree, MapFindRef findRef, fl
 	frame stack[21];
 
 	for (int i = 0; i < MAX_THREAD_STACK_SIZE; i++) {
-		stack[i].tx0 = tx0; stack[i].ty0 = ty0; stack[i].tz0 = tz0; stack[i].tx1 = tx1; stack[i].ty1 = ty1; stack[i].tz1 = tz1; stack[i].nodeIndex = 0; stack[i].mortonCode = 1; stack[i].txm = -1; stack[i].tym = -1; stack[i].tzm = -1;
+		stack[i].tx0 = tx0; stack[i].ty0 = ty0; stack[i].tz0 = tz0; stack[i].tx1 = tx1; stack[i].ty1 = ty1; stack[i].tz1 = tz1; stack[i].nodeIndex = 0; stack[i].mortonCode = uint64_t(1); stack[i].txm = -1; stack[i].tym = -1; stack[i].tzm = -1;
 	}
 
 	int currIndex = 0;
@@ -305,7 +307,7 @@ __device__ unsigned char raycastDrawPixel(Octree* octree, MapFindRef findRef, fl
 		//	printf("%d\n", nodeSize(stack[currIndex].mortonCode, octree->level));
 
 		// terminal (leaf) node (but not air)
-		if (nodeLevel(stack[currIndex].mortonCode, octree->level) <= 1 /*&& node.blockId != 0*/) {
+		if (nodeLevel(stack[currIndex].mortonCode, octree->level) == 0 && node.blockId != 0) {
 
 			int blockX, blockY, blockZ;
 			octree->morton3Ddecode(stack[currIndex].mortonCode, blockX, blockY, blockZ);
@@ -319,7 +321,7 @@ __device__ unsigned char raycastDrawPixel(Octree* octree, MapFindRef findRef, fl
 		}
 
 		// out of the octree
-		else if (!node.hasChildren || stack[currIndex].tx1 < 0 || stack[currIndex].ty1 < 0 || stack[currIndex].tz1 < 0) {
+		else if (!node.childMask || stack[currIndex].tx1 < 0 || stack[currIndex].ty1 < 0 || stack[currIndex].tz1 < 0) {
 
 		end:
 			currIndex--;
@@ -374,6 +376,7 @@ __device__ unsigned char raycastDrawPixel(Octree* octree, MapFindRef findRef, fl
 		//printf("%d\n", stack[currIndex].nodeIndex);
 		//printf("%d\n", stack[currIndex].mortonCode);
 
+		// TODO: CHECK IN ADVANCE IF THE CHILD EXISTS
 		switch (stack[currIndex].nodeIndex) {
 
 			case 0: {
