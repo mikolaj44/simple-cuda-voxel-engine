@@ -86,7 +86,6 @@ inline void reinsertGeometry(){
     //cudaDeviceSynchronize();
 
     //clock_t end_ = clock();
-
     //double elapsed = double(end_ - start_) / CLOCKS_PER_SEC;
     //std::cout << "Execution time: " << elapsed << " seconds" << std::endl;
 }
@@ -118,7 +117,7 @@ int main(){
 
     cudaMalloc(&pixels_gpu, size * sizeof(unsigned char));
 
-    const int threadsPerBlock = 700;
+    const int threadsPerBlock = 600;
     const int blocksPerGrid = (SCREEN_WIDTH * SCREEN_HEIGHT + threadsPerBlock - 1) / threadsPerBlock;
 
     initBlockTextures();
@@ -172,9 +171,9 @@ int main(){
 
     int prevMouseX = 0, prevMouseY = 0;
 
-    reinsertGeometry();
-
     while (!quit) {
+
+        reinsertGeometry();
 
         Uint64 start = SDL_GetPerformanceCounter();
 
@@ -413,7 +412,7 @@ int main(){
 
             //-dc -G -lineinfo 
 
-            renderScreenCuda(octree, SCREEN_WIDTH, SCREEN_HEIGHT, cameraAngle.x, cameraAngle.y, cameraPos.x, cameraPos.y, cameraPos.z, pixels_gpu, blocksPerGrid, threadsPerBlock);
+            renderScreenCuda(octree, SCREEN_WIDTH, SCREEN_HEIGHT, cameraAngle.x, cameraAngle.y, cameraPos.x, cameraPos.y, cameraPos.z, pixels_gpu, 32768, 64);
             //cudaDeviceSynchronize();
             //DrawVisibleFaces(octree);
 

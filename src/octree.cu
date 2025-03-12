@@ -13,13 +13,6 @@
 #include "octree.cuh"
 #include "cuda_morton.cuh"
 
-#include <thrust/device_vector.h>
-#include <thrust/execution_policy.h>
-#include <thrust/iterator/zip_iterator.h>
-#include <thrust/logical.h>
-#include <thrust/sequence.h>
-#include <thrust/tuple.h>
-
 #include <cmath>
 #include <cstddef>
 #include <iostream>
@@ -48,14 +41,11 @@ void Octree::createOctree(int xMin_, int yMin_, int zMin_, unsigned int level_) 
 	yMin = yMin_;
 	zMin = zMin_;
 	level = level_;
+
+	cudaMalloc(&nodes, PREALLOCATE_MB_AMOUNT * size_t(1024) * size_t(1024));
+	cudaDeviceSynchronize();
 	
 	//memoryAvailableBytes = size_t(PREALLOCATE_MB_AMOUNT * 1024 * 1024) / sizeof(Node);
-
-	nodeMap = cuco::static_map{cuco::extent<std::size_t, NODE_MAP_CAPACITY>{},
-								cuco::empty_key{uint64_t{0}},
-								cuco::empty_value{Node{}},
-								thrust::equal_to<uint64_t>{},
-								cuco::linear_probing<1,cuco::xxhash_64<uint64_t>>{}};
 
 	// int status;
     // char* demangled = abi::__cxa_demangle(typeid(nodeMapFindRef).name(), nullptr, nullptr, &status);
@@ -78,6 +68,9 @@ void Octree::createOctree(){
 	createOctree(0, 0, 0, 1);
 }
 
+void Octree::clear(){
+	cudaMemset(nodes, 0, PREALLOCATE_MB_AMOUNT * size_t(1024) * size_t(1024));
+}
 
 //void Octree::subdivide(Node* node) {
 //
@@ -184,7 +177,7 @@ void Octree::createOctree(){
 //	return get(x, y, z, root);
 //}
 
-void Octree::getChildXYZindex(int& x, int& y, int& z, uint64_t& index, unsigned int level, unsigned int childIndex) {
+void Octree::getChildXYZindex(int& x, int& y, int& z, uint32_t& index, unsigned int level, unsigned int childIndex) {
 
 	int size = 1 << level;
 	index <<= 3;
@@ -235,11 +228,11 @@ void Octree::getChildXYZindex(int& x, int& y, int& z, uint64_t& index, unsigned 
 	}
 }
 
-__device__ void Octree::morton3Ddecode(uint64_t mortonCode, int& x, int& y, int& z){
+__device__ void Octree::morton3Ddecode(uint32_t mortonCode, int& x, int& y, int& z){
 
-	const uint64_t mostSignificant1 = uint64_t(1) << 63;
+	const uint32_t mostSignificant1 = uint32_t(1) << 31;
 	int index = 0;
-	uint64_t code = mortonCode;
+	uint32_t code = mortonCode;
 
 	while(code >>= 1){
 		index++;
@@ -247,7 +240,7 @@ __device__ void Octree::morton3Ddecode(uint64_t mortonCode, int& x, int& y, int&
 
 	//printf("%d %llu %llu\n",index, mortonCode, code);
 
-	mortonCode <<= (64 - index);
+	mortonCode <<= (32 - index);
 
 	x = xMin;
 	y = yMin;
@@ -278,7 +271,9 @@ __device__ void Octree::morton3Ddecode(uint64_t mortonCode, int& x, int& y, int&
 
 }
 
-void Octree::display(unsigned char* pixels, uint64_t index, bool showBorder, int x, int y, int z, unsigned int level){
+void Octree::display(unsigned char* pixels, uint32_t index, bool showBorder, int x, int y, int z, unsigned int level){
+
+	return;
 
 	if(index == 1){
 		x = xMin;
@@ -287,15 +282,9 @@ void Octree::display(unsigned char* pixels, uint64_t index, bool showBorder, int
 		level = Octree::level;
 	}
 
-	//cout << bitset<64>(index) << endl;
+	//cout << bitset<32>(index) << endl;
 
-	thrust::device_vector<uint64_t> key(1);
-	thrust::device_vector<Node> value(1);
-	key[0] = index;
-
-	nodeMap.find(key.begin(), key.end(), value.begin());
-
-	Node node = value[0];
+	uint8_t nodeId = nodes[index];
 
 	//cout << (int)node.blockId << " " << node.hasChildren << endl;
 
@@ -304,7 +293,9 @@ void Octree::display(unsigned char* pixels, uint64_t index, bool showBorder, int
 
 	int size = 1 << level;
 
-	if ((showBorder /*&& level < 8*/) || (size == 1 && node.blockId != 0)) {
+	if ((showBorder /*&& level < 8*/) || (size == 1 && nodeId & 127 != 0)) {
+
+		printf("%d\n", nodeId);
 
 		// if(size == 1){
 		// 	cout << nodeLevel(index, Octree::level) << " " << index << " " << Octree::level << endl;
@@ -375,7 +366,7 @@ void Octree::display(unsigned char* pixels, uint64_t index, bool showBorder, int
 		drawLine(pixels, (int)coordinates[3][0], (int)coordinates[3][1], (int)coordinates[7][0], (int)coordinates[7][1], color[0], color[1], color[2]);
 	}
 
-	if (level <= 0 || node.childMask == 0) {
+	if (level <= 0 || nodeId & 128 == 0) {
 		return;
 	}
 
@@ -383,7 +374,7 @@ void Octree::display(unsigned char* pixels, uint64_t index, bool showBorder, int
 		int x_ = x;
 		int y_ = y;
 		int z_ = z;
-		uint64_t index_ = index;
+		uint32_t index_ = index;
 		getChildXYZindex(x_, y_, z_, index_, level, i);
 		display(pixels, index_, showBorder, x_, y_, z_, level - 1);
 	}
@@ -410,10 +401,6 @@ void Octree::display(unsigned char* pixels, uint64_t index, bool showBorder, int
 
 void Octree::display(unsigned char* pixels, bool showBorder){
 	display(pixels, 1, showBorder);
-}
-
-void Octree::clear(){
-	nodeMap.clear();
 }
 
 __device__
@@ -463,9 +450,9 @@ int newNode(float tx, int i1, float ty, int i2, float tz, int i3) {
 }
 
 // TODO: OPTIMIZE THIS - IT SHOULD NEED ONLY 3 IF'S, NOT 8
-__device__ uint64_t childMortonRevelles(uint64_t mortonCode, unsigned char revellesChildIndex){
+__device__ uint32_t childMortonRevelles(uint32_t mortonCode, unsigned char revellesChildIndex){
 
-	uint64_t code = mortonCode << 3;
+	uint32_t code = mortonCode << 3;
 
 	switch (revellesChildIndex){
 		case 0:
@@ -530,4 +517,325 @@ __device__ void drawTexturePixel(int blockX, int blockY, int blockZ, float oX, f
 	//printf("%d\n", negativeDX);
 
 	setPixelById(sX, sY, blockX, blockY, blockZ, x, y, z, blockId, pixels);
+}
+
+// the actual device insert function
+__device__ void Octree::insert(Block block) {
+
+	int x = block.x;
+	int y = block.y;
+	int z = block.z;
+
+	//printf("%d %d %d\n", x, y, z);
+
+	int level = Octree::level;
+	int size = 1 << level;
+
+	// Octree coordinate system is positive only, convert the coordinates to this system
+	x -= Octree::xMin;
+	y -= Octree::yMin;
+	z -= Octree::zMin;
+
+	int xMin = 0;
+	int yMin = 0;
+	int zMin = 0;
+
+	int xM, yM, zM;
+
+	//printf("%d\n", x, y, z, xMin + size, yMin + size, zMin + size);
+
+	// If the voxel is out of bounds (we don't grow the octree)
+	if(x < 0 || y < 0 || z < 0 || x >= size || y >= size || z >= size){
+		return;
+	}
+
+	uint32_t index = 1; // root node index
+	uint32_t prevIndex = 1;
+	//int numShifts = 0;
+
+	// Iterate over all node levels up until the leaf node
+	do{
+		// if(level == 17){
+		// 	printf("%d %llu\n", level, index);
+		// }
+
+		//cout << level << " " << bitset<32>(index) << endl;
+
+		if (level == 0) {
+
+			// Get the node at index (to insert the right block data)
+			// auto iterator = nodeMapRef.find(index);
+			// iterator->second
+
+			nodes[index] = block.blockId;
+			return;
+		}
+
+		// if(numShifts >= 21){ // Detect index overflow
+		// 	return;
+		// }
+
+		prevIndex = index;
+
+		// Get the midpoint
+		int xM = (2 * xMin + size) / 2;
+		int yM = (2 * yMin + size) / 2;
+		int zM = (2 * zMin + size) / 2;
+
+		//numShifts += 1;
+		index <<= 3;
+
+		// Compute the coordinates and morton code of the child node
+		if (x >= xM) {
+			xMin += size / 2;
+			index |= 1;
+		}
+		if (y >= yM) {
+			yMin += size / 2;
+			index |= 2;
+		}
+
+		if (z >= zM) {	
+			zMin += size / 2;
+			index |= 4;
+		}
+
+		nodes[prevIndex] = block.blockId | 128;
+
+		level--;
+		size = 1 << level;
+
+	} while (level >= 0);
+}
+
+__device__ void performRaycast(Octree* octree, float oX, float oY, float oZ, float dX, float dY, float dZ, int sX, int sY, int minNodeSize, unsigned char* pixels){
+
+	unsigned char a = 0;
+
+	bool negativeDX = false, negativeDY = false, negativeDZ = false;
+	float origOX = oX, origOY = oY, origOZ = oZ;
+
+	int size = 1 << octree->level;
+
+	if (dX < 0) {
+		//origin.x *= -1; //abs(octree->(root->xMin + root->size) - octree->root->xMin) / 2 - origin.x;
+		//origin.x += abs(octree->(root->zMin + root->size) - octree->root->zMin) / 4; // abs(octree->(root->xMin + root->size) - octree->root->xMin);
+		oX = -oX + (octree->xMin * 2 + size);// +dCenterX;
+		dX = -dX;
+		a |= 4;
+		negativeDX = true;
+	}
+	if (dY < 0) {
+		//origin.y *= -1;
+		//origin.y += abs(octree->(root->zMin + root->size) - octree->root->zMin) / 4; //shift; //abs(octree->(root->yMin + root->size) - octree->root->yMin);
+		oY = -oY + (octree->yMin * 2 + size);// +dCenterY;
+		dY = -dY;
+		a |= 2;
+		negativeDY = true;
+	}
+	if (dZ < 0) {
+		//origin.z *= -1; //abs(octree->(root->zMin + root->size) - octree->root->zMin) / 2- origin.z;
+		//origin.z += abs(octree->(root->zMin + root->size) - octree->root->zMin) / 4; // abs(octree->(root->zMin + root->size) - octree->root->zMin);
+		oZ = -oZ + (octree->zMin * 2 + size);// +dCenterZ;
+		dZ = -dZ;
+		a |= 1;
+		negativeDZ = true;
+	}
+
+	float tx0 = (octree->xMin - oX) / dX;
+	float tx1 = (octree->xMin + size - oX) / dX;
+	float ty0 = (octree->yMin - oY) / dY;
+	float ty1 = (octree->yMin + size - oY) / dY;
+	float tz0 = (octree->zMin - oZ) / dZ;
+	float tz1 = (octree->zMin + size - oZ) / dZ;
+
+	//int color[3] = { 0,0,0 };
+
+	//printf("\n-2");
+
+	if (maxv(maxv(tx0, ty0), tz0) < minv(minv(tx1, ty1), tz1)) {
+
+		//printf("%f %f %f\n",tx0, ty0, tz0);
+
+		unsigned char result = raycastDrawPixel(octree, oX, oY, oZ, dX, dY, dZ, tx0, ty0, tz0, tx1, ty1, tz1, a, minNodeSize, sX, sY, pixels, origOX, origOY, origOZ, negativeDX, negativeDY, negativeDZ);
+
+		if (result == 0) {
+			setPixel(pixels, sX, sY, 30, 30, 30, 255); //30 30 255
+		}
+
+	}
+}
+
+__device__ unsigned char raycastDrawPixel(Octree* octree, float oX, float oY, float oZ, float dX, float dY, float dZ, float tx0, float ty0, float tz0, float tx1, float ty1, float tz1, unsigned char a, int minNodeSize, int sX, int sY, unsigned char* pixels, float origOX, float origOY, float origOZ, bool negativeDX, bool negativeDY, bool negativeDZ) {
+
+	unsigned int MAX_THREAD_STACK_SIZE = octree->level + 1;
+
+	printf("%d\n", MAX_THREAD_STACK_SIZE);
+
+	frame stack[21];
+
+	for (int i = 0; i < MAX_THREAD_STACK_SIZE; i++) {
+		stack[i].tx0 = tx0; stack[i].ty0 = ty0; stack[i].tz0 = tz0; stack[i].tx1 = tx1; stack[i].ty1 = ty1; stack[i].tz1 = tz1; stack[i].nodeIndex = 0; stack[i].mortonCode = uint32_t(1); stack[i].txm = -1; stack[i].tym = -1; stack[i].tzm = -1;
+	}
+
+	int currIndex = 0;
+
+	while (currIndex >= 0 && currIndex < MAX_THREAD_STACK_SIZE) {
+
+	start:
+
+		uint8_t nodeId = octree->nodes[stack[currIndex].mortonCode];
+
+		if(nodeId == 0){
+			goto end;
+		}
+
+		// else if(nodeSize(stack[currIndex].mortonCode, octree->level) <= 2){
+		// 	printf("%d %llu\n", nodeSize(stack[currIndex].mortonCode, octree->level), stack[currIndex].mortonCode);
+		// }
+		// else{
+		// 	printf("%d %d %llu\n", nodeSize(stack[currIndex].mortonCode, octree->level), octree->level, stack[currIndex].mortonCode);
+		// }
+
+		//printf("%d - %f\n", currIndex, stack[currIndex].tx0);
+		//if(nodeSize(stack[currIndex].mortonCode, octree->level) < 8)
+		//	printf("%d\n", nodeSize(stack[currIndex].mortonCode, octree->level));
+
+		// terminal (leaf) node (but not air)
+		if (nodeLevel(stack[currIndex].mortonCode, octree->level) == 0 && nodeId != 0) {
+
+			int blockX, blockY, blockZ;
+			octree->morton3Ddecode(stack[currIndex].mortonCode, blockX, blockY, blockZ);
+
+			//printf("%d\n", nodeId);
+
+			drawTexturePixel(blockX, blockY, blockZ, origOX, origOY, origOZ, dX, dY, dZ, sX, sY, nodeId & 127, pixels, negativeDX, negativeDY, negativeDZ);
+
+			//unsigned char* color = BlockTypeToColor(stack[currIndex].node->blockId);
+			//setPixel(pixels, sX, sY, 0, 255, 0);
+
+			return nodeId & 127;
+		}
+
+		// out of the octree
+		else if (nodeId & 128 == 0 || stack[currIndex].tx1 < 0 || stack[currIndex].ty1 < 0 || stack[currIndex].tz1 < 0) {
+
+		end:
+			currIndex--;
+
+			if (currIndex < 0)
+				return 0;
+
+			unsigned char prevIndex;
+
+			// set node index of the previous stack frame
+			switch (stack[currIndex].nodeIndex) {
+
+				prevIndex = stack[currIndex].nodeIndex;
+
+				case 0:
+					stack[currIndex].nodeIndex = newNode(stack[currIndex].txm, 4, stack[currIndex].tym, 2, stack[currIndex].tzm, 1);
+					break;
+				case 1:
+					stack[currIndex].nodeIndex = newNode(stack[currIndex].txm, 5, stack[currIndex].tym, 3, stack[currIndex].tz1, 8);
+					break;
+				case 2:
+					stack[currIndex].nodeIndex = newNode(stack[currIndex].txm, 6, stack[currIndex].ty1, 8, stack[currIndex].tzm, 3);
+					break;
+				case 3:
+					stack[currIndex].nodeIndex = newNode(stack[currIndex].txm, 7, stack[currIndex].ty1, 8, stack[currIndex].tz1, 8);
+					break;
+				case 4:
+					stack[currIndex].nodeIndex = newNode(stack[currIndex].tx1, 8, stack[currIndex].tym, 6, stack[currIndex].tzm, 5);
+					break;
+				case 5:
+					stack[currIndex].nodeIndex = newNode(stack[currIndex].tx1, 8, stack[currIndex].tym, 7, stack[currIndex].tz1, 8);
+					break;
+				case 6:
+					stack[currIndex].nodeIndex = newNode(stack[currIndex].tx1, 8, stack[currIndex].ty1, 8, stack[currIndex].tzm, 7);
+					break;
+				case 7:
+					stack[currIndex].nodeIndex = 8;
+					break;
+			}
+
+		// 	//printf("%d - %d\n", prevIndex, stack[currIndex].nodeIndex);
+		 	goto loop;
+		}
+
+		stack[currIndex].txm = (stack[currIndex].tx0 + stack[currIndex].tx1) / 2.0;
+		stack[currIndex].tym = (stack[currIndex].ty0 + stack[currIndex].ty1) / 2.0;
+		stack[currIndex].tzm = (stack[currIndex].tz0 + stack[currIndex].tz1) / 2.0;
+		//unsigned char x = stack[currIndex].nodeIndex;
+		stack[currIndex].nodeIndex = firstNode(stack[currIndex].tx0, stack[currIndex].ty0, stack[currIndex].tz0, stack[currIndex].txm, stack[currIndex].tym, stack[currIndex].tzm);
+	loop:
+			
+		//printf("%d\n", stack[currIndex].nodeIndex);
+		//printf("%d\n", stack[currIndex].mortonCode);
+
+		// TODO: CHECK IN ADVANCE IF THE CHILD EXISTS
+		switch (stack[currIndex].nodeIndex) {
+
+			case 0: {
+				if (currIndex >= MAX_THREAD_STACK_SIZE - 1)
+					return 0;
+				currIndex++;
+				stack[currIndex].tx0 = stack[currIndex - 1].tx0; stack[currIndex].ty0 = stack[currIndex - 1].ty0; stack[currIndex].tz0 = stack[currIndex - 1].tz0; stack[currIndex].tx1 = stack[currIndex - 1].txm; stack[currIndex].ty1 = stack[currIndex - 1].tym; stack[currIndex].tz1 = stack[currIndex - 1].tzm; stack[currIndex].nodeIndex = 0; stack[currIndex].mortonCode = childMortonRevelles(stack[currIndex - 1].mortonCode, a);
+				goto start;
+			}
+			case 1: {
+				if (currIndex >= MAX_THREAD_STACK_SIZE - 1)
+					return 0;
+				currIndex++;
+				stack[currIndex].tx0 = stack[currIndex - 1].tx0; stack[currIndex].ty0 = stack[currIndex - 1].ty0; stack[currIndex].tz0 = stack[currIndex - 1].tzm; stack[currIndex].tx1 = stack[currIndex - 1].txm; stack[currIndex].ty1 = stack[currIndex - 1].tym; stack[currIndex].tz1 = stack[currIndex - 1].tz1; stack[currIndex].nodeIndex = 1; stack[currIndex].mortonCode = childMortonRevelles(stack[currIndex - 1].mortonCode, 1 ^ a);
+				goto start;
+			}
+			case 2: {
+				if (currIndex >= MAX_THREAD_STACK_SIZE - 1)
+					return 0;
+				currIndex++;
+				stack[currIndex].tx0 = stack[currIndex - 1].tx0; stack[currIndex].ty0 = stack[currIndex - 1].tym; stack[currIndex].tz0 = stack[currIndex - 1].tz0; stack[currIndex].tx1 = stack[currIndex - 1].txm; stack[currIndex].ty1 = stack[currIndex - 1].ty1; stack[currIndex].tz1 = stack[currIndex - 1].tzm; stack[currIndex].nodeIndex = 2; stack[currIndex].mortonCode = childMortonRevelles(stack[currIndex - 1].mortonCode, 2 ^ a);
+				goto start;
+			}
+			case 3: {
+				if (currIndex >= MAX_THREAD_STACK_SIZE - 1)
+					return 0;
+				currIndex++;
+				stack[currIndex].tx0 = stack[currIndex - 1].tx0; stack[currIndex].ty0 = stack[currIndex - 1].tym; stack[currIndex].tz0 = stack[currIndex - 1].tzm; stack[currIndex].tx1 = stack[currIndex - 1].txm; stack[currIndex].ty1 = stack[currIndex - 1].ty1; stack[currIndex].tz1 = stack[currIndex - 1].tz1; stack[currIndex].nodeIndex = 3; stack[currIndex].mortonCode = childMortonRevelles(stack[currIndex - 1].mortonCode, 3 ^ a);
+				goto start;
+			}
+			case 4: {
+				if (currIndex >= MAX_THREAD_STACK_SIZE - 1)
+					return 0;
+				currIndex++;
+				stack[currIndex].tx0 = stack[currIndex - 1].txm; stack[currIndex].ty0 = stack[currIndex - 1].ty0; stack[currIndex].tz0 = stack[currIndex - 1].tz0; stack[currIndex].tx1 = stack[currIndex - 1].tx1; stack[currIndex].ty1 = stack[currIndex - 1].tym; stack[currIndex].tz1 = stack[currIndex - 1].tzm; stack[currIndex].nodeIndex = 4; stack[currIndex].mortonCode = childMortonRevelles(stack[currIndex - 1].mortonCode, 4 ^ a);
+				goto start;
+			}
+			case 5: {
+				if (currIndex >= MAX_THREAD_STACK_SIZE - 1)
+					return 0;
+				currIndex++;
+				stack[currIndex].tx0 = stack[currIndex - 1].txm; stack[currIndex].ty0 = stack[currIndex - 1].ty0; stack[currIndex].tz0 = stack[currIndex - 1].tzm; stack[currIndex].tx1 = stack[currIndex - 1].tx1; stack[currIndex].ty1 = stack[currIndex - 1].tym; stack[currIndex].tz1 = stack[currIndex - 1].tz1; stack[currIndex].nodeIndex = 5; stack[currIndex].mortonCode = childMortonRevelles(stack[currIndex - 1].mortonCode, 5 ^ a);
+				goto start;
+			}
+			case 6: {
+				if (currIndex >= MAX_THREAD_STACK_SIZE - 1)
+					return 0;
+				currIndex++;
+				stack[currIndex].tx0 = stack[currIndex - 1].txm; stack[currIndex].ty0 = stack[currIndex - 1].tym; stack[currIndex].tz0 = stack[currIndex - 1].tz0; stack[currIndex].tx1 = stack[currIndex - 1].tx1; stack[currIndex].ty1 = stack[currIndex - 1].ty1; stack[currIndex].tz1 = stack[currIndex - 1].tzm; stack[currIndex].nodeIndex = 6; stack[currIndex].mortonCode = childMortonRevelles(stack[currIndex - 1].mortonCode, 6 ^ a);
+				goto start;
+			}
+			case 7: {
+				if (currIndex >= MAX_THREAD_STACK_SIZE - 1)
+					return 0;
+				currIndex++;
+				stack[currIndex].tx0 = stack[currIndex - 1].txm; stack[currIndex].ty0 = stack[currIndex - 1].tym; stack[currIndex].tz0 = stack[currIndex - 1].tzm; stack[currIndex].tx1 = stack[currIndex - 1].tx1; stack[currIndex].ty1 = stack[currIndex - 1].ty1; stack[currIndex].tz1 = stack[currIndex - 1].tz1; stack[currIndex].nodeIndex = 7; stack[currIndex].mortonCode = childMortonRevelles(stack[currIndex - 1].mortonCode, 7 ^ a);
+				goto start;
+			}
+		}
+
+		if (stack[currIndex].nodeIndex >= 8)
+			goto end;
+	}
+	return 0;
 }

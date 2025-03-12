@@ -20,10 +20,10 @@ extern float halfVerFOV, halfHorFOV;
 constexpr float MOUSE_SENSITIVITY = 0.004;
 
 // rendering parameters
-constexpr int RENDER_DISTANCE_CHUNKS = 20; // (in chunks)
+constexpr int RENDER_DISTANCE_CHUNKS = 10; // (in chunks)
 
 // octree memory parameters
-constexpr size_t PREALLOCATE_MB_AMOUNT = 1000;
+constexpr size_t PREALLOCATE_MB_AMOUNT = 4000;
 constexpr size_t MEMORY_LIMIT_MB = 300;
 constexpr size_t NODE_MAP_CAPACITY = 10'000'000; // 300 million is about 5 GB of VRAM used (4 byte Node)
 
