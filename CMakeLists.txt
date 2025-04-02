@@ -1,6 +1,7 @@
 cmake_minimum_required(VERSION 3.23.1 FATAL_ERROR)
 
 project(cuda-voxel-engineLANGUAGES CXX CUDA)
+# cmake_policy(SET CMP00)
 
 file(GLOB SOURCES "src/*.cpp" "src/*.cu")
 file(GLOB HEADERS "include/*.h" "include/*.hpp" "include/*.cuh")
@@ -8,8 +9,12 @@ file(GLOB HEADERS "include/*.h" "include/*.hpp" "include/*.cuh")
 find_package(CUDAToolkit REQUIRED)
 find_package(SDL2 REQUIRED)
 find_package(SDL2_ttf REQUIRED)
+find_package(OpenGL REQUIRED)
+find_package(glfw3 REQUIRED)
+find_package(GLEW REQUIRED)
+find_package(GLUT REQUIRED)
 
-include_directories(${SDL2_INCLUDE_DIRS})
+include_directories(${SDL2_INCLUDE_DIRS} ${OPENGL_INCLUDE_DIRS} ${GLEW_INCLUDE_DIRS})
 
 include(cmake/CPM.cmake)
 
@@ -45,3 +50,4 @@ target_include_directories(${PROJECT_NAME} PRIVATE include)
 #target_link_libraries(${PROJECT_NAME} CCCL:CCCL)
 target_link_libraries(${PROJECT_NAME} PRIVATE cuco)
 target_link_libraries(${PROJECT_NAME} PRIVATE SDL2::SDL2 SDL2_ttf::SDL2_ttf)
+target_link_libraries(${PROJECT_NAME} PRIVATE glfw GLEW::GLEW GL GLUT::GLUT)

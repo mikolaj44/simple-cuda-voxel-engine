@@ -5,7 +5,7 @@ __constant__ int blocksAmount = 10;
 
 __constant__ float epsilon = 0.0001;
 
-__device__ void setPixelById(int sX, int sY, int blockX, int blockY, int blockZ, float x, float y, float z, unsigned char blockId, unsigned char* pixels) {
+__device__ void setPixelById(int sX, int sY, int blockX, int blockY, int blockZ, float x, float y, float z, unsigned char blockId, uchar4* pixels) {
 
     if (blockId >= blocksAmount) {
         return;

@@ -48,7 +48,7 @@ public:
 
 	void clear();
 
-	void display(unsigned char* pixels, bool showBorder = true);
+	void display(uchar4* pixels, bool showBorder = true);
 
 	__device__ void morton3Ddecode(uint32_t mortonCode, int&x, int& y, int& z);
 
@@ -56,7 +56,7 @@ public:
 	
 private:
 
-	void display(unsigned char* pixels, uint32_t index = 1, bool showBorder = true, int x = 0, int y = 0, int z = 0, unsigned int level = 0);
+	void display(uchar4* pixels, uint32_t index = 1, bool showBorder = true, int x = 0, int y = 0, int z = 0, unsigned int level = 0);
 };
 
 // __device__ __host__ inline unsigned int nodeLevel(uint32_t mortonCode, unsigned int octreeLevel){
@@ -86,16 +86,12 @@ __device__ int newNode(float tx, int i1, float ty, int i2, float tz, int i3);
 
 __device__ uint32_t childMortonRevelles(uint32_t mortonCode, unsigned char revellesChildIndex);
 
-__device__ void performRaycast(Octree* octree, float oX, float oY, float oZ, float dX, float dY, float dZ, int sX, int sY, int minNodeSize = 1, unsigned char* pixels = nullptr);
-
-__device__ unsigned char raycastDrawPixel(float oX, float oY, float oZ, float dX, float dY, float dZ, float tx0, float ty0, float tz0, float tx1, float ty1, float tz1, unsigned char a, int minNodeSize, int sX, int sY, unsigned char* pixels, float origOX, float origOY, float origOZ, bool negativeDX, bool negativeDY, bool negativeDZ);
-
-__device__ void performRaycast(Octree* octree, float oX, float oY, float oZ, float dX, float dY, float dZ, int sX, int sY, int minNodeSize, unsigned char* pixels);
+__device__ void performRaycast(Octree* octree, float oX, float oY, float oZ, float dX, float dY, float dZ, int sX, int sY, int minNodeSize = 1, uchar4*  pixels = nullptr);
 
 struct frame {
 	float tx0, ty0, tz0, tx1, ty1, tz1, txm, tym, tzm; unsigned char nodeIndex; uint32_t mortonCode;
 };
 
-__device__ void drawTexturePixel(int blockX, int blockY, int blockZ, float oX, float oY, float oZ, float dX, float dY, float dZ, int sX, int sY, unsigned char blockId, unsigned char* pixels, bool negativeDX, bool negativeDY, bool negativeDZ);
+__device__ void drawTexturePixel(int blockX, int blockY, int blockZ, float oX, float oY, float oZ, float dX, float dY, float dZ, int sX, int sY, unsigned char blockId, uchar4* pixels, bool negativeDX, bool negativeDY, bool negativeDZ);
 
-__device__ unsigned char raycastDrawPixel(Octree* octree, float oX, float oY, float oZ, float dX, float dY, float dZ, float tx0, float ty0, float tz0, float tx1, float ty1, float tz1, unsigned char a, int minNodeSize, int sX, int sY, unsigned char* pixels, float origOX, float origOY, float origOZ, bool negativeDX, bool negativeDY, bool negativeDZ);
+__device__ unsigned char raycastDrawPixel(Octree* octree, float oX, float oY, float oZ, float dX, float dY, float dZ, float tx0, float ty0, float tz0, float tx1, float ty1, float tz1, unsigned char a, int minNodeSize, int sX, int sY, uchar4* pixels, float origOX, float origOY, float origOZ, bool negativeDX, bool negativeDY, bool negativeDZ);

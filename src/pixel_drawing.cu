@@ -1,23 +1,6 @@
 #include "pixel_drawing.cuh"
 
-__device__ __host__ void setPixel(unsigned char* pixels, int x, int y, int r, int g, int b, int a) {
-
-    /*if (x < 0)
-        x = 0;
-    if (y < 0)
-        y = 0;
-    if (x >= SCREEN_WIDTH)
-        x = SCREEN_WIDTH - 1;
-    if (y >= SCREEN_HEIGHT)
-        y = SCREEN_HEIGHT - 1;*/
-
-    pixels[(y * SCREEN_WIDTH + x) * 4 + 0] = b;
-    pixels[(y * SCREEN_WIDTH + x) * 4 + 1] = g;
-    pixels[(y * SCREEN_WIDTH + x) * 4 + 2] = r;
-    pixels[(y * SCREEN_WIDTH + x) * 4 + 3] = a;
-}
-
-void plotLineLow(unsigned char* pixels, int x1, int y1, int x2, int y2, int r, int g, int b, int a) {
+void plotLineLow(uchar4* pixels, int x1, int y1, int x2, int y2, int r, int g, int b, int a) {
 
     float dx = x2 - x1;
     float dy = y2 - y1;
@@ -62,7 +45,7 @@ void plotLineLow(unsigned char* pixels, int x1, int y1, int x2, int y2, int r, i
     }
 }
 
-void plotLineHigh(unsigned char* pixels, int x1, int y1, int x2, int y2, int r, int g, int b, int a) {
+void plotLineHigh(uchar4* pixels, int x1, int y1, int x2, int y2, int r, int g, int b, int a) {
 
     float dx = x2 - x1;
     float dy = y2 - y1;
@@ -169,7 +152,7 @@ vector<pair<int, int>> plotLineHighPoints(int x1, int y1, int x2, int y2) {
     return v;
 }
 
-void drawLine(unsigned char* pixels, int x1, int y1, int x2, int y2, int r, int g, int b, int a){
+void drawLine(uchar4* pixels, int x1, int y1, int x2, int y2, int r, int g, int b, int a){
 
     /*if (x1 < 0)
         x1 = 0;

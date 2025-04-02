@@ -1,0 +1,21 @@
+# ninja log v6
+609	630	1742920459288914191	rapids-cmake-populate-prefix/src/rapids-cmake-populate-stamp/rapids-cmake-populate-update	8beb8fde2cfd388b
+736	765	1742920459423917954	rapids-cmake-populate-prefix/src/rapids-cmake-populate-stamp/rapids-cmake-populate-done	f0be291355ad43cb
+36	609	1742920459268913633	/home/mikolaj/Desktop/cuda-voxel-engine/build/_deps/rapids-cmake-subbuild/rapids-cmake-populate-prefix/src/rapids-cmake-populate-stamp/rapids-cmake-populate-download	636926fef44291df
+0	36	1742920458693897597	/home/mikolaj/Desktop/cuda-voxel-engine/build/_deps/rapids-cmake-subbuild/rapids-cmake-populate-prefix/src/rapids-cmake-populate-stamp/rapids-cmake-populate-mkdir	4533f9a5f9b96c5c
+711	736	1742920459393917118	/home/mikolaj/Desktop/cuda-voxel-engine/build/_deps/rapids-cmake-subbuild/rapids-cmake-populate-prefix/src/rapids-cmake-populate-stamp/rapids-cmake-populate-test	ef3557d34b710e2b
+609	630	1742920459288914191	/home/mikolaj/Desktop/cuda-voxel-engine/build/_deps/rapids-cmake-subbuild/rapids-cmake-populate-prefix/src/rapids-cmake-populate-stamp/rapids-cmake-populate-update	8beb8fde2cfd388b
+711	736	1742920459393917118	rapids-cmake-populate-prefix/src/rapids-cmake-populate-stamp/rapids-cmake-populate-test	ef3557d34b710e2b
+630	649	1742920459308914748	/home/mikolaj/Desktop/cuda-voxel-engine/build/_deps/rapids-cmake-subbuild/rapids-cmake-populate-prefix/src/rapids-cmake-populate-stamp/rapids-cmake-populate-patch	c3d0e46dbd2e449d
+36	609	1742920459268913633	rapids-cmake-populate-prefix/src/rapids-cmake-populate-stamp/rapids-cmake-populate-download	636926fef44291df
+0	36	1742920458693897597	rapids-cmake-populate-prefix/src/rapids-cmake-populate-stamp/rapids-cmake-populate-mkdir	4533f9a5f9b96c5c
+736	765	1742920459423917954	/home/mikolaj/Desktop/cuda-voxel-engine/build/_deps/rapids-cmake-subbuild/CMakeFiles/rapids-cmake-populate-complete	f0be291355ad43cb
+690	711	1742920459369916449	rapids-cmake-populate-prefix/src/rapids-cmake-populate-stamp/rapids-cmake-populate-install	74a9eaf8de55d759
+736	765	1742920459423917954	CMakeFiles/rapids-cmake-populate-complete	f0be291355ad43cb
+630	649	1742920459308914748	rapids-cmake-populate-prefix/src/rapids-cmake-populate-stamp/rapids-cmake-populate-patch	c3d0e46dbd2e449d
+671	690	1742920459349915891	/home/mikolaj/Desktop/cuda-voxel-engine/build/_deps/rapids-cmake-subbuild/rapids-cmake-populate-prefix/src/rapids-cmake-populate-stamp/rapids-cmake-populate-build	29af7b43fd31ab21
+671	690	1742920459349915891	rapids-cmake-populate-prefix/src/rapids-cmake-populate-stamp/rapids-cmake-populate-build	29af7b43fd31ab21
+736	765	1742920459423917954	/home/mikolaj/Desktop/cuda-voxel-engine/build/_deps/rapids-cmake-subbuild/rapids-cmake-populate-prefix/src/rapids-cmake-populate-stamp/rapids-cmake-populate-done	f0be291355ad43cb
+649	671	1742920459329915334	rapids-cmake-populate-prefix/src/rapids-cmake-populate-stamp/rapids-cmake-populate-configure	6c95e77ea2388513
+690	711	1742920459369916449	/home/mikolaj/Desktop/cuda-voxel-engine/build/_deps/rapids-cmake-subbuild/rapids-cmake-populate-prefix/src/rapids-cmake-populate-stamp/rapids-cmake-populate-install	74a9eaf8de55d759
+649	671	1742920459329915334	/home/mikolaj/Desktop/cuda-voxel-engine/build/_deps/rapids-cmake-subbuild/rapids-cmake-populate-prefix/src/rapids-cmake-populate-stamp/rapids-cmake-populate-configure	6c95e77ea2388513
