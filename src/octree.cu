@@ -271,7 +271,7 @@ __device__ void Octree::morton3Ddecode(uint32_t mortonCode, int& x, int& y, int&
 
 }
 
-void Octree::display(unsigned char* pixels, uint32_t index, bool showBorder, int x, int y, int z, unsigned int level){
+void Octree::display(uchar4* pixels, uint32_t index, bool showBorder, int x, int y, int z, unsigned int level){
 
 	return;
 
@@ -295,7 +295,7 @@ void Octree::display(unsigned char* pixels, uint32_t index, bool showBorder, int
 
 	if ((showBorder /*&& level < 8*/) || (size == 1 && nodeId & 127 != 0)) {
 
-		printf("%d\n", nodeId);
+		//printf("%d\n", nodeId);
 
 		// if(size == 1){
 		// 	cout << nodeLevel(index, Octree::level) << " " << index << " " << Octree::level << endl;
@@ -399,7 +399,7 @@ void Octree::display(unsigned char* pixels, uint32_t index, bool showBorder, int
 	// 	display(node->children[7], showBorder, ++depth);*/
 }
 
-void Octree::display(unsigned char* pixels, bool showBorder){
+void Octree::display(uchar4* pixels, bool showBorder){
 	display(pixels, 1, showBorder);
 }
 
@@ -488,7 +488,7 @@ __device__ uint32_t childMortonRevelles(uint32_t mortonCode, unsigned char revel
 	}
 }
 
-__device__ void drawTexturePixel(int blockX, int blockY, int blockZ, float oX, float oY, float oZ, float dX, float dY, float dZ, int sX, int sY, unsigned char blockId, unsigned char* pixels, bool negativeDX, bool negativeDY, bool negativeDZ) {
+__device__ void drawTexturePixel(int blockX, int blockY, int blockZ, float oX, float oY, float oZ, float dX, float dY, float dZ, int sX, int sY, unsigned char blockId, uchar4* pixels, bool negativeDX, bool negativeDY, bool negativeDZ) {
 
 	if (dX == 0 || dY == 0 || dZ == 0) { // for now
 		return;
@@ -608,7 +608,7 @@ __device__ void Octree::insert(Block block) {
 	} while (level >= 0);
 }
 
-__device__ void performRaycast(Octree* octree, float oX, float oY, float oZ, float dX, float dY, float dZ, int sX, int sY, int minNodeSize, unsigned char* pixels){
+__device__ void performRaycast(Octree* octree, float oX, float oY, float oZ, float dX, float dY, float dZ, int sX, int sY, int minNodeSize, uchar4* pixels){
 
 	unsigned char a = 0;
 
@@ -666,11 +666,11 @@ __device__ void performRaycast(Octree* octree, float oX, float oY, float oZ, flo
 	}
 }
 
-__device__ unsigned char raycastDrawPixel(Octree* octree, float oX, float oY, float oZ, float dX, float dY, float dZ, float tx0, float ty0, float tz0, float tx1, float ty1, float tz1, unsigned char a, int minNodeSize, int sX, int sY, unsigned char* pixels, float origOX, float origOY, float origOZ, bool negativeDX, bool negativeDY, bool negativeDZ) {
+__device__ unsigned char raycastDrawPixel(Octree* octree, float oX, float oY, float oZ, float dX, float dY, float dZ, float tx0, float ty0, float tz0, float tx1, float ty1, float tz1, unsigned char a, int minNodeSize, int sX, int sY, uchar4* pixels, float origOX, float origOY, float origOZ, bool negativeDX, bool negativeDY, bool negativeDZ) {
 
 	unsigned int MAX_THREAD_STACK_SIZE = octree->level + 1;
 
-	printf("%d\n", MAX_THREAD_STACK_SIZE);
+	//printf("%d\n", MAX_THREAD_STACK_SIZE);
 
 	frame stack[21];
 

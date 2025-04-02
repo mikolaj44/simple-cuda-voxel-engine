@@ -11,6 +11,8 @@
 #include <bitset>
 #include <chrono>
 
+#include <GL/glew.h>
+
 #include "renderer.cuh"
 #include "chunk.cuh"
 #include "chunk_generation.cuh"
@@ -22,6 +24,7 @@
 #include "db_perlin.hpp"
 
 #include <cuda_runtime.h>
+#include <cuda_gl_interop.h>
 #include <device_launch_parameters.h>
 
 using namespace std;
@@ -79,16 +82,79 @@ dim3 gridSize(10,10,10);
 
 inline void reinsertGeometry(){
 
-    //clock_t start_ = clock();
+    //Uint64 start = SDL_GetPerformanceCounter();
 
     octree->clear();
-    generateChunks(octree, cameraPos, blockSize, gridSize);
+    generateChunks(octree, Vector3(0,0,0), blockSize, gridSize);
     //cudaDeviceSynchronize();
 
-    //clock_t end_ = clock();
-    //double elapsed = double(end_ - start_) / CLOCKS_PER_SEC;
-    //std::cout << "Execution time: " << elapsed << " seconds" << std::endl;
+    // Uint64 end = SDL_GetPerformanceCounter();
+    // float elapsed = (end - start) / (float)SDL_GetPerformanceFrequency();
+    // std::cout << "Execution time: " << elapsed << " seconds" << std::endl;
 }
+
+GLuint textureID;
+cudaGraphicsResource *cudaResource;
+Uint64 start, end;
+
+void createCudaTexture() {
+    glGenTextures(1, &textureID);
+    glBindTexture(GL_TEXTURE_2D, textureID);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, SCREEN_WIDTH, SCREEN_HEIGHT, 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
+    
+    // Register texture with CUDA
+    cudaGraphicsGLRegisterImage(&cudaResource, textureID, GL_TEXTURE_2D, cudaGraphicsRegisterFlagsWriteDiscard);
+}
+
+void writeAndRenderTexture() {
+    cudaArray *cudaArrayPtr;
+    cudaGraphicsMapResources(1, &cudaResource, 0);
+    cudaGraphicsSubResourceGetMappedArray(&cudaArrayPtr, cudaResource, 0, 0);
+
+    // Copy data to CUDA array
+    uchar4 *devPtr;
+    size_t pitch;
+    cudaMallocPitch(&devPtr, &pitch, SCREEN_WIDTH * sizeof(uchar4), SCREEN_HEIGHT);
+
+    cudaEvent_t start, stop;
+    cudaEventCreate(&start);
+    cudaEventCreate(&stop);
+
+    cudaEventRecord(start);
+    renderScreenCuda(octree, SCREEN_WIDTH, SCREEN_HEIGHT, cameraAngle.x, cameraAngle.y, cameraPos.x, cameraPos.y, cameraPos.z, devPtr, 32768, 512);
+    cudaEventRecord(stop);
+    cudaEventSynchronize(stop);
+
+    float milliseconds = 0;
+    cudaEventElapsedTime(&milliseconds, start, stop);
+    printf("Kernel execution time: %f ms\n", milliseconds);
+    //cudaDeviceSynchronize();
+
+    // Copy memory from CUDA device to OpenGL texture
+    cudaMemcpy2DToArray(cudaArrayPtr, 0, 0, devPtr, pitch, SCREEN_WIDTH * sizeof(uchar4), SCREEN_HEIGHT, cudaMemcpyDeviceToDevice);
+    cudaFree(devPtr);
+
+    cudaGraphicsUnmapResources(1, &cudaResource, 0);
+
+    glClear(GL_COLOR_BUFFER_BIT);
+    
+    glEnable(GL_TEXTURE_2D);
+    glBindTexture(GL_TEXTURE_2D, textureID);
+    
+    glBegin(GL_QUADS);
+        glTexCoord2f(0, 1); glVertex2f(-1,  1);
+        glTexCoord2f(0, 0); glVertex2f(-1, -1);
+        glTexCoord2f(1, 0); glVertex2f( 1, -1);
+        glTexCoord2f(1, 1); glVertex2f( 1,  1);
+    glEnd();
+    
+    glDisable(GL_TEXTURE_2D);
+}
+
 
 int main(){
     
@@ -102,48 +168,27 @@ int main(){
     cudaMallocManaged(&octree, sizeof(Octree));
     octree->createOctree();
 
-    // cout << bitset<64>(octree_morton3D_64_encode(0,0,0,0,octree->xMin, octree->yMin, octree->zMin, octree->level)) << endl;
-    // cout << bitset<64>(octree_morton3D_64_encode(1 << 17,0,0, 0,octree->xMin, octree->yMin, octree->zMin, octree->level)) << endl;
-    // cout << bitset<64>(octree_morton3D_64_encode(0,1 << 17,0, 0,octree->xMin, octree->yMin, octree->zMin, octree->level)) << endl;
-    // //cout << bitset<64>(octree_morton3D_64_encode(1 << 18 - 5,1 << 18 - 6,1 << 18 - 7,0,18)) << endl;
-    // return 0;
-
-    //octree = new Octree(-pow2neg, pow2, -pow2neg, pow2, -pow2neg, pow2);
-
-    size_t size = SCREEN_WIDTH * SCREEN_HEIGHT * 4;
-
-    unsigned char* pixels = new unsigned char[size]; // cpu
-    unsigned char* pixels_gpu; // gpu
-
-    cudaMalloc(&pixels_gpu, size * sizeof(unsigned char));
-
     const int threadsPerBlock = 600;
     const int blocksPerGrid = (SCREEN_WIDTH * SCREEN_HEIGHT + threadsPerBlock - 1) / threadsPerBlock;
 
     initBlockTextures();
 
-    //cudaMemcpy(pixels, pixels_gpu, bytes, cudaMemcpyHostToDevice);
+    SDL_Init(SDL_INIT_VIDEO);
 
-    window = SDL_CreateWindow("voxel engine", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, SCREEN_WIDTH, SCREEN_HEIGHT, 0);
-    renderer = SDL_CreateRenderer(window, -1, SDL_RENDERER_ACCELERATED);
-    SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, "1");
+    window = SDL_CreateWindow("voxel engine", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, SCREEN_WIDTH, SCREEN_HEIGHT, SDL_WINDOW_OPENGL);
+    //renderer = SDL_CreateRenderer(window, -1, SDL_RENDERER_ACCELERATED);
+    //SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, "1");
+
+    SDL_GLContext glContext = SDL_GL_CreateContext(window);
+    glewInit();
+
+    createCudaTexture();
 
     texture = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_ARGB8888, SDL_TEXTUREACCESS_STREAMING, SCREEN_WIDTH, SCREEN_HEIGHT);
 
     if (mouseControls) {
         SDL_SetRelativeMouseMode(SDL_TRUE);
     }
-
-    int texture_pitch = 0;
-    void* texture_pixels = NULL;
-
-    if (SDL_LockTexture(texture, NULL, &texture_pixels, &texture_pitch) != 0) {
-        SDL_Log("Unable to lock texture: %s", SDL_GetError());
-    }
-    else {
-        memcpy(texture_pixels, pixels, texture_pitch * SCREEN_HEIGHT);
-    }
-    SDL_UnlockTexture(texture);
 
     TTF_Init();
 
@@ -175,22 +220,7 @@ int main(){
 
         reinsertGeometry();
 
-        Uint64 start = SDL_GetPerformanceCounter();
-
         SDL_Event event_;
-
-        float offsetX, offsetZ;
-        int cubeSize;
-
-        // if (doGravity) {
-
-        //     unsigned char check = octree->get((int)cameraPos.x, (int)(cameraPos.y + 2), (int)cameraPos.z);
-
-        //     cout << (int)check << endl;
-
-        //     if (check == 0 || check == 255)
-        //         cameraPos.y += 0.5;
-        // }
 
         while (SDL_PollEvent(&event_)) {
 
@@ -209,7 +239,7 @@ int main(){
                     switch (event_.window.event) {
 
                         case SDL_WINDOWEVENT_CLOSE:   // exit game
-                            goto end;
+                            goto end_;
                             break;
 
                         default:
@@ -218,79 +248,21 @@ int main(){
                     break;
 
                 case SDL_QUIT:
-                    goto end;
+                    goto end_;
 
                 case SDL_KEYDOWN:
 
                     switch (event_.key.keysym.sym) {
 
-                    case SDLK_1:
-
-                        // for (int x = -START_RENDER_DISTANCE; x < START_RENDER_DISTANCE; x++)
-                        //     for (int z = -START_RENDER_DISTANCE; z < START_RENDER_DISTANCE; z++)
-                        //         if (x * x + z * z <= START_RENDER_DISTANCE * START_RENDER_DISTANCE) {
-                        //             //generateChunk(octree, x, 0, z);
-                        //         }
-
-                        // break;
-
-                    case SDLK_z:
-                        PLAYER_SPEED /= 2;
-                        break;
-                    case SDLK_x:
-                        PLAYER_SPEED *= 2;
-                        break;
-                    case SDLK_c:
-                        doOldRendering = !doOldRendering;
-                        break; 
-
-                    case SDLK_2:
-
-                        cubeSize = 100;
-
-                        for (int x = -cubeSize / 2; x < cubeSize / 2; x++) {
-                            for (int y = -cubeSize / 2; y < cubeSize / 2; y++) {
-                                for (int z = -cubeSize / 2; z < cubeSize / 2; z++) {
-                                    //octree->insert(x, y, z, rand() % 255 + 1);
-                                }
-                            }
-                        }
-
-                        break;
-
-                    case SDLK_3:
-
-                        cubeSize = 100;
-
-                        // for (int x = -cubeSize / 2; x < cubeSize / 2; x++) {
-                        //     for (int y = -cubeSize / 2; y < cubeSize / 2; y++) {
-                        //         for (int z = -cubeSize / 2; z < cubeSize / 2; z++) {
-                        //             if (rand() % 200 == 1)
-                        //                 //octree->insert(x, y, z, rand() % 400 + 1);
-                        //         }
-                        //     }
-                        // }
-
-                        break;
-
-                    case SDLK_4:
-
-                        cubeSize = 50;
-
-                        // for (int x = -cubeSize * 2; x < cubeSize * 2; x++) {
-                        //     for (int y = -cubeSize * 2; y < cubeSize * 2; y++) {
-                        //         for (int z = -cubeSize * 2; z < cubeSize * 2; z++) {
-                        //             if (x * x + y * y + z * z <= cubeSize * cubeSize)
-                        //                 //octree->insert(x, y, z, rand() % 700 + 1);
-                        //         }
-                        //     }
-                        // }
-
-                        break;
-
-                    case SDLK_5:
-
-                        break;
+                        case SDLK_z:
+                            PLAYER_SPEED /= 2;
+                            break;
+                        case SDLK_x:
+                            PLAYER_SPEED *= 2;
+                            break;
+                        case SDLK_c:
+                            doOldRendering = !doOldRendering;
+                            break; 
 
                         case SDLK_UP:
                             cameraPos.x += sin(cameraAngle.y) * PLAYER_SPEED;
@@ -336,69 +308,10 @@ int main(){
                                 cameraAngle.x = 2 * M_PI;
                             break;
 
-                        case SDLK_i:
-                            x = rand() % 128 - 64;
-                            y = rand() % 128 - 64;
-                            z = rand() % 128 - 64;
-                            cout << x << " " << y << " " << z << endl;
-                            //octree->insert(x,y,z, rand() % 5);
-                            break;
-
-                        case SDLK_o:
-                            x = rand() % 256 - 128;
-                            y = rand() % 256 - 128;
-                            z = rand() % 256 - 128;
-                            cout << x << " " << y << " " << z << endl;
-                            //octree->insert(x, y, z, rand() % 5);
-                            break;
-
                         case SDLK_t:
                             doOldRendering = !doOldRendering;
                             break;
-
-                        case SDLK_9:
-                            shiftX++;
-                            break;
-                        case SDLK_0:
-                            shiftX--;
-                            break;
-
-                        case SDLK_n:
-                            shiftY++;
-                            break;
-                        case SDLK_m:
-                            shiftY--;
-                            break;
-
-                        case SDLK_h:
-                            shiftZ++;
-                            break;
-                        case SDLK_j:
-                            shiftZ--;
-                            break;
-
-                        case SDLK_k:
-
-                            //shift--;
-
-                            offsetX = rand() % 100;
-                            offsetZ = rand() % 100;
-
-                            //for (int x = -START_RENDER_DISTANCE * 2; x < START_RENDER_DISTANCE * 2; x++)
-                             //   for (int z = -START_RENDER_DISTANCE * 2; z < START_RENDER_DISTANCE * 2; z++)
-                               //     if (x*x + z*z <= 4 * START_RENDER_DISTANCE * START_RENDER_DISTANCE)
-                                        //generateChunk(octree, 0, 0, 0, offsetX, offsetZ);
-
-                            break;
-
-                        case SDLK_l:
-                            shift++;
-                            break;
-
-                        case SDLK_b:
-                            showBorder = !showBorder;
-                            break;
-
+                            
                         default:
                             break;
                     }
@@ -407,85 +320,81 @@ int main(){
 
         if (!doOldRendering) {
 
-            // allocate space on device for the host octree (calculate the size)
-            // copy it
 
-            //-dc -G -lineinfo 
-
-            renderScreenCuda(octree, SCREEN_WIDTH, SCREEN_HEIGHT, cameraAngle.x, cameraAngle.y, cameraPos.x, cameraPos.y, cameraPos.z, pixels_gpu, 32768, 64);
+            
+            writeAndRenderTexture();
             //cudaDeviceSynchronize();
-            //DrawVisibleFaces(octree);
 
-            bool showCudaErrors = true;
+            SDL_GL_SwapWindow(window);
 
-            if (showCudaErrors) {
-                cudaError_t err = cudaGetLastError();
+            //bool showCudaErrors = true;
 
-                //size_t freeMem, totalMem;
-                //cudaMemGetInfo(&freeMem, &totalMem);
-                //printf("Free memory: %zu bytes\n", freeMem);
-                //printf("Total memory: %zu bytes\n", totalMem);
+            // if (showCudaErrors) {
+            //     cudaError_t err = cudaGetLastError();
 
-                if (err != cudaSuccess) {
-                    printf("%s |\n", cudaGetErrorString(err));
-                    return 0;
-                }
-            }
+            //     //size_t freeMem, totalMem;
+            //     //cudaMemGetInfo(&freeMem, &totalMem);
+            //     //printf("Free memory: %zu bytes\n", freeMem);
+            //     //printf("Total memory: %zu bytes\n", totalMem);
+
+            //     if (err != cudaSuccess) {
+            //         printf("%s |\n", cudaGetErrorString(err));
+            //         return 0;
+            //     }
+            // }
 
             /*size_t stackSize;
             cudaDeviceGetLimit(&stackSize, cudaLimitStackSize);
             printf("Stack size: %zu bytes\n", stackSize);*/
         }
-        else {
-            octree->display(pixels, showBorder);
-        }
+        // else {
+        //     octree->display(pixels_cpu, showBorder);
+        // }
 
         //cout << cameraPos.x << " " << cameraPos.y << " " << cameraPos.z << endl;
         //cout << PLAYER_SPEED << endl;
 
-        SDL_RenderClear(renderer);
+        //SDL_RenderClear(renderer);
 
-        SDL_LockTexture(texture, NULL, &texture_pixels, &texture_pitch);
+        //if(!doOldRendering){
+        //    cudaMemcpy(pixels_cpu, pixels_gpu, size, cudaMemcpyDeviceToHost);
+        //}
 
-        if(!doOldRendering){
-            cudaMemcpy(texture_pixels, pixels_gpu, size, cudaMemcpyDeviceToHost);
-        }
-        else{
-            memcpy(texture_pixels, pixels, size * sizeof(unsigned char));
-        }
+        //memset(pixels, 0, SCREEN_HEIGHT * texture_pitch);
 
-        SDL_UnlockTexture(texture);
-
-        memset(pixels, 0, SCREEN_HEIGHT * texture_pitch);
-        SDL_RenderCopy(renderer, texture, NULL, NULL);
+        // SDL_UpdateTexture(texture, NULL, pixels_cpu, 1);
+        // SDL_RenderCopy(renderer, texture, NULL, NULL);
 
         //system("pause");
 
         if (showFps) {
+            // float elapsed = (end - start) / (float)SDL_GetPerformanceFrequency();
 
-            Uint64 end = SDL_GetPerformanceCounter();
-            float elapsed = (end - start) / (float)SDL_GetPerformanceFrequency();
+            // cout << to_string(1.0 / elapsed).c_str() << endl;
 
-            SDL_Surface* updatedSurface = TTF_RenderText_Blended(font, to_string(1.0 / elapsed).c_str(), whiteColor);
-            SDL_UpdateTexture(textTexture, nullptr, updatedSurface->pixels, updatedSurface->pitch);
+            //SDL_Surface* updatedSurface = TTF_RenderText_Blended(font, to_string(1.0 / elapsed).c_str(), whiteColor);
+            //SDL_UpdateTexture(textTexture, nullptr, updatedSurface->pixels, updatedSurface->pitch);
 
-            SDL_RenderCopy(renderer, textTexture, nullptr, &textRect);
+            // SDL_RenderCopy(renderer, textTexture, nullptr, &textRect);
 
-            /*cout << "FPS: " << 1.0 / elapsed << ", " << threadsPerBlock << " threads per block , " << blocksPerGrid << " blocks" << "\n";
-            cout << blocksPerGrid * threadsPerBlock << " threads" << "\n";
-            cout << "octree taken size (KB): " << octree->memoryTakenBytes / 1024 << "\n";
-            cout << "octree available size (KB): " << octree->memoryAvailableBytes / 1024 << "\n\n";*/
-            SDL_RenderPresent(renderer);
-            SDL_FreeSurface(updatedSurface);
+            // //cout << "FPS: " << 1.0 / elapsed << ", " << threadsPerBlock << " threads per block , " << blocksPerGrid << " blocks" << "\n";
+            // // cout << blocksPerGrid * threadsPerBlock << " threads" << "\n";
+            // // cout << "octree taken size (KB): " << octree->memoryTakenBytes / 1024 << "\n";
+            // // cout << "octree available size (KB): " << octree->memoryAvailableBytes / 1024 << "\n\n";
+            // SDL_RenderPresent(renderer);
+            // SDL_FreeSurface(updatedSurface);
         }
         else {
-            SDL_RenderPresent(renderer);
+            //SDL_RenderPresent(renderer);
         }
     }
 
-end:
+end_:
 
     delete octree;
+
+    cudaGraphicsUnregisterResource(cudaResource);
+    glDeleteTextures(1, &textureID);
 
     SDL_FreeSurface(textSurface);
     SDL_DestroyTexture(textTexture);
@@ -495,45 +404,8 @@ end:
     SDL_DestroyWindow(window);
     SDL_Quit();
 
-    cudaFree(pixels_gpu);
-
     cudaDeviceReset();
     exit(0);
 
-    delete[] pixels;
-    delete[] (char*)texture_pixels;
-
     return 0;
 }
-
-//got = chunkPosIndex.find(make_pair((int)cameraPos.x / CHUNK_W + 1, (int)cameraPos.z / CHUNK_W + 1));
-//if (got == chunkPosIndex.end())
-//GenerateChunk((int)cameraPos.x / CHUNK_W + 1, (int)cameraPos.z / CHUNK_W + 1);
-//
-//got = chunkPosIndex.find(make_pair((int)cameraPos.x / CHUNK_W, (int)cameraPos.z / CHUNK_W + 1));
-//if (got == chunkPosIndex.end())
-//GenerateChunk((int)cameraPos.x / CHUNK_W, (int)cameraPos.z / CHUNK_W + 1);
-//
-//got = chunkPosIndex.find(make_pair((int)cameraPos.x / CHUNK_W + 1, (int)cameraPos.z / CHUNK_W));
-//if (got == chunkPosIndex.end())
-//GenerateChunk((int)cameraPos.x / CHUNK_W + 1, (int)cameraPos.z / CHUNK_W);
-//
-//got = chunkPosIndex.find(make_pair((int)cameraPos.x / CHUNK_W + 1, (int)cameraPos.z / CHUNK_W - 1));
-//if (got == chunkPosIndex.end())
-//GenerateChunk((int)cameraPos.x / CHUNK_W + 1, (int)cameraPos.z / CHUNK_W - 1);
-//
-//got = chunkPosIndex.find(make_pair((int)cameraPos.x / CHUNK_W - 1, (int)cameraPos.z / CHUNK_W + 1));
-//if (got == chunkPosIndex.end())
-//GenerateChunk((int)cameraPos.x / CHUNK_W - 1, (int)cameraPos.z / CHUNK_W + 1);
-//
-//got = chunkPosIndex.find(make_pair((int)cameraPos.x / CHUNK_W - 1, (int)cameraPos.z / CHUNK_W - 1));
-//if (got == chunkPosIndex.end())
-//GenerateChunk((int)cameraPos.x / CHUNK_W - 1, (int)cameraPos.z / CHUNK_W - 1);
-//
-//got = chunkPosIndex.find(make_pair((int)cameraPos.x / CHUNK_W - 1, (int)cameraPos.z / CHUNK_W));
-//if (got == chunkPosIndex.end())
-//GenerateChunk((int)cameraPos.x / CHUNK_W - 1, (int)cameraPos.z / CHUNK_W);
-//
-//got = chunkPosIndex.find(make_pair((int)cameraPos.x / CHUNK_W, (int)cameraPos.z / CHUNK_W - 1));
-//if (got == chunkPosIndex.end())
-//GenerateChunk((int)cameraPos.x / CHUNK_W, (int)cameraPos.z / CHUNK_W - 1);
