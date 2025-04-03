@@ -23,12 +23,8 @@ constexpr float MOUSE_SENSITIVITY = 0.004;
 constexpr int RENDER_DISTANCE_CHUNKS = 20; // (in chunks)
 
 // octree memory parameters
-constexpr size_t PREALLOCATE_MB_AMOUNT = 4000;
-constexpr size_t MEMORY_LIMIT_MB = 300;
-constexpr size_t NODE_MAP_CAPACITY = 10'000'000; // 300 million is about 5 GB of VRAM used (4 byte Node)
-
-// threading parameters
-//constexpr unsigned int MAX_THREADS_AMOUNT = 1;
+constexpr size_t PREALLOCATE_MB_AMOUNT = 5000;
+constexpr int CUDA_STACK_SIZE = 40;
 
 // general numeric parameters
 constexpr float EPSILON = 0.00001;

@@ -7,7 +7,7 @@
 
 using namespace std;
 
-__device__ __host__ inline void setPixel(uchar4* pixels, int x, int y, int r, int g, int b, int a) {
+__device__ __host__ inline void setPixel(uchar4* pixels, int x, int y, int r, int g, int b, int a = 255) {
     pixels[(SCREEN_HEIGHT - 1 - y) * SCREEN_WIDTH + x] = make_uchar4(r, g, b, a);
 }
 

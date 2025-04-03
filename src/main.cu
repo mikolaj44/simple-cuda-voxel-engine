@@ -120,18 +120,18 @@ void writeAndRenderTexture() {
     size_t pitch;
     cudaMallocPitch(&devPtr, &pitch, SCREEN_WIDTH * sizeof(uchar4), SCREEN_HEIGHT);
 
-    cudaEvent_t start, stop;
-    cudaEventCreate(&start);
-    cudaEventCreate(&stop);
+    //printf("launch\n");
 
-    cudaEventRecord(start);
+    // cudaEvent_t start, stop;
+    // cudaEventCreate(&start);
+    // cudaEventCreate(&stop);
+    //cudaEventRecord(start);
     renderScreenCuda(octree, SCREEN_WIDTH, SCREEN_HEIGHT, cameraAngle.x, cameraAngle.y, cameraPos.x, cameraPos.y, cameraPos.z, devPtr, 32768, 512);
-    cudaEventRecord(stop);
-    cudaEventSynchronize(stop);
-
-    float milliseconds = 0;
-    cudaEventElapsedTime(&milliseconds, start, stop);
-    printf("Kernel execution time: %f ms\n", milliseconds);
+    //cudaEventRecord(stop);
+    //cudaEventSynchronize(stop);
+    // float milliseconds = 0;
+    // cudaEventElapsedTime(&milliseconds, start, stop);
+    // printf("Kernel execution time: %f ms (%f fps)\n", milliseconds, 1.0 / (milliseconds / 1000.0));
     //cudaDeviceSynchronize();
 
     // Copy memory from CUDA device to OpenGL texture

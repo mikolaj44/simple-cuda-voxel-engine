@@ -29,7 +29,7 @@ void Vector3::scale(float val) {
 }
 
 Vector3 unitCubeCoords[8] = { Vector3(0,0,0), Vector3(1,0,0), Vector3(1,1,0), Vector3(0,1,0), Vector3(0,0,1), Vector3(1,0,1), Vector3(1,1,1), Vector3(0,1,1) };
-Vector3 cameraPos(0, 0, 0);
+Vector3 cameraPos(-500, -500, -500);
 Vector3 cameraAngle(0, 0, 0);
 
 std::string pathStr = getPathStr();

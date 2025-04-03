@@ -34,11 +34,11 @@ CPMAddPackage(
      "BUILD_EXAMPLES OFF"
 )
 
-set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} --expt-extended-lambda -rdc=true -use_fast_math -w -Xcompiler -w -g")
+set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} --expt-extended-lambda -rdc=true -use_fast_math -w -Xcompiler -w")
 set(CMAKE_CUDA_ARCHITECTURES "75")
 
 set(CMAKE_CUDA_FLAGS_RELEASE "-O3 -Xptxas -O3")
-set(CMAKE_CUDA_FLAGS_RELWITHDEBINFO "-O2 -g -Xptxas -O2")
+set(CMAKE_CUDA_FLAGS_RELWITHDEBINFO "-O2 -Xptxas -O2")
 
 add_executable(${PROJECT_NAME} ${SOURCES} ${HEADERS})
 
