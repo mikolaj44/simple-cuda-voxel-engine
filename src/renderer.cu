@@ -15,6 +15,8 @@ void calculateFOV() {
     halfVerFOV = atanf(SCREEN_HEIGHT / (2.0 * FOCAL_LENGTH));
 }
 
+typedef void (*func_ptr)(Octree*, float, float, float, float, float, float, int, int, int, uchar4*);
+
 __global__ void renderScreenCudaKernel(Octree* octree, int width, int height, float cameraAngleX, float cameraAngleY, float oX, float oY, float oZ, uchar4* pixels) {
     unsigned int index = threadIdx.x + blockDim.x * blockIdx.x;
 
@@ -23,6 +25,9 @@ __global__ void renderScreenCudaKernel(Octree* octree, int width, int height, fl
 
     int pX = index % width;
     int pY = index / width;
+
+    // setPixel(pixels, pX, pY, 255, 0, 0);
+    // return;
 
     //if (!(pX == 0 && pY == 0))
     //    return;

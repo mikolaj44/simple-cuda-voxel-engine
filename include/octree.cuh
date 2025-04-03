@@ -26,10 +26,21 @@ class Octree {
 
 public:
 
+	struct Node {
+		uint8_t id; // most significant bit is 1 if the node has children, the rest of the bits are for block id
+
+		__device__ __host__ inline bool hasChildren() const {
+			return id & 128;
+		}
+
+		__device__ __host__ inline unsigned char blockId() const {
+			return id & 127;
+		}
+	};
+
 	enum class OctreeSpecialPosition { CENTERED };
 
-	// nodeId : most significant bit is 1 if the node has children, the rest of the bits are for block id
-	uint8_t* nodes;
+	Node* nodes;
 
 	int xMin, yMin, zMin;
 	unsigned int level; // level 0 is a terminal node
@@ -55,8 +66,34 @@ public:
 	static void getChildXYZindex(int& x, int& y, int& z, uint32_t& index, unsigned int level, unsigned int childIndex);
 	
 private:
-
 	void display(uchar4* pixels, uint32_t index = 1, bool showBorder = true, int x = 0, int y = 0, int z = 0, unsigned int level = 0);
+};
+
+class Stack {
+public:
+
+	struct Frame {
+		float tx0, ty0, tz0, tx1, ty1, tz1, txm, tym, tzm; unsigned char nodeIndex; uint32_t mortonCode = 1;
+	};
+
+	Frame data[CUDA_STACK_SIZE];
+	int topIndex = 0;
+
+	__device__ inline void push(Frame&& frame) {
+		data[topIndex++] = frame;
+	}
+	
+	__device__ inline void pop() {
+		topIndex--;
+	}
+	
+	__device__ inline Frame* top() {
+		return &data[topIndex - 1];
+	}
+
+	__device__ inline bool isEmpty() {
+		return topIndex <= 0;
+	}
 };
 
 // __device__ __host__ inline unsigned int nodeLevel(uint32_t mortonCode, unsigned int octreeLevel){
@@ -68,7 +105,6 @@ private:
 // }
 
 __device__ __host__ inline unsigned int nodeLevel(uint32_t mortonCode, unsigned int octreeLevel){
-
 	int depth = 0;
 
 	for (uint32_t code = mortonCode; code != 1; code >>= 3, depth++);
@@ -80,18 +116,20 @@ __device__ __host__ inline unsigned int nodeSize(uint32_t mortonCode, unsigned i
 	return 1 << nodeLevel(mortonCode, octreeLevel);
 }
 
-__device__ int firstNode(float tx0, float ty0, float tz0, float txm, float tym, float tzm);
+__device__ unsigned char firstNode(float tx0, float ty0, float tz0, float txm, float tym, float tzm);
 
-__device__ int newNode(float tx, int i1, float ty, int i2, float tz, int i3);
+__device__ unsigned char newNode(float tx, unsigned char i1, float ty, unsigned char i2, float tz, unsigned char i3);
 
 __device__ uint32_t childMortonRevelles(uint32_t mortonCode, unsigned char revellesChildIndex);
 
 __device__ void performRaycast(Octree* octree, float oX, float oY, float oZ, float dX, float dY, float dZ, int sX, int sY, int minNodeSize = 1, uchar4*  pixels = nullptr);
 
-struct frame {
-	float tx0, ty0, tz0, tx1, ty1, tz1, txm, tym, tzm; unsigned char nodeIndex; uint32_t mortonCode;
-};
-
-__device__ void drawTexturePixel(int blockX, int blockY, int blockZ, float oX, float oY, float oZ, float dX, float dY, float dZ, int sX, int sY, unsigned char blockId, uchar4* pixels, bool negativeDX, bool negativeDY, bool negativeDZ);
+__device__ void drawTexturePixel(int blockX, int blockY, int blockZ, float oX, float oY, float oZ, float dX, float dY, float dZ, int sX, int sY, unsigned char blockId, uchar4* pixels);
 
 __device__ unsigned char raycastDrawPixel(Octree* octree, float oX, float oY, float oZ, float dX, float dY, float dZ, float tx0, float ty0, float tz0, float tx1, float ty1, float tz1, unsigned char a, int minNodeSize, int sX, int sY, uchar4* pixels, float origOX, float origOY, float origOZ, bool negativeDX, bool negativeDY, bool negativeDZ);
+
+
+
+__device__ int traverseChildNodes(Stack::Frame* data, const unsigned char& a, int minNodeSize, int sX, int sY, int origOX, int origOY, int origOZ, int origDX, int origDY, int origDZ, uchar4* pixels, Stack& stack, Octree* octree);
+
+__device__ int traverseNewNode(const float& tx0, const float& ty0, const float& tz0, const float& tx1, const float& ty1, const float& tz1, const unsigned int& nodeIdx, int minNodeSize, int sX, int sY, int origOX, int origOY, int origOZ, int origDX, int origDY, int origDZ, uchar4* pixels, Stack& stack, Octree* octree);
