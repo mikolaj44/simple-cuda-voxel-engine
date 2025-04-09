@@ -73,7 +73,7 @@ class Stack {
 public:
 
 	struct Frame {
-		float tx0, ty0, tz0, tx1, ty1, tz1, txm, tym, tzm; unsigned char nodeIndex; uint32_t mortonCode = 1;
+		float tx0, ty0, tz0, txm, tym, tzm, tx1, ty1, tz1; uint32_t mortonCode = 1; unsigned char nodeIndex;
 	};
 
 	Frame data[CUDA_STACK_SIZE];
@@ -129,7 +129,8 @@ __device__ void drawTexturePixel(int blockX, int blockY, int blockZ, float oX, f
 __device__ unsigned char raycastDrawPixel(Octree* octree, float oX, float oY, float oZ, float dX, float dY, float dZ, float tx0, float ty0, float tz0, float tx1, float ty1, float tz1, unsigned char a, int minNodeSize, int sX, int sY, uchar4* pixels, float origOX, float origOY, float origOZ, bool negativeDX, bool negativeDY, bool negativeDZ);
 
 
+__device__ int proc_subtree(Octree* octree, float oX, float oY, float oZ, float dX, float dY, float dZ, float tx0, float ty0, float tz0, float tx1, float ty1, float tz1, unsigned char a, int minNodeSize, int sX, int sY, uchar4* pixels, int morton = 1);
 
-__device__ int traverseChildNodes(Stack::Frame* data, const unsigned char& a, int minNodeSize, int sX, int sY, int origOX, int origOY, int origOZ, int origDX, int origDY, int origDZ, uchar4* pixels, Stack& stack, Octree* octree);
+__device__ int traverseChildNodes(Stack::Frame* data, unsigned char a, int minNodeSize, int sX, int sY, int origOX, int origOY, int origOZ, float origDX, float origDY, float origDZ, uchar4* pixels, Stack& stack, Octree* octree);
 
-__device__ int traverseNewNode(const float& tx0, const float& ty0, const float& tz0, const float& tx1, const float& ty1, const float& tz1, const unsigned int& nodeIdx, int minNodeSize, int sX, int sY, int origOX, int origOY, int origOZ, int origDX, int origDY, int origDZ, uchar4* pixels, Stack& stack, Octree* octree);
+__device__ int traverseNewNode(float tx0, float ty0, float tz0, float&tx1, float ty1, float tz1, unsigned int nodeIdx, int minNodeSize, int sX, int sY, int origOX, int origOY, int origOZ, float origDX, float origDY, float origDZ, uchar4* pixels, Stack& stack, Octree* octree);

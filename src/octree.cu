@@ -489,7 +489,6 @@ __device__ uint32_t childMortonRevelles(uint32_t mortonCode, unsigned char revel
 }
 
 __device__ void drawTexturePixel(int blockX, int blockY, int blockZ, float oX, float oY, float oZ, float dX, float dY, float dZ, int sX, int sY, unsigned char blockId, uchar4* pixels) {
-
 	if (dX == 0 || dY == 0 || dZ == 0) { // for now
 		return;
 	}
@@ -504,7 +503,7 @@ __device__ void drawTexturePixel(int blockX, int blockY, int blockZ, float oX, f
 	float y = oY + tmin * dY;
 	float z = oZ + tmin * dZ;
 
-	//printf("%d\n", negativeDX);
+	//printf("%d %d %d\n", x, y, z);
 
 	setPixelById(sX, sY, blockX, blockY, blockZ, x, y, z, blockId, pixels);
 }
@@ -650,6 +649,7 @@ __device__ void performRaycast(Octree* octree, float oX, float oY, float oZ, flo
         while (!stack.isEmpty() && foundNode == -1) {
 			//printf("1");
             Stack::Frame* data = stack.top();
+
             foundNode = traverseChildNodes(data, a, minNodeSize, sX, sY, origOX, origOY, origOZ, origDX, origDY, origDZ, pixels, stack, octree);
 			//printf("%d %d\n", foundNode, index);
 			//index++;
@@ -663,54 +663,51 @@ __device__ void performRaycast(Octree* octree, float oX, float oY, float oZ, flo
 	}
 }
 
-__device__ int traverseChildNodes(Stack::Frame* data, const unsigned char& a, int minNodeSize, int sX, int sY, int origOX, int origOY, int origOZ, int origDX, int origDY, int origDZ, uchar4* pixels, Stack& stack, Octree* octree) {
-
+__device__ int traverseChildNodes(Stack::Frame* data, unsigned char a, int minNodeSize, int sX, int sY, int origOX, int origOY, int origOZ, float origDX, float origDY, float origDZ, uchar4* pixels, Stack& stack, Octree* octree) {
 	switch (data->nodeIndex) {
-	case 0:
-		data->nodeIndex = newNode(data->txm, 4, data->tym, 2, data->tzm, 1);
-		return traverseNewNode(data->tx0, data->ty0, data->tz0, data->txm, data->tym, data->tzm, childMortonRevelles(data->mortonCode,     a), minNodeSize, sX, sY, origOX, origOY, origOZ, origDX, origDY, origDZ, pixels, stack, octree);
-	case 1:
-		data->nodeIndex = newNode(data->txm, 5, data->tym, 3, data->tz1, 8);
-		return traverseNewNode(data->tx0, data->ty0, data->tzm, data->txm, data->tym, data->tz1, childMortonRevelles(data->mortonCode, 1 ^ a), minNodeSize, sX, sY, origOX, origOY, origOZ, origDX, origDY, origDZ, pixels, stack, octree);
-	case 2:
-		data->nodeIndex = newNode(data->txm, 6, data->ty1, 8, data->tzm, 3);
-		return traverseNewNode(data->tx0, data->tym, data->tz0, data->txm, data->ty1, data->tzm, childMortonRevelles(data->mortonCode, 2 ^ a), minNodeSize, sX, sY, origOX, origOY, origOZ, origDX, origDY, origDZ, pixels, stack, octree);
-	case 3:
-		data->nodeIndex = newNode(data->txm, 7, data->ty1, 8, data->tz1, 8);
-		return traverseNewNode(data->tx0, data->tym, data->tzm, data->txm, data->ty1, data->tz1, childMortonRevelles(data->mortonCode, 3 ^ a), minNodeSize, sX, sY, origOX, origOY, origOZ, origDX, origDY, origDZ, pixels, stack, octree);
-	case 4:
-		data->nodeIndex = newNode(data->tx1, 8, data->tym, 6, data->tzm, 5);
-		return traverseNewNode(data->txm, data->ty0, data->tz0, data->tx1, data->tym, data->tzm, childMortonRevelles(data->mortonCode, 4 ^ a), minNodeSize, sX, sY, origOX, origOY, origOZ, origDX, origDY, origDZ, pixels, stack, octree);
-	case 5:
-		data->nodeIndex = newNode(data->tx1, 8, data->tym, 7, data->tz1, 8);
-		return traverseNewNode(data->txm, data->ty0, data->tzm, data->tx1, data->tym, data->tz1, childMortonRevelles(data->mortonCode, 5 ^ a), minNodeSize, sX, sY, origOX, origOY, origOZ, origDX, origDY, origDZ, pixels, stack, octree);
-	case 6:
-		data->nodeIndex = newNode(data->tx1, 8, data->ty1, 8, data->tzm, 7);
-		return traverseNewNode(data->txm, data->tym, data->tz0, data->tx1, data->ty1, data->tzm, childMortonRevelles(data->mortonCode, 6 ^ a), minNodeSize, sX, sY, origOX, origOY, origOZ, origDX, origDY, origDZ, pixels, stack, octree);
-	case 7:
-		data->nodeIndex = 8;
-		return traverseNewNode(data->txm, data->tym, data->tzm, data->tx1, data->ty1, data->tz1, childMortonRevelles(data->mortonCode, 7 ^ a), minNodeSize, sX, sY, origOX, origOY, origOZ, origDX, origDY, origDZ, pixels, stack, octree);
-	case 8:
-		stack.pop();
-		return -1;
-	default:
-		printf("%d\n", data->nodeIndex);
+		case 0:
+			data->nodeIndex = newNode(data->txm, 4, data->tym, 2, data->tzm, 1);
+			return traverseNewNode(data->tx0, data->ty0, data->tz0, data->txm, data->tym, data->tzm, childMortonRevelles(data->mortonCode,     a), minNodeSize, sX, sY, origOX, origOY, origOZ, origDX, origDY, origDZ, pixels, stack, octree);
+		case 1:
+			data->nodeIndex = newNode(data->txm, 5, data->tym, 3, data->tz1, 8);
+			return traverseNewNode(data->tx0, data->ty0, data->tzm, data->txm, data->tym, data->tz1, childMortonRevelles(data->mortonCode, 1 ^ a), minNodeSize, sX, sY, origOX, origOY, origOZ, origDX, origDY, origDZ, pixels, stack, octree);
+		case 2:
+			data->nodeIndex = newNode(data->txm, 6, data->ty1, 8, data->tzm, 3);
+			return traverseNewNode(data->tx0, data->tym, data->tz0, data->txm, data->ty1, data->tzm, childMortonRevelles(data->mortonCode, 2 ^ a), minNodeSize, sX, sY, origOX, origOY, origOZ, origDX, origDY, origDZ, pixels, stack, octree);
+		case 3:
+			data->nodeIndex = newNode(data->txm, 7, data->ty1, 8, data->tz1, 8);
+			return traverseNewNode(data->tx0, data->tym, data->tzm, data->txm, data->ty1, data->tz1, childMortonRevelles(data->mortonCode, 3 ^ a), minNodeSize, sX, sY, origOX, origOY, origOZ, origDX, origDY, origDZ, pixels, stack, octree);
+		case 4:
+			data->nodeIndex = newNode(data->tx1, 8, data->tym, 6, data->tzm, 5);
+			return traverseNewNode(data->txm, data->ty0, data->tz0, data->tx1, data->tym, data->tzm, childMortonRevelles(data->mortonCode, 4 ^ a), minNodeSize, sX, sY, origOX, origOY, origOZ, origDX, origDY, origDZ, pixels, stack, octree);
+		case 5:
+			data->nodeIndex = newNode(data->tx1, 8, data->tym, 7, data->tz1, 8);
+			return traverseNewNode(data->txm, data->ty0, data->tzm, data->tx1, data->tym, data->tz1, childMortonRevelles(data->mortonCode, 5 ^ a), minNodeSize, sX, sY, origOX, origOY, origOZ, origDX, origDY, origDZ, pixels, stack, octree);
+		case 6:
+			data->nodeIndex = newNode(data->tx1, 8, data->ty1, 8, data->tzm, 7);
+			return traverseNewNode(data->txm, data->tym, data->tz0, data->tx1, data->ty1, data->tzm, childMortonRevelles(data->mortonCode, 6 ^ a), minNodeSize, sX, sY, origOX, origOY, origOZ, origDX, origDY, origDZ, pixels, stack, octree);
+		case 7:
+			data->nodeIndex = 8;
+			return traverseNewNode(data->txm, data->tym, data->tzm, data->tx1, data->ty1, data->tz1, childMortonRevelles(data->mortonCode, 7 ^ a), minNodeSize, sX, sY, origOX, origOY, origOZ, origDX, origDY, origDZ, pixels, stack, octree);
+		case 8:
+			stack.pop();
+			return -1;
 	}
-
+	
 	return -1;
 }
 
-__device__ int traverseNewNode(const float& tx0, const float& ty0, const float& tz0, const float& tx1, const float& ty1, const float& tz1, const unsigned int& nodeIdx, int minNodeSize, int sX, int sY, int origOX, int origOY, int origOZ, int origDX, int origDY, int origDZ, uchar4* pixels, Stack& stack, Octree* octree) {
+__device__ int traverseNewNode(float tx0, float ty0, float tz0, float&tx1, float ty1, float tz1, unsigned int nodeIdx, int minNodeSize, int sX, int sY, int origOX, int origOY, int origOZ, float origDX, float origDY, float origDZ, uchar4* pixels, Stack& stack, Octree* octree) {
         
 	if(stack.topIndex >= CUDA_STACK_SIZE - 1) return -1;
 
 	if (nodeLevel(nodeIdx, octree->level) == 0 && octree->nodes[nodeIdx].blockId() != 0) {
 
-		// int blockX, blockY, blockZ;
-		// octree->morton3Ddecode(nodeIdx, blockX, blockY, blockZ);
-		// drawTexturePixel(blockX, blockY, blockZ, origOX, origOY, origOZ, origDX, origDY, origDZ, sX, sY, octree->nodes[nodeIdx].blockId(), pixels);
+		int blockX, blockY, blockZ;
+		octree->morton3Ddecode(nodeIdx, blockX, blockY, blockZ);
+		drawTexturePixel(blockX, blockY, blockZ, origOX, origOY, origOZ, origDX, origDY, origDZ, sX, sY, octree->nodes[nodeIdx].blockId(), pixels);
 
-		setPixel(pixels, sX, sY, 0, 255, 0);
+		//setPixel(pixels, sX, sY, 0, 255, 0);
 
 		return octree->nodes[nodeIdx].blockId();
 	}
@@ -725,8 +722,8 @@ __device__ int traverseNewNode(const float& tx0, const float& ty0, const float& 
 		tx0, ty0, tz0,
 		txm, tym, tzm,
 		tx1, ty1, tz1,
+		nodeIdx,
 		firstNode(tx0, ty0, tz0, txm, tym, tzm),
-		nodeIdx
 	});
 	
 	return -1;

@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.23.1 FATAL_ERROR)
 
-project(cuda-voxel-engineLANGUAGES CXX CUDA)
+project(cuda-voxel-engine LANGUAGES CXX CUDA)
 # cmake_policy(SET CMP00)
 
 file(GLOB SOURCES "src/*.cpp" "src/*.cu")
