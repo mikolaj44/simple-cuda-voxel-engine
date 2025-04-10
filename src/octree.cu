@@ -663,7 +663,7 @@ __device__ void performRaycast(Octree* octree, float oX, float oY, float oZ, flo
 	}
 }
 
-__device__ int traverseChildNodes(Stack::Frame* data, unsigned char a, int minNodeSize, int sX, int sY, int origOX, int origOY, int origOZ, float origDX, float origDY, float origDZ, uchar4* pixels, Stack& stack, Octree* octree) {
+__device__ int traverseChildNodes(Stack::Frame* data, unsigned char a, int minNodeSize, int sX, int sY, float origOX, float origOY, float origOZ, float origDX, float origDY, float origDZ, uchar4* pixels, Stack& stack, Octree* octree) {
 	switch (data->nodeIndex) {
 		case 0:
 			data->nodeIndex = newNode(data->txm, 4, data->tym, 2, data->tzm, 1);
@@ -697,7 +697,7 @@ __device__ int traverseChildNodes(Stack::Frame* data, unsigned char a, int minNo
 	return -1;
 }
 
-__device__ int traverseNewNode(float tx0, float ty0, float tz0, float&tx1, float ty1, float tz1, unsigned int nodeIdx, int minNodeSize, int sX, int sY, int origOX, int origOY, int origOZ, float origDX, float origDY, float origDZ, uchar4* pixels, Stack& stack, Octree* octree) {
+__device__ int traverseNewNode(float tx0, float ty0, float tz0, float&tx1, float ty1, float tz1, unsigned int nodeIdx, int minNodeSize, int sX, int sY, float origOX, float origOY, float origOZ, float origDX, float origDY, float origDZ, uchar4* pixels, Stack& stack, Octree* octree) {
         
 	if(stack.topIndex >= CUDA_STACK_SIZE - 1) return -1;
 
