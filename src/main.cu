@@ -35,6 +35,8 @@ SDL_Texture* texture;
 
 BlockTexture** blockTextures = nullptr;
 
+uint64_t frameCount = 0;
+
 void initBlockTextures() {
 
     int blockAmount = 3;
@@ -82,10 +84,21 @@ dim3 gridSize(10,10,10);
 
 inline void reinsertGeometry(){
 
+    // Returns -1 if nothing should be inserted
+    auto blockPosToIdFunction = [] __device__ (int x, int y, int z){
+        if(x*x + y*y + z*z < 50 * 50){
+            return 1;
+        }
+        return -1;
+    };
+
     //Uint64 start = SDL_GetPerformanceCounter();
 
     octree->clear();
-    generateChunks(octree, Vector3(0,0,0), blockSize, gridSize);
+    generateChunks(octree, Vector3(0,0,0), blockPosToIdFunction, blockSize, gridSize, frameCount);
+    frameCount++;
+
+    frameCount %= UINT64_MAX;
     //cudaDeviceSynchronize();
 
     // Uint64 end = SDL_GetPerformanceCounter();
