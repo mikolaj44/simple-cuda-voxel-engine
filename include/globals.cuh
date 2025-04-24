@@ -4,6 +4,9 @@
 #include <unistd.h>
 #include <algorithm>
 
+#include "pointlight.cuh"
+#include "material.cuh"
+
 //#include "D:\threadpool\include\BS_thread_pool.hpp"
 
 // files
@@ -20,7 +23,7 @@ extern float halfVerFOV, halfHorFOV;
 constexpr float MOUSE_SENSITIVITY = 0.004;
 
 // rendering parameters
-constexpr int RENDER_DISTANCE_CHUNKS = 20; // (in chunks)
+constexpr int RENDER_DISTANCE_CHUNKS = 32; // (in chunks)
 
 // octree memory parameters
 constexpr size_t PREALLOCATE_MB_AMOUNT = 5000;
@@ -60,21 +63,12 @@ extern int shiftZ;
 
 std::string getPathStr();
 
-class Vector3 {
-
-public:
-
-    float x = 0, y = 0, z = 0;
-
-    Vector3();
-
-    Vector3(float x_, float y_, float z_);
-
-    void scale(float val);
-};
-
 extern Vector3 cameraPos;
 extern Vector3 cameraAngle;
+
+extern PointLight pointLight;
+
+extern Material mainMaterial;
 
 extern Vector3 unitCubeCoords[8];
 //extern BS::thread_pool threadPool;

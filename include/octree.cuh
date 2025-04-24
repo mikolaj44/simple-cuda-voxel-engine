@@ -38,6 +38,8 @@ public:
 		}
 	};
 
+	bool textureRenderingEnabled = false;
+
 	enum class OctreeSpecialPosition { CENTERED };
 
 	Node* nodes;
@@ -64,6 +66,10 @@ public:
 	__device__ void morton3Ddecode(uint32_t mortonCode, int&x, int& y, int& z);
 
 	static void getChildXYZindex(int& x, int& y, int& z, uint32_t& index, unsigned int level, unsigned int childIndex);
+
+	void setTextureRendering(bool value){
+		textureRenderingEnabled = value;
+	}
 	
 private:
 	void display(uchar4* pixels, uint32_t index = 1, bool showBorder = true, int x = 0, int y = 0, int z = 0, unsigned int level = 0);
@@ -124,7 +130,7 @@ __device__ uint32_t childMortonRevelles(uint32_t mortonCode, unsigned char revel
 
 __device__ void performRaycast(Octree* octree, float oX, float oY, float oZ, float dX, float dY, float dZ, int sX, int sY, int minNodeSize = 1, uchar4*  pixels = nullptr);
 
-__device__ void drawTexturePixel(int blockX, int blockY, int blockZ, float oX, float oY, float oZ, float dX, float dY, float dZ, int sX, int sY, unsigned char blockId, uchar4* pixels);
+__device__ void drawTexturePixel(int blockX, int blockY, int blockZ, float oX, float oY, float oZ, float dX, float dY, float dZ, int sX, int sY, unsigned char blockId, uchar4* pixels, bool textureRenderingEnabled);
 
 __device__ unsigned char raycastDrawPixel(Octree* octree, float oX, float oY, float oZ, float dX, float dY, float dZ, float tx0, float ty0, float tz0, float tx1, float ty1, float tz1, unsigned char a, int minNodeSize, int sX, int sY, uchar4* pixels, float origOX, float origOY, float origOZ, bool negativeDX, bool negativeDY, bool negativeDZ);
 

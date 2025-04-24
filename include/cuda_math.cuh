@@ -3,19 +3,22 @@
 #include <cuda_runtime.h>
 #include <device_launch_parameters.h>
 
-__device__ __host__ inline float maxv(float a, float b) {
+template<typename Number>
+__device__ __host__ inline Number maxv(Number a, Number b) {
 	if (a > b)
 		return a;
 	return b;
 }
 
-__device__ __host__ inline float minv(float a, float b) {
+template<typename Number>
+__device__ __host__ inline Number minv(Number a, Number b) {
 	if (a < b)
 		return a;
 	return b;
 }
 
-__device__ __host__ inline float absv(float a) {
+template<typename Number>
+__device__ __host__ inline Number absv(Number a) {
 	if (a < 0)
 		return -a;
 	return a;
