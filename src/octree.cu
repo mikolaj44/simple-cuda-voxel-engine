@@ -488,14 +488,14 @@ __device__ uint32_t childMortonRevelles(uint32_t mortonCode, unsigned char revel
 	}
 }
 
-__device__ void drawTexturePixel(int blockX, int blockY, int blockZ, float oX, float oY, float oZ, float dX, float dY, float dZ, int sX, int sY, unsigned char blockId, uchar4* pixels) {
+__device__ void drawTexturePixel(int blockX, int blockY, int blockZ, float oX, float oY, float oZ, float dX, float dY, float dZ, int sX, int sY, unsigned char blockId, uchar4* pixels, bool textureRenderingEnabled) {
 	if (dX == 0 || dY == 0 || dZ == 0) { // for now
 		return;
 	}
 	
-	float tmin =  minv(((float)blockX - oX) / dX, ((float)blockX + 1.0 - oX) / dX);
-	float tymin = minv(((float)blockY - oY) / dY, ((float)blockY + 1.0 - oY) / dY);
-	float tzmin = minv(((float)blockZ - oZ) / dZ, ((float)blockZ + 1.0 - oZ) / dZ);
+	float tmin =  minv((float)((float)blockX - oX) / dX, (float)((float)blockX + 1.0 - oX) / dX);
+	float tymin = minv((float)((float)blockY - oY) / dY, (float)((float)blockY + 1.0 - oY) / dY);
+	float tzmin = minv((float)((float)blockZ - oZ) / dZ, (float)((float)blockZ + 1.0 - oZ) / dZ);
 
 	tmin = maxv(maxv(tmin, tymin), tzmin);
 
@@ -505,7 +505,7 @@ __device__ void drawTexturePixel(int blockX, int blockY, int blockZ, float oX, f
 
 	//printf("%d %d %d\n", x, y, z);
 
-	setPixelById(sX, sY, blockX, blockY, blockZ, x, y, z, blockId, pixels);
+	setPixelById(sX, sY, blockX, blockY, blockZ, x, y, z, blockId, pixels, Vector3(oX, oY, oZ), Material(Vector3(255,255,255), 0, 1, 15), PointLight(Vector3(0,0,-500), Vector3(255, 0, 255)), true);
 }
 
 // the actual device insert function
@@ -655,7 +655,7 @@ __device__ void performRaycast(Octree* octree, float oX, float oY, float oZ, flo
 			//index++;
         }
 
-		if (foundNode == -1) {
+		if (foundNode <= -1) {
 			setPixel(pixels, sX, sY, 30, 30, 30, 255); //30 30 255
 		}
 
@@ -705,7 +705,7 @@ __device__ int traverseNewNode(float tx0, float ty0, float tz0, float&tx1, float
 
 		int blockX, blockY, blockZ;
 		octree->morton3Ddecode(nodeIdx, blockX, blockY, blockZ);
-		drawTexturePixel(blockX, blockY, blockZ, origOX, origOY, origOZ, origDX, origDY, origDZ, sX, sY, octree->nodes[nodeIdx].blockId(), pixels);
+		drawTexturePixel(blockX, blockY, blockZ, origOX, origOY, origOZ, origDX, origDY, origDZ, sX, sY, octree->nodes[nodeIdx].blockId(), pixels, octree->textureRenderingEnabled);
 
 		//setPixel(pixels, sX, sY, 0, 255, 0);
 

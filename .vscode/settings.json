@@ -76,6 +76,7 @@
         "typeinfo": "cpp",
         "variant": "cpp",
         "__config": "cpp",
-        "stream_ref": "cpp"
+        "stream_ref": "cpp",
+        "annotated_ptr": "cpp"
     }
 }

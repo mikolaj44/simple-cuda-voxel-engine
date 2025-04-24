@@ -10,21 +10,27 @@
 using namespace std;
 
 template<typename XYZtoIdFunction>
-__global__ void generateChunksKernel(Octree* octree, Vector3 cameraPos, XYZtoIdFunction blockPosToIdFunction, uint64_t frameCount){
+__global__ void generateChunksKernel(Octree* octree, Vector3 pos, XYZtoIdFunction blockPosToIdFunction, uint64_t frameCount){
 
     int x = threadIdx.x + blockIdx.x * blockDim.x;
     int y = threadIdx.y + blockIdx.y * blockDim.y;
     int z = threadIdx.z + blockIdx.z * blockDim.z;
 
-	if(x > RENDER_DISTANCE_CHUNKS * CHUNK_W || y > RENDER_DISTANCE_CHUNKS * CHUNK_W || z > RENDER_DISTANCE_CHUNKS * CHUNK_W){
+    // x %= RENDER_DISTANCE_CHUNKS * CHUNK_W * 2;
+    // y %= RENDER_DISTANCE_CHUNKS * CHUNK_W * 2;
+    // z %= RENDER_DISTANCE_CHUNKS * CHUNK_W * 2;
+
+	if(x > RENDER_DISTANCE_CHUNKS * CHUNK_W * 2 || y > RENDER_DISTANCE_CHUNKS * CHUNK_W * 2 || z > RENDER_DISTANCE_CHUNKS * CHUNK_W * 2){
 		return;
 	}
 
-    x += cameraPos.x - CHUNK_W * RENDER_DISTANCE_CHUNKS / 2;
-    y += cameraPos.y - CHUNK_W * RENDER_DISTANCE_CHUNKS / 2;
-    z += cameraPos.z - CHUNK_W * RENDER_DISTANCE_CHUNKS / 2;
+    x += pos.x - CHUNK_W * RENDER_DISTANCE_CHUNKS;
+    y += pos.y - CHUNK_W * RENDER_DISTANCE_CHUNKS;
+    z += pos.z - CHUNK_W * RENDER_DISTANCE_CHUNKS;
 
-    char id = blockPosToIdFunction(x, y, z);
+    //printf("%d %d %d\n", x,y,z);
+
+    char id = blockPosToIdFunction(x, y, z, frameCount);
 
     if(id != -1){
         octree->insert(Block(x, y, z, id));
@@ -48,14 +54,21 @@ __global__ void generateChunksKernel(Octree* octree, Vector3 cameraPos, XYZtoIdF
 }
 
 template<typename XYZtoIdFunction>
-void generateChunks(Octree* octree, Vector3 cameraPos, XYZtoIdFunction blockPosToIdFunction, dim3 gridSize, dim3 blockSize, uint64_t frameCount){
+void generateChunks(Octree* octree, Vector3 pos, XYZtoIdFunction blockPosToIdFunction, dim3 maxGridSize, dim3 blockSize, uint64_t frameCount){
 
-    octree->xMin = cameraPos.x - CHUNK_W * RENDER_DISTANCE_CHUNKS / 2;
-    octree->yMin = cameraPos.y - CHUNK_W * RENDER_DISTANCE_CHUNKS / 2;
-    octree->zMin = cameraPos.z - CHUNK_W * RENDER_DISTANCE_CHUNKS / 2;
-    octree->level = log2(RENDER_DISTANCE_CHUNKS * CHUNK_W * 2) - 1;
+    const int length = RENDER_DISTANCE_CHUNKS * CHUNK_W * 2;
 
-    generateChunksKernel<<<gridSize, blockSize>>>(octree, cameraPos, blockPosToIdFunction, frameCount);
+    octree->xMin = pos.x - length / 2;
+    octree->yMin = pos.y - length / 2;
+    octree->zMin = pos.z - length / 2;
+    octree->level = log2(length); // * 2) - 1
+
+    printf("%d %d %d\n", octree->xMin, octree->yMin, octree->zMin);
+    printf("%d %d %d\n", octree->xMin + (1 << octree->level), octree->yMin + (1 << octree->level), octree->zMin + (1 << octree->level));
+
+    dim3 gridSize = dim3(min(maxGridSize.x, (length + blockSize.x - 1) / blockSize.x), min(maxGridSize.y, (length + blockSize.y - 1) / blockSize.y), min(maxGridSize.z, (length + blockSize.z - 1) / blockSize.z));
+
+    generateChunksKernel<<<gridSize, blockSize>>>(octree, pos, blockPosToIdFunction, frameCount);
 
     //cudaDeviceSynchronize(); // maybe remove this later
 }

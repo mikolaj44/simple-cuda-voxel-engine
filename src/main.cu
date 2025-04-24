@@ -39,7 +39,7 @@ uint64_t frameCount = 0;
 
 void initBlockTextures() {
 
-    int blockAmount = 3;
+    int blockAmount = 4;
 
     cudaMallocManaged(&blockTextures, size_t(blockAmount * sizeof(BlockTexture*)));
 
@@ -79,23 +79,74 @@ void handleCameraMovement(int mouseX, int mouseY, int& prevMouseX, int& prevMous
 
 Octree* octree;
 
-dim3 blockSize(40,40,40);
-dim3 gridSize(10,10,10);
+dim3 maxGridSize(32768,32768,32768);
+dim3 blockSize(9,9,9);
 
 inline void reinsertGeometry(){
 
     // Returns -1 if nothing should be inserted
-    auto blockPosToIdFunction = [] __device__ (int x, int y, int z){
-        if(x*x + y*y + z*z < 50 * 50){
-            return 1;
-        }
+    auto blockPosToIdFunction = [] __device__ (int x, int y, int z, uint64_t frameCount){
+
+        // int maxIterations = 50;
+        // //int deltaIterations = 3;
+
+        // float newX = float(x) / 450.0;
+        // float newY = float(y) / 450.0;
+        // float newZ = float(z) / 450.0;
+
+        // float wX = newX;
+        // float wY = newY;
+        // float wZ = newZ;
+
+        // int iterations = maxIterations;
+
+        // //printf("%f %f %f\n", newX, newY, newZ);
+
+        // while(iterations--){
+        //     float x_ = wX;
+        //     float y_ = wY;
+        //     float z_ = wZ;
+
+        //     float x2 = x_*x_;
+        //     float y2 = y_*y_;
+        //     float z2 = z_*z_;
+
+        //     float x4 = x2*x2;
+        //     float y4 = y2*y2;
+        //     float z4 = z2*z2;
+
+        //     float k3 = x2 + z2;
+        //     float k2 = 1.0 / sqrt(k3*k3*k3*k3*k3*k3*k3);
+        //     float k1 = x4 + y4 + z4 - 6.0*y2*z2 - 6.0*x2*y2 + 2.0*z2*x2;
+        //     float k4 = x2 - y2 + z2;
+
+        //     wX =  64.0*x_*y_*z_*(x2-z2)*k4*(x4-6.0*x2*z2+z4)*k1*k2;
+        //     wY = -16.0*y2*k3*k4*k4 + k1*k1;
+        //     wZ = -8.0*y_*k4*(x4*x4 - 28.0*x4*x2*z2 + 70.0*x4*z4 - 28.0*x2*z2*z4 + z4*z4)*k1*k2;
+
+        //     wX += newX;
+        //     wY += newY;
+        //     wZ += newZ;
+
+        //     if(wX * wX + wY * wY + wZ * wZ > 4.0){
+        //         return -1;
+        //     }
+        // }
+
+        // if(!(iterations > maxIterations - deltaIterations && iterations < maxIterations)){
+        //     return -1;
+        // }
+
+        //if(x > -10e3 && x < 10e3 && y > -10e3 && y < 10e3 && z > -10e3 && z < 10e3)
+        if(x*x + y*y + z*z <= 50 * 50 * 50)
+            return 1; //int(sqrtf(float(x*x) + float(y*y) + float(z*z))) % 127 + 1;
         return -1;
     };
 
     //Uint64 start = SDL_GetPerformanceCounter();
 
     octree->clear();
-    generateChunks(octree, Vector3(0,0,0), blockPosToIdFunction, blockSize, gridSize, frameCount);
+    generateChunks(octree, Vector3(0,0,0), blockPosToIdFunction, maxGridSize, blockSize, frameCount);
     frameCount++;
 
     frameCount %= UINT64_MAX;
@@ -170,9 +221,25 @@ void writeAndRenderTexture() {
 
 
 int main(){
-    
-    ios_base::sync_with_stdio(false);
-    cin.tie(NULL);
+    // initializing global variables
+
+    cameraPos.x = 0;
+    cameraPos.y = 0;
+    cameraPos.z = 0;
+
+    cameraAngle.x = 0;
+    cameraAngle.y = 0;
+    cameraAngle.z = 0;
+
+    pointLight.pos = Vector3(50,50,50);
+    pointLight.color = Vector3(255, 255, 255);
+
+    mainMaterial.color = Vector3(255, 255, 255);
+    mainMaterial.diffuse = 0.7;
+    mainMaterial.specular = 0.5;
+    mainMaterial.specularExponent = 2;
+
+    // ===========================================
 
     size_t sizeB = 64 * 1024 * 1024;
     cudaDeviceSetLimit(cudaLimitMallocHeapSize, sizeB);
@@ -229,9 +296,9 @@ int main(){
 
     int prevMouseX = 0, prevMouseY = 0;
 
-    while (!quit) {
+    reinsertGeometry();
 
-        reinsertGeometry();
+    while (!quit) {
 
         SDL_Event event_;
 
@@ -274,7 +341,8 @@ int main(){
                             PLAYER_SPEED *= 2;
                             break;
                         case SDLK_c:
-                            doOldRendering = !doOldRendering;
+                            octree->textureRenderingEnabled = !octree->textureRenderingEnabled;
+                            //doOldRendering = !doOldRendering;
                             break; 
 
                         case SDLK_UP:

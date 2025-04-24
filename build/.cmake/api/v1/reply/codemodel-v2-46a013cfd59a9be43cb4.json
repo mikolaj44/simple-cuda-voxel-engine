@@ -1,0 +1,464 @@
+{
+	"configurations" : 
+	[
+		{
+			"directories" : 
+			[
+				{
+					"build" : ".",
+					"childIndexes" : 
+					[
+						1,
+						5
+					],
+					"hasInstallRule" : true,
+					"jsonFile" : "directory-.-Release-f5ebdc15457944623624.json",
+					"minimumCMakeVersion" : 
+					{
+						"string" : "3.14"
+					},
+					"projectIndex" : 0,
+					"source" : ".",
+					"targetIndexes" : 
+					[
+						28
+					]
+				},
+				{
+					"build" : "_deps/cccl-build",
+					"childIndexes" : 
+					[
+						2,
+						3,
+						4
+					],
+					"jsonFile" : "directory-_deps.cccl-build-Release-32254a7baf179eba875e.json",
+					"minimumCMakeVersion" : 
+					{
+						"string" : "3.15"
+					},
+					"parentIndex" : 0,
+					"projectIndex" : 1,
+					"source" : "build/_deps/cccl-src",
+					"targetIndexes" : 
+					[
+						0,
+						1,
+						2,
+						3,
+						4,
+						5,
+						6,
+						7,
+						8,
+						9,
+						10,
+						11,
+						12,
+						13,
+						14,
+						15,
+						16,
+						17,
+						18,
+						19,
+						20,
+						21,
+						22,
+						23,
+						24,
+						25,
+						26,
+						27
+					]
+				},
+				{
+					"build" : "_deps/cccl-build/libcudacxx",
+					"jsonFile" : "directory-_deps.cccl-build.libcudacxx-Release-8fe1004390bd49d5cda2.json",
+					"minimumCMakeVersion" : 
+					{
+						"string" : "3.15"
+					},
+					"parentIndex" : 1,
+					"projectIndex" : 2,
+					"source" : "build/_deps/cccl-src/libcudacxx"
+				},
+				{
+					"build" : "_deps/cccl-build/cub",
+					"jsonFile" : "directory-_deps.cccl-build.cub-Release-ec542714bd2a9ef0a1fd.json",
+					"minimumCMakeVersion" : 
+					{
+						"string" : "3.15"
+					},
+					"parentIndex" : 1,
+					"projectIndex" : 3,
+					"source" : "build/_deps/cccl-src/cub"
+				},
+				{
+					"build" : "_deps/cccl-build/thrust",
+					"jsonFile" : "directory-_deps.cccl-build.thrust-Release-149426762c6cc10bc6de.json",
+					"minimumCMakeVersion" : 
+					{
+						"string" : "3.15"
+					},
+					"parentIndex" : 1,
+					"projectIndex" : 4,
+					"source" : "build/_deps/cccl-src/thrust"
+				},
+				{
+					"build" : "_deps/cuco-build",
+					"childIndexes" : 
+					[
+						6
+					],
+					"hasInstallRule" : true,
+					"jsonFile" : "directory-_deps.cuco-build-Release-b8fca21d12331efbe528.json",
+					"minimumCMakeVersion" : 
+					{
+						"string" : "3.23.1"
+					},
+					"parentIndex" : 0,
+					"projectIndex" : 5,
+					"source" : "build/_deps/cuco-src"
+				},
+				{
+					"build" : "_deps/rapids-cmake-build",
+					"jsonFile" : "directory-_deps.rapids-cmake-build-Release-ad7ad15dc26650b4fe78.json",
+					"minimumCMakeVersion" : 
+					{
+						"string" : "3.26.4"
+					},
+					"parentIndex" : 5,
+					"projectIndex" : 6,
+					"source" : "build/_deps/rapids-cmake-src"
+				}
+			],
+			"name" : "Release",
+			"projects" : 
+			[
+				{
+					"childIndexes" : 
+					[
+						1,
+						5
+					],
+					"directoryIndexes" : 
+					[
+						0
+					],
+					"name" : "cuda-voxel-engine",
+					"targetIndexes" : 
+					[
+						28
+					]
+				},
+				{
+					"childIndexes" : 
+					[
+						2,
+						3,
+						4
+					],
+					"directoryIndexes" : 
+					[
+						1
+					],
+					"name" : "CCCL",
+					"parentIndex" : 0,
+					"targetIndexes" : 
+					[
+						0,
+						1,
+						2,
+						3,
+						4,
+						5,
+						6,
+						7,
+						8,
+						9,
+						10,
+						11,
+						12,
+						13,
+						14,
+						15,
+						16,
+						17,
+						18,
+						19,
+						20,
+						21,
+						22,
+						23,
+						24,
+						25,
+						26,
+						27
+					]
+				},
+				{
+					"directoryIndexes" : 
+					[
+						2
+					],
+					"name" : "libcudacxx",
+					"parentIndex" : 1
+				},
+				{
+					"directoryIndexes" : 
+					[
+						3
+					],
+					"name" : "CUB",
+					"parentIndex" : 1
+				},
+				{
+					"directoryIndexes" : 
+					[
+						4
+					],
+					"name" : "Thrust",
+					"parentIndex" : 1
+				},
+				{
+					"childIndexes" : 
+					[
+						6
+					],
+					"directoryIndexes" : 
+					[
+						5
+					],
+					"name" : "CUCO",
+					"parentIndex" : 0
+				},
+				{
+					"directoryIndexes" : 
+					[
+						6
+					],
+					"name" : "cuda-voxel-engine",
+					"parentIndex" : 5
+				}
+			],
+			"targets" : 
+			[
+				{
+					"directoryIndex" : 1,
+					"id" : "Continuous::@71bc8e0727c30fcc7f30",
+					"jsonFile" : "target-Continuous-Release-dcc65937bcffb8d05370.json",
+					"name" : "Continuous",
+					"projectIndex" : 1
+				},
+				{
+					"directoryIndex" : 1,
+					"id" : "ContinuousBuild::@71bc8e0727c30fcc7f30",
+					"jsonFile" : "target-ContinuousBuild-Release-0ca67074a29e648d5170.json",
+					"name" : "ContinuousBuild",
+					"projectIndex" : 1
+				},
+				{
+					"directoryIndex" : 1,
+					"id" : "ContinuousConfigure::@71bc8e0727c30fcc7f30",
+					"jsonFile" : "target-ContinuousConfigure-Release-8e31034b28acca850993.json",
+					"name" : "ContinuousConfigure",
+					"projectIndex" : 1
+				},
+				{
+					"directoryIndex" : 1,
+					"id" : "ContinuousCoverage::@71bc8e0727c30fcc7f30",
+					"jsonFile" : "target-ContinuousCoverage-Release-758ea7150a2f632e2a9d.json",
+					"name" : "ContinuousCoverage",
+					"projectIndex" : 1
+				},
+				{
+					"directoryIndex" : 1,
+					"id" : "ContinuousMemCheck::@71bc8e0727c30fcc7f30",
+					"jsonFile" : "target-ContinuousMemCheck-Release-18c750b17138c9d9925e.json",
+					"name" : "ContinuousMemCheck",
+					"projectIndex" : 1
+				},
+				{
+					"directoryIndex" : 1,
+					"id" : "ContinuousStart::@71bc8e0727c30fcc7f30",
+					"jsonFile" : "target-ContinuousStart-Release-336e8c346c741aaf0189.json",
+					"name" : "ContinuousStart",
+					"projectIndex" : 1
+				},
+				{
+					"directoryIndex" : 1,
+					"id" : "ContinuousSubmit::@71bc8e0727c30fcc7f30",
+					"jsonFile" : "target-ContinuousSubmit-Release-f8b4dc4c02ebe88b1914.json",
+					"name" : "ContinuousSubmit",
+					"projectIndex" : 1
+				},
+				{
+					"directoryIndex" : 1,
+					"id" : "ContinuousTest::@71bc8e0727c30fcc7f30",
+					"jsonFile" : "target-ContinuousTest-Release-cdb1de2d2a2dce82892b.json",
+					"name" : "ContinuousTest",
+					"projectIndex" : 1
+				},
+				{
+					"directoryIndex" : 1,
+					"id" : "ContinuousUpdate::@71bc8e0727c30fcc7f30",
+					"jsonFile" : "target-ContinuousUpdate-Release-7a51e3eaf26ca3ac5691.json",
+					"name" : "ContinuousUpdate",
+					"projectIndex" : 1
+				},
+				{
+					"directoryIndex" : 1,
+					"id" : "Experimental::@71bc8e0727c30fcc7f30",
+					"jsonFile" : "target-Experimental-Release-e6ff6beff15e6c9196d9.json",
+					"name" : "Experimental",
+					"projectIndex" : 1
+				},
+				{
+					"directoryIndex" : 1,
+					"id" : "ExperimentalBuild::@71bc8e0727c30fcc7f30",
+					"jsonFile" : "target-ExperimentalBuild-Release-fd465116742da89cf72f.json",
+					"name" : "ExperimentalBuild",
+					"projectIndex" : 1
+				},
+				{
+					"directoryIndex" : 1,
+					"id" : "ExperimentalConfigure::@71bc8e0727c30fcc7f30",
+					"jsonFile" : "target-ExperimentalConfigure-Release-37d6f3310f9defc13acc.json",
+					"name" : "ExperimentalConfigure",
+					"projectIndex" : 1
+				},
+				{
+					"directoryIndex" : 1,
+					"id" : "ExperimentalCoverage::@71bc8e0727c30fcc7f30",
+					"jsonFile" : "target-ExperimentalCoverage-Release-1fea131e3e3fca20679e.json",
+					"name" : "ExperimentalCoverage",
+					"projectIndex" : 1
+				},
+				{
+					"directoryIndex" : 1,
+					"id" : "ExperimentalMemCheck::@71bc8e0727c30fcc7f30",
+					"jsonFile" : "target-ExperimentalMemCheck-Release-2016936aa97e6b0a2dd9.json",
+					"name" : "ExperimentalMemCheck",
+					"projectIndex" : 1
+				},
+				{
+					"directoryIndex" : 1,
+					"id" : "ExperimentalStart::@71bc8e0727c30fcc7f30",
+					"jsonFile" : "target-ExperimentalStart-Release-18b5c287e6c7ed1a6b12.json",
+					"name" : "ExperimentalStart",
+					"projectIndex" : 1
+				},
+				{
+					"directoryIndex" : 1,
+					"id" : "ExperimentalSubmit::@71bc8e0727c30fcc7f30",
+					"jsonFile" : "target-ExperimentalSubmit-Release-483c2e8e8c26f19d0c97.json",
+					"name" : "ExperimentalSubmit",
+					"projectIndex" : 1
+				},
+				{
+					"directoryIndex" : 1,
+					"id" : "ExperimentalTest::@71bc8e0727c30fcc7f30",
+					"jsonFile" : "target-ExperimentalTest-Release-c5b8e7fc4ef8ca14bd34.json",
+					"name" : "ExperimentalTest",
+					"projectIndex" : 1
+				},
+				{
+					"directoryIndex" : 1,
+					"id" : "ExperimentalUpdate::@71bc8e0727c30fcc7f30",
+					"jsonFile" : "target-ExperimentalUpdate-Release-c22fab166de881bb3e4e.json",
+					"name" : "ExperimentalUpdate",
+					"projectIndex" : 1
+				},
+				{
+					"directoryIndex" : 1,
+					"id" : "Nightly::@71bc8e0727c30fcc7f30",
+					"jsonFile" : "target-Nightly-Release-325b0d93d9ccae90df1f.json",
+					"name" : "Nightly",
+					"projectIndex" : 1
+				},
+				{
+					"directoryIndex" : 1,
+					"id" : "NightlyBuild::@71bc8e0727c30fcc7f30",
+					"jsonFile" : "target-NightlyBuild-Release-407603c08280640fc413.json",
+					"name" : "NightlyBuild",
+					"projectIndex" : 1
+				},
+				{
+					"directoryIndex" : 1,
+					"id" : "NightlyConfigure::@71bc8e0727c30fcc7f30",
+					"jsonFile" : "target-NightlyConfigure-Release-47239f5006ca463e8cf5.json",
+					"name" : "NightlyConfigure",
+					"projectIndex" : 1
+				},
+				{
+					"directoryIndex" : 1,
+					"id" : "NightlyCoverage::@71bc8e0727c30fcc7f30",
+					"jsonFile" : "target-NightlyCoverage-Release-4662bc6a64513b24c077.json",
+					"name" : "NightlyCoverage",
+					"projectIndex" : 1
+				},
+				{
+					"directoryIndex" : 1,
+					"id" : "NightlyMemCheck::@71bc8e0727c30fcc7f30",
+					"jsonFile" : "target-NightlyMemCheck-Release-794be4b1d434921cc4b4.json",
+					"name" : "NightlyMemCheck",
+					"projectIndex" : 1
+				},
+				{
+					"directoryIndex" : 1,
+					"id" : "NightlyMemoryCheck::@71bc8e0727c30fcc7f30",
+					"jsonFile" : "target-NightlyMemoryCheck-Release-29397e60021eb3bcec34.json",
+					"name" : "NightlyMemoryCheck",
+					"projectIndex" : 1
+				},
+				{
+					"directoryIndex" : 1,
+					"id" : "NightlyStart::@71bc8e0727c30fcc7f30",
+					"jsonFile" : "target-NightlyStart-Release-fe870489e1377bd59576.json",
+					"name" : "NightlyStart",
+					"projectIndex" : 1
+				},
+				{
+					"directoryIndex" : 1,
+					"id" : "NightlySubmit::@71bc8e0727c30fcc7f30",
+					"jsonFile" : "target-NightlySubmit-Release-97cd1732cd27718b7986.json",
+					"name" : "NightlySubmit",
+					"projectIndex" : 1
+				},
+				{
+					"directoryIndex" : 1,
+					"id" : "NightlyTest::@71bc8e0727c30fcc7f30",
+					"jsonFile" : "target-NightlyTest-Release-7652b916785d9bb8f5c5.json",
+					"name" : "NightlyTest",
+					"projectIndex" : 1
+				},
+				{
+					"directoryIndex" : 1,
+					"id" : "NightlyUpdate::@71bc8e0727c30fcc7f30",
+					"jsonFile" : "target-NightlyUpdate-Release-c3374078068db6660745.json",
+					"name" : "NightlyUpdate",
+					"projectIndex" : 1
+				},
+				{
+					"directoryIndex" : 0,
+					"id" : "cuda-voxel-engine::@6890427a1f51a3e7e1df",
+					"jsonFile" : "target-cuda-voxel-engine-Release-1949a816e7190f16f5a7.json",
+					"name" : "cuda-voxel-engine",
+					"projectIndex" : 0
+				}
+			]
+		}
+	],
+	"kind" : "codemodel",
+	"paths" : 
+	{
+		"build" : "/home/mikolaj/Desktop/cuda-voxel-engine/build",
+		"source" : "/home/mikolaj/Desktop/cuda-voxel-engine"
+	},
+	"version" : 
+	{
+		"major" : 2,
+		"minor" : 7
+	}
+}
