@@ -505,7 +505,7 @@ __device__ void drawTexturePixel(int blockX, int blockY, int blockZ, float oX, f
 
 	//printf("%d %d %d\n", x, y, z);
 
-	setPixelById(sX, sY, blockX, blockY, blockZ, x, y, z, blockId, pixels, Vector3(oX, oY, oZ), Material(Vector3(255,255,255), 0, 1, 15), PointLight(Vector3(0,0,-500), Vector3(255, 0, 255)), true);
+	setPixelById(sX, sY, blockX, blockY, blockZ, x, y, z, blockId, pixels, Vector3(oX, oY, oZ), Material(Vector3(255,255,255), 0.3, 0.6, 35), PointLight(Vector3(oX, oY, oZ), Vector3(255, 255, 255)), false);
 }
 
 // the actual device insert function
