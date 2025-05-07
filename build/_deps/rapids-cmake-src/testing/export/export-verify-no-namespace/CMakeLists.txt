@@ -1,5 +1,5 @@
 #=============================================================================
-# Copyright (c) 2023-2024, NVIDIA CORPORATION.
+# Copyright (c) 2023-2025, NVIDIA CORPORATION.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -15,7 +15,7 @@
 #=============================================================================
 include(${rapids-cmake-dir}/export/export.cmake)
 
-cmake_minimum_required(VERSION 3.26.4)
+cmake_minimum_required(VERSION 3.30.4)
 project(FakEProJecT LANGUAGES CXX VERSION 3.1.4)
 
 add_library(fakeLib1 INTERFACE)
@@ -23,16 +23,13 @@ add_library(fakeLib2 INTERFACE)
 set_target_properties(fakeLib2 PROPERTIES EXPORT_NAME namespacefor2only)
 install(TARGETS fakeLib1 fakeLib2 EXPORT fake_set)
 
-rapids_export(BUILD FakEProJecT
-  EXPORT_SET fake_set
-  LANGUAGES CXX
-)
+rapids_export(BUILD FakEProJecT EXPORT_SET fake_set LANGUAGES CXX)
 
-# Add a custom command that generates a second project
-# that verifies our target was exported with the correct
-# namespace
-file(WRITE "${CMAKE_BINARY_DIR}/verify/CMakeLists.txt" [=[
-cmake_minimum_required(VERSION 3.26.4)
+# Add a custom command that generates a second project that verifies our target was exported with
+# the correct namespace
+file(WRITE "${CMAKE_BINARY_DIR}/verify/CMakeLists.txt"
+     [=[
+cmake_minimum_required(VERSION 3.30.4)
 project(verify_build_targets LANGUAGES CXX)
 message(STATUS "${CMAKE_CURRENT_LIST_DIR}/../fakeproject-targets.cmake")
 if(NOT EXISTS "${CMAKE_CURRENT_LIST_DIR}/../fakeproject-targets.cmake")
@@ -48,6 +45,6 @@ endif()
   ]=])
 
 add_custom_target(verify_target_file ALL
-  COMMAND ${CMAKE_COMMAND} -E rm -rf "${CMAKE_BINARY_DIR}/verify/build"
-  COMMAND ${CMAKE_COMMAND} -S="${CMAKE_BINARY_DIR}/verify" -B="${CMAKE_BINARY_DIR}/verify/build"
-  )
+                  COMMAND ${CMAKE_COMMAND} -E rm -rf "${CMAKE_BINARY_DIR}/verify/build"
+                  COMMAND ${CMAKE_COMMAND} -S="${CMAKE_BINARY_DIR}/verify"
+                          -B="${CMAKE_BINARY_DIR}/verify/build")

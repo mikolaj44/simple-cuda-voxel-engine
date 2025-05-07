@@ -13,6 +13,11 @@ float dot(Vector3 v1, Vector3 v2){
     return v1.x * v2.x + v1.y * v2.y + v1.z * v2.z;
 }
 
+Vector3 cross(Vector3 v1, Vector3 v2){
+    return Vector3(v1.y * v2.z - v1.z - v2.y, v1.x * v2.z - v1.z - v2.x, v1.x * v2.y - v1.y - v2.x);
+}
+
+
 Vector3 mul(Vector3 v, float val){
     return Vector3(v.x * val, v.y * val, v.z * val);
 }
@@ -22,7 +27,11 @@ Vector3 div(Vector3 v, float val){
 }
 
 Vector3 norm(Vector3 v){
-    return div(v, len(v));
+    float len_ = len(v);
+    if(len == 0){
+        return v;
+    }
+    return div(v, len_);
 }
 
 Vector3 add(Vector3 v1, Vector3 v2){

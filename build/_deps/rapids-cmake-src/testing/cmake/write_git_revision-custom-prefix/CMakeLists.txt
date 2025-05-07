@@ -1,5 +1,5 @@
 #=============================================================================
-# Copyright (c) 2021-2024, NVIDIA CORPORATION.
+# Copyright (c) 2021-2025, NVIDIA CORPORATION.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -15,11 +15,13 @@
 #=============================================================================
 include(${rapids-cmake-dir}/cmake/write_git_revision_file.cmake)
 
-cmake_minimum_required(VERSION 3.26.4)
+cmake_minimum_required(VERSION 3.30.4)
 
 project(DEMO VERSION 2.4 LANGUAGES CXX)
-rapids_cmake_write_git_revision_file(demo_version "${CMAKE_CURRENT_BINARY_DIR}/demo/demo_git_version.hpp")
-rapids_cmake_write_git_revision_file(nested_version "${CMAKE_CURRENT_BINARY_DIR}/nested/nested_git_version.h" PREFIX NESTED)
+rapids_cmake_write_git_revision_file(demo_version
+                                     "${CMAKE_CURRENT_BINARY_DIR}/demo/demo_git_version.hpp")
+rapids_cmake_write_git_revision_file(
+  nested_version "${CMAKE_CURRENT_BINARY_DIR}/nested/nested_git_version.h" PREFIX NESTED)
 
 add_executable(write_git_version main.cpp)
 target_link_libraries(write_git_version PRIVATE demo_version nested_version)

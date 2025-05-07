@@ -67,7 +67,7 @@ endmacro()
 
 ####################################################################################
 
-cmake_minimum_required(VERSION 3.23.1)
+cmake_minimum_required(VERSION 3.30.4)
 
 set(rapids_global_languages )
 foreach(lang IN LISTS rapids_global_languages)

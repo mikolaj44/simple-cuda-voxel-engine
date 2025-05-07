@@ -13,13 +13,16 @@
 extern std::string pathStr;
 
 // screen size
-constexpr int SCREEN_WIDTH = 1920;
-constexpr int SCREEN_HEIGHT = 1080;
+extern __constant__ unsigned int SCREEN_WIDTH_DEVICE;
+extern __constant__ unsigned int SCREEN_HEIGHT_DEVICE;
+
+extern unsigned int SCREEN_WIDTH_HOST;
+extern unsigned int SCREEN_HEIGHT_HOST;
+
 
 // viewing parameters
 constexpr float FOCAL_LENGTH = 10000; //350 //1200 //4000
 constexpr float SCALE_V = 1;
-extern float halfVerFOV, halfHorFOV;
 constexpr float MOUSE_SENSITIVITY = 0.004;
 
 // rendering parameters

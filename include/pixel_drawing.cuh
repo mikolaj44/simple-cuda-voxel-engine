@@ -7,8 +7,11 @@
 
 using namespace std;
 
+extern __constant__ float halfHorFOV;
+extern __constant__ float halfVerFOV;
+
 __device__ __host__ inline void setPixel(uchar4* pixels, int x, int y, int r, int g, int b, int a = 255) {
-    pixels[(SCREEN_HEIGHT - 1 - y) * SCREEN_WIDTH + x] = make_uchar4(r, g, b, a);
+    pixels[(SCREEN_HEIGHT_DEVICE - 1 - y) * SCREEN_WIDTH_DEVICE + x] = make_uchar4(r, g, b, a);
 }
 
 void plotLineHigh(uchar4* pixels, int x1, int y1, int x2, int y2, int r, int g, int b, int a = 255);

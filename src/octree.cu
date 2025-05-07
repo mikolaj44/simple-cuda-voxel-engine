@@ -405,7 +405,6 @@ void Octree::display(uchar4* pixels, bool showBorder){
 
 __device__
 unsigned char firstNode(float tx0, float ty0, float tz0, float txm, float tym, float tzm) {
-
 	float maxV = maxv(maxv(tx0, ty0), tz0);
 
 	unsigned char v = 0;
@@ -449,43 +448,10 @@ unsigned char newNode(float tx, unsigned char i1, float ty, unsigned char i2, fl
 	return i3;
 }
 
-// TODO: OPTIMIZE THIS - IT SHOULD NEED ONLY 3 IF'S, NOT 8
 __device__ uint32_t childMortonRevelles(uint32_t mortonCode, unsigned char revellesChildIndex){
+	static unsigned char reversed[8] = {0, 4, 2, 6, 1, 5, 3, 7};
 
-	uint32_t code = mortonCode << 3;
-
-	switch (revellesChildIndex){
-		case 0:
-			return code;
-		case 1:
-			code |= (1 << 2);
-			return code;
-		case 2:
-			code |= (1 << 1);
-			return code;
-		case 3:
-			code |= (1 << 1);
-			code |= (1 << 2);
-			return code;
-		case 4:
-			code |= 1;
-			return code;
-		case 5:
-			code |= 1;
-			code |= (1 << 2);
-			return code;
-		case 6:
-			code |= 1;
-			code |= (1 << 1);
-			return code;
-		case 7:
-			code |= 1;
-			code |= (1 << 1);
-			code |= (1 << 2);
-			return code;
-		default:
-			return code;
-	}
+	return (mortonCode << 3) | reversed[revellesChildIndex];
 }
 
 __device__ void drawTexturePixel(int blockX, int blockY, int blockZ, float oX, float oY, float oZ, float dX, float dY, float dZ, int sX, int sY, unsigned char blockId, uchar4* pixels, bool textureRenderingEnabled) {
@@ -505,12 +471,12 @@ __device__ void drawTexturePixel(int blockX, int blockY, int blockZ, float oX, f
 
 	//printf("%d %d %d\n", x, y, z);
 
-	setPixelById(sX, sY, blockX, blockY, blockZ, x, y, z, blockId, pixels, Vector3(oX, oY, oZ), Material(Vector3(255,255,255), 0.3, 0.6, 35), PointLight(Vector3(oX, oY, oZ), Vector3(255, 255, 255)), false);
+	// 1500,-500,-5000
+	setPixelById(sX, sY, blockX, blockY, blockZ, x, y, z, blockId, pixels, Vector3(oX, oY, oZ), Material(Vector3(255,255,255), 0.7, 1, 25), PointLight(Vector3(1500,-500,-5000), Vector3(255, 255, 255)), false); //oX - dX * 1000, oY - dY * 1000, oZ - dZ * 1000
 }
 
 // the actual device insert function
 __device__ void Octree::insert(Block block) {
-
 	int x = block.x;
 	int y = block.y;
 	int z = block.z;

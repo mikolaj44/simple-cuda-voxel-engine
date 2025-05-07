@@ -1,5 +1,5 @@
 #=============================================================================
-# Copyright (c) 2021-2024, NVIDIA CORPORATION.
+# Copyright (c) 2021-2025, NVIDIA CORPORATION.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -13,7 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #=============================================================================
-cmake_minimum_required(VERSION 3.26.4)
+cmake_minimum_required(VERSION 3.30.4)
 
 include(${rapids-cmake-dir}/cpm/init.cmake)
 include(${rapids-cmake-dir}/cpm/find.cmake)
@@ -23,38 +23,30 @@ project(rapids-existing-target LANGUAGES CXX)
 
 include("${rapids-cmake-testing-dir}/cpm/make_fake_project_build_dir_with_config.cmake")
 
-make_fake_project_build_dir_with_config(RapidsTestFind 2021.01.02
-    RapidsTestFindConfig.cmake
-    RapidsTestFindConfigVersion.cmake)
+make_fake_project_build_dir_with_config(RapidsTestFind 2021.01.02 RapidsTestFindConfig.cmake
+                                        RapidsTestFindConfigVersion.cmake)
 
 rapids_cpm_init()
 
-set(CMAKE_PREFIX_PATH
-  "${CMAKE_CURRENT_BINARY_DIR}/RapidsTestFind-build/"
-  )
-
+set(CMAKE_PREFIX_PATH "${CMAKE_CURRENT_BINARY_DIR}/RapidsTestFind-build/")
 
 add_library(RapidsTest::RapidsTest IMPORTED INTERFACE)
 
-rapids_cpm_find(RapidsTestFind 2021.01.02
-  GLOBAL_TARGETS RapidsTest::RapidsTest
-  INSTALL_EXPORT_SET setA)
+rapids_cpm_find(RapidsTestFind 2021.01.02 GLOBAL_TARGETS RapidsTest::RapidsTest
+                INSTALL_EXPORT_SET setA)
 
-rapids_cpm_find(RapidsTestFind 2021.01.02
-  GLOBAL_TARGETS RapidsTest::RapidsTest
-  INSTALL_EXPORT_SET setB)
+rapids_cpm_find(RapidsTestFind 2021.01.02 GLOBAL_TARGETS RapidsTest::RapidsTest
+                INSTALL_EXPORT_SET setB)
 
-rapids_cpm_find(RapidsTestFind 2021.01.02
-  GLOBAL_TARGETS RapidsTest::RapidsTest
-  BUILD_EXPORT_SET setB)
-
+rapids_cpm_find(RapidsTestFind 2021.01.02 GLOBAL_TARGETS RapidsTest::RapidsTest
+                BUILD_EXPORT_SET setB)
 
 function(verify_dependency_file file_name to_match)
   file(STRINGS "${file_name}" text)
   set(package_dependency_found FALSE)
 
   foreach(line IN LISTS text)
-    if( line MATCHES ${to_match})
+    if(line MATCHES ${to_match})
       set(package_dependency_found TRUE)
       break()
     endif()

@@ -13,7 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #=============================================================================
-cmake_minimum_required(VERSION 3.26.4)
+cmake_minimum_required(VERSION 3.30.4)
 
 project(fill_cache LANGUAGES CXX)
 
@@ -54,7 +54,7 @@ rapids_cpm_nvcomp(USE_PROPRIETARY_BINARY ON DOWNLOAD_ONLY ON)
 get_cmake_property(cpm_packages CACHE_VARIABLES)
 set(packages)
 foreach(p ${cpm_packages})
-  if ("${p}" MATCHES "^CPM_PACKAGE_(.*)_SOURCE_DIR")
+  if("${p}" MATCHES "^CPM_PACKAGE_(.*)_SOURCE_DIR")
     list(APPEND packages ${CMAKE_MATCH_1})
   endif()
 endforeach()

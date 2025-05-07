@@ -1,5 +1,5 @@
 #=============================================================================
-# Copyright (c) 2024, NVIDIA CORPORATION.
+# Copyright (c) 2024-2025, NVIDIA CORPORATION.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -13,7 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #=============================================================================
-cmake_minimum_required(VERSION 3.26.4)
+cmake_minimum_required(VERSION 3.30.4)
 project(rapids-test-project LANGUAGES CXX)
 
 include(${rapids-cmake-dir}/cpm/init.cmake)
@@ -27,5 +27,6 @@ rapids_cpm_package_override("${CMAKE_CURRENT_BINARY_DIR}/../rapids-cmake/pinned_
 rapids_cpm_package_details(rmm rmm_version rmm_repository pin_rmm_tag rmm_shallow rmm_exclude)
 
 if(NOT pin_rmm_tag STREQUAL "e3e32150d1bef13480ede4b2df1f0b38e43108a4")
-  message(FATAL_ERROR "pinned rmm tag (${pin_rmm_tag}) doesn't match pre-computed SHA1 for the 22.02 tag")
+  message(FATAL_ERROR "pinned rmm tag (${pin_rmm_tag}) doesn't match pre-computed SHA1 for the 22.02 tag"
+  )
 endif()

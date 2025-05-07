@@ -1,5 +1,12 @@
 #include "globals.cuh"
 
+// screen size
+__constant__ unsigned int SCREEN_WIDTH_DEVICE;
+__constant__ unsigned int SCREEN_HEIGHT_DEVICE;
+
+unsigned int SCREEN_WIDTH_HOST;
+unsigned int SCREEN_HEIGHT_HOST;
+
 using namespace std;
 
 std::string getPathStr() {
@@ -25,9 +32,6 @@ std::string pathStr = getPathStr();
 float PLAYER_SPEED = 1; // 1
 float PLAYER_SPEED_FLYING = 0.2; // 0.2
 float PLAYER_TURN_Y_SPEED = 0.1;
-
-float halfHorFOV;
-float halfVerFOV;
 
 bool mouseControls = true;
 bool doGravity = false;

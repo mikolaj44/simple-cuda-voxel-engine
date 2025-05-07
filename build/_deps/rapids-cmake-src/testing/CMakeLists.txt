@@ -1,5 +1,5 @@
 #=============================================================================
-# Copyright (c) 2021-2024, NVIDIA CORPORATION.
+# Copyright (c) 2021-2025, NVIDIA CORPORATION.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -14,7 +14,7 @@
 # limitations under the License.
 #=============================================================================
 
-cmake_minimum_required(VERSION 3.26.4 FATAL_ERROR)
+cmake_minimum_required(VERSION 3.30.4 FATAL_ERROR)
 project(rapids-cmake-testing LANGUAGES NONE)
 
 enable_testing()
@@ -33,9 +33,8 @@ add_subdirectory(test)
 
 option(RAPIDS_CMAKE_ENABLE_DOWNLOAD_TESTS "Enable tests that require downloads" ON)
 if(RAPIDS_CMAKE_ENABLE_DOWNLOAD_TESTS)
-  # Setup and fill the cpm cache, and specify CPM_SOURCE_CACHE
-  # so that all subsequent tests in this directory use the
-  # shared CPM_SOURCE_CACHE
+  # Setup and fill the cpm cache, and specify CPM_SOURCE_CACHE so that all subsequent tests in this
+  # directory use the shared CPM_SOURCE_CACHE
   include("${CMAKE_CURRENT_SOURCE_DIR}/utils/setup_cpm_cache.cmake")
   setup_cpm_cache()
 

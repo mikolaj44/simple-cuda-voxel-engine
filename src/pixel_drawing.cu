@@ -1,5 +1,8 @@
 #include "pixel_drawing.cuh"
 
+float __constant__ halfHorFOV;
+float __constant__ halfVerFOV;
+
 void plotLineLow(uchar4* pixels, int x1, int y1, int x2, int y2, int r, int g, int b, int a) {
 
     float dx = x2 - x1;
@@ -20,18 +23,18 @@ void plotLineLow(uchar4* pixels, int x1, int y1, int x2, int y2, int r, int g, i
             return;
         if (y < 0)
             return;
-        if (x >= SCREEN_WIDTH)
+        if (x >= SCREEN_WIDTH_HOST)
             return;
-        if (y >= SCREEN_HEIGHT)
+        if (y >= SCREEN_HEIGHT_HOST)
             return;
 
         if (x < 0)
             return;
         if (y < 0)
             return;
-        if (x >= SCREEN_WIDTH)
+        if (x >= SCREEN_WIDTH_HOST)
             return;
-        if (y >= SCREEN_HEIGHT)
+        if (y >= SCREEN_HEIGHT_HOST)
             return;
 
         setPixel(pixels, x, y, r, g, b, a);
@@ -65,18 +68,18 @@ void plotLineHigh(uchar4* pixels, int x1, int y1, int x2, int y2, int r, int g, 
             return;
         if (y < 0)
             return;
-        if (x >= SCREEN_WIDTH)
+        if (x >= SCREEN_WIDTH_HOST)
             return;
-        if (y >= SCREEN_HEIGHT)
+        if (y >= SCREEN_HEIGHT_HOST)
             return;
 
         if (x < 0)
             return;
         if (y < 0)
             return;
-        if (x >= SCREEN_WIDTH)
+        if (x >= SCREEN_WIDTH_HOST)
             return;
-        if (y >= SCREEN_HEIGHT)
+        if (y >= SCREEN_HEIGHT_HOST)
             return;
 
         setPixel(pixels, x, y, r, g, b, a);
@@ -300,8 +303,8 @@ float* _3d2dProjection(float x_, float y_, float z_) {
         coords[1] = INT_MAX;
     }
     else {
-        coords[0] = int(dX * FOCAL_LENGTH / dZ * SCALE_V + SCREEN_WIDTH  / 2);
-        coords[1] = int(dY * FOCAL_LENGTH / dZ * SCALE_V + SCREEN_HEIGHT / 2);
+        coords[0] = int(dX * FOCAL_LENGTH / dZ * SCALE_V + SCREEN_WIDTH_HOST  / 2);
+        coords[1] = int(dY * FOCAL_LENGTH / dZ * SCALE_V + SCREEN_HEIGHT_HOST / 2);
 
         //coords[0] = (FOCAL_LENGTH * x) / (z + FOCAL_LENGTH) * 100 + SCREEN_WIDTH / 2;
         //coords[1] = (FOCAL_LENGTH * y) / (z + FOCAL_LENGTH) * 100 + SCREEN_HEIGHT / 2;

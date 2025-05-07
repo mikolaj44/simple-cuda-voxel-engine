@@ -1,5 +1,5 @@
 #=============================================================================
-# Copyright (c) 2024, NVIDIA CORPORATION.
+# Copyright (c) 2024-2025, NVIDIA CORPORATION.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -24,17 +24,16 @@ enable_testing()
 rapids_test_init()
 
 add_executable(verify_ main.cu)
-rapids_test_add(
-  NAME verify
-  COMMAND verify_
-  GPUS 1
-  PERCENT 100
-  INSTALL_COMPONENT_SET testing
-)
+rapids_test_add(NAME verify
+                COMMAND verify_
+                GPUS 1
+                PERCENT 100
+                INSTALL_COMPONENT_SET testing)
 rapids_test_install_relocatable(INSTALL_COMPONENT_SET testing DESTINATION bin/tests/to_verify/)
 
 add_custom_target(install_testing_component ALL
-  COMMAND ${CMAKE_COMMAND} --install "${CMAKE_CURRENT_BINARY_DIR}" --component testing --prefix install/
-  COMMAND ${CMAKE_CTEST_COMMAND} --test-dir install/bin/tests/to_verify/ --output-on-failure --no-tests=error
-  )
-add_dependencies(install_testing_component verify_)
+                  COMMAND ${CMAKE_COMMAND} --install "${CMAKE_CURRENT_BINARY_DIR}" --component
+                          testing --prefix install/
+                  COMMAND ${CMAKE_CTEST_COMMAND} --test-dir install/bin/tests/to_verify/
+                          --output-on-failure --no-tests=error)
+add_dependencies(install_testing_component verify_ generate_ctest_json)

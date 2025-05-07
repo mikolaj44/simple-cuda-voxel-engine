@@ -13,23 +13,25 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #=============================================================================
-cmake_minimum_required(VERSION 3.26.4)
+cmake_minimum_required(VERSION 3.30.4)
 project(rapids-test-project LANGUAGES CXX)
 
 include(${rapids-cmake-dir}/cpm/init.cmake)
 include(${rapids-cmake-dir}/cpm/fmt.cmake)
+include(${rapids-cmake-dir}/cpm/nvtx3.cmake)
 include(${rapids-cmake-dir}/cpm/rmm.cmake)
 
 rapids_cpm_init(GENERATE_PINNED_VERSIONS)
 rapids_cpm_fmt(DOWNLOAD_ONLY ON)
+rapids_cpm_nvtx3(DOWNLOAD_ONLY ON)
 rapids_cpm_rmm(DOWNLOAD_ONLY ON)
 
 # only check projects that were downloaded by CPM (ignore those already in the build environment)
-foreach(proj IN ITEMS rmm fmt)
+foreach(proj IN ITEMS fmt nvtx3 rmm)
   if(${proj}_SOURCE_DIR)
     list(APPEND projects-to-verify ${proj})
   endif()
 endforeach()
 
 include("${rapids-cmake-testing-dir}/cpm/verify_generated_pins.cmake")
-verify_generated_pins(verify_pins PROJECTS rmm fmt)
+verify_generated_pins(verify_pins PROJECTS ${projects-to-verify})

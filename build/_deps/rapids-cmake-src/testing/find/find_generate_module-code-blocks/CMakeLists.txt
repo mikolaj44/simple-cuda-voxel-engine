@@ -1,5 +1,5 @@
 #=============================================================================
-# Copyright (c) 2023-2024, NVIDIA CORPORATION.
+# Copyright (c) 2023-2025, NVIDIA CORPORATION.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -15,7 +15,7 @@
 #=============================================================================
 include(${rapids-cmake-dir}/find/generate_module.cmake)
 
-cmake_minimum_required(VERSION 3.26.4)
+cmake_minimum_required(VERSION 3.30.4)
 project(rapids-test-project LANGUAGES CXX)
 
 set(CMAKE_PREFIX_PATH "${CMAKE_CURRENT_SOURCE_DIR}")
@@ -23,12 +23,10 @@ set(CMAKE_PREFIX_PATH "${CMAKE_CURRENT_SOURCE_DIR}")
 # Generate the find module
 set(initial_code_block [[set(RapidsTest_INITIAL_CODE_BLOCK TRUE)]])
 set(final_code_block [[set(RapidsTest_FINAL_CODE_BLOCK TRUE)]])
-rapids_find_generate_module( RapidsTest
-    HEADER_NAMES rapids-cmake-test-header_only.hpp
-    INITIAL_CODE_BLOCK initial_code_block
-    FINAL_CODE_BLOCK   final_code_block
-    INSTALL_EXPORT_SET test_set
-    )
+rapids_find_generate_module(RapidsTest
+                            HEADER_NAMES rapids-cmake-test-header_only.hpp INITIAL_CODE_BLOCK
+                                         initial_code_block FINAL_CODE_BLOCK final_code_block
+                            INSTALL_EXPORT_SET test_set)
 
 find_package(RapidsTest REQUIRED)
 

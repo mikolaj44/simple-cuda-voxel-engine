@@ -1,0 +1,7 @@
+{
+	"InstallScripts" : 
+	[
+		"/home/mikolaj/Desktop/cuda-voxel-engine/build/_deps/cccl-subbuild/cmake_install.cmake"
+	],
+	"Parallel" : false
+}

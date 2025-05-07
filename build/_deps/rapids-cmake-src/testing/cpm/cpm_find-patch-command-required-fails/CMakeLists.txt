@@ -1,5 +1,5 @@
 #=============================================================================
-# Copyright (c) 2024, NVIDIA CORPORATION.
+# Copyright (c) 2024-2025, NVIDIA CORPORATION.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -13,7 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #=============================================================================
-cmake_minimum_required(VERSION 3.26.4)
+cmake_minimum_required(VERSION 3.30.4)
 project(rapids-cpm_find-patch-command-project LANGUAGES CXX)
 
 include("${rapids-cmake-dir}/cpm/detail/package_details.cmake")
@@ -23,9 +23,8 @@ set(deps_dir "${CMAKE_CURRENT_BINARY_DIR}/_fmt_dep")
 if(NOT EXISTS "${deps_dir}")
   file(MAKE_DIRECTORY "${deps_dir}")
   find_package(Git)
-  execute_process(
-    COMMAND ${GIT_EXECUTABLE} clone --depth 1 --branch "${tag}" "${repository}"
-    WORKING_DIRECTORY "${deps_dir}")
+  execute_process(COMMAND ${GIT_EXECUTABLE} clone --depth 1 --branch "${tag}" "${repository}"
+                  WORKING_DIRECTORY "${deps_dir}")
 endif()
 
 set(fmt_dir "${deps_dir}/fmt")
@@ -41,5 +40,5 @@ include(${rapids-cmake-dir}/cpm/fmt.cmake)
 rapids_cpm_fmt()
 
 if(NOT "${fmt_ADDED}")
-    message(FATAL_ERROR "The found repo was used rather than downloading and patching a new version")
+  message(FATAL_ERROR "The found repo was used rather than downloading and patching a new version")
 endif()

@@ -15,6 +15,8 @@ __device__ __host__ float len(Vector3 v);
 
 __device__ __host__ float dot(Vector3 v1, Vector3 v2);
 
+__device__ __host__ Vector3 cross(Vector3 v1, Vector3 v2);
+
 __device__ __host__ Vector3 mul(Vector3 v, float val);
 
 __device__ __host__ Vector3 div(Vector3 v, float val);

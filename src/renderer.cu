@@ -10,35 +10,28 @@
 
 using namespace std;
 
-void calculateFOV() {
-    halfHorFOV = atanf(SCREEN_WIDTH / (2.0 * FOCAL_LENGTH));
-    halfVerFOV = atanf(SCREEN_HEIGHT / (2.0 * FOCAL_LENGTH));
+void Renderer::calculateFOV() {
+    float halfHorFOV_ = atanf(SCREEN_WIDTH_HOST / (2.0 * FOCAL_LENGTH));
+    float halfVerFOV_ = atanf(SCREEN_HEIGHT_HOST / (2.0 * FOCAL_LENGTH));
+
+    cudaMemcpyToSymbol(halfHorFOV, &halfHorFOV_, sizeof(float), 0, cudaMemcpyHostToDevice);
+    cudaMemcpyToSymbol(halfVerFOV, &halfVerFOV_, sizeof(float), 0, cudaMemcpyHostToDevice);
 }
 
-typedef void (*func_ptr)(Octree*, float, float, float, float, float, float, int, int, int, uchar4*);
-
-__global__ void renderScreenCudaKernel(Octree* octree, int width, int height, float cameraAngleX, float cameraAngleY, float oX, float oY, float oZ, uchar4* pixels) {
+__global__ void renderScreenCudaKernel(Octree* octree, float cameraAngleX, float cameraAngleY, float oX, float oY, float oZ, uchar4* pixels) {
     unsigned int index = threadIdx.x + blockDim.x * blockIdx.x;
 
-    if (index >= width * height)
+    if (index >= SCREEN_WIDTH_DEVICE * SCREEN_HEIGHT_DEVICE)
         return;
 
-    int pX = index % width;
-    int pY = index / width;
-
-    // setPixel(pixels, pX, pY, 255, 0, 0);
-    // return;
-
-    //if (!(pX == 0 && pY == 0))
-    //    return;
-
-    //printf("%f %f %f\n", oX, oY, oZ);
+    int pX = index % SCREEN_WIDTH_DEVICE;
+    int pY = index / SCREEN_HEIGHT_DEVICE;
 
     float alpha;
     float polar;
 
-    alpha = (atanf(-(pX - SCREEN_WIDTH  / 2) / FOCAL_LENGTH) - cameraAngleY + M_PI / 2); // horizontal angle
-    polar = (atanf(-(pY - SCREEN_HEIGHT / 2) / FOCAL_LENGTH) + cameraAngleX + M_PI / 2); // vertical angle
+    alpha = (atanf(-(pX - SCREEN_WIDTH_DEVICE / 2) / FOCAL_LENGTH) - cameraAngleY + M_PI / 2); // horizontal angle
+    polar = (atanf(-(pY - SCREEN_HEIGHT_DEVICE / 2) / FOCAL_LENGTH) + cameraAngleX + M_PI / 2); // vertical angle
 
     float sX = sin(polar) * cos(alpha);
     float sZ = sin(polar) * sin(alpha);
@@ -47,6 +40,6 @@ __global__ void renderScreenCudaKernel(Octree* octree, int width, int height, fl
     performRaycast(octree, oX, oY, oZ, sX, sY, sZ, pX, pY, 1, pixels);
 }
 
-void renderScreenCuda(Octree* octree, int width, int height, float cameraAngleX, float cameraAngleY, float oX, float oY, float oZ, uchar4* pixels, unsigned int gridSize, unsigned int blockSize) {
-    renderScreenCudaKernel<<<gridSize,blockSize>>>(octree, SCREEN_WIDTH, SCREEN_HEIGHT, cameraAngle.x, cameraAngle.y, cameraPos.x, cameraPos.y, cameraPos.z, pixels);
+void Renderer::renderScreenCuda(Octree* octree, float cameraAngleX, float cameraAngleY, float oX, float oY, float oZ, uchar4* pixels, unsigned int gridSize, unsigned int blockSize) {
+    renderScreenCudaKernel<<<gridSize,blockSize>>>(octree, cameraAngle.x, cameraAngle.y, cameraPos.x, cameraPos.y, cameraPos.z, pixels);
 }

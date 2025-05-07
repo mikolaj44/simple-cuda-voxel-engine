@@ -3,7 +3,7 @@
 # No other meaning or use of this file is supported.
 
 method=git
-command=/usr/bin/cmake;-DCMAKE_MESSAGE_LOG_LEVEL=VERBOSE;-P;/home/mikolaj/Desktop/cuda-voxel-engine/build/_deps/cuco-subbuild/cuco-populate-prefix/tmp/cuco-populate-gitclone.cmake
+command=/usr/local/bin/cmake;-DCMAKE_MESSAGE_LOG_LEVEL=VERBOSE;-P;/home/mikolaj/Desktop/cuda-voxel-engine/build/_deps/cuco-subbuild/cuco-populate-prefix/tmp/cuco-populate-gitclone.cmake
 source_dir=/home/mikolaj/Desktop/cuda-voxel-engine/build/_deps/cuco-src
 work_dir=/home/mikolaj/Desktop/cuda-voxel-engine/build/_deps
 repository=https://github.com/NVIDIA/cuCollections.git

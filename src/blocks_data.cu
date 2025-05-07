@@ -1,9 +1,9 @@
 #include "blocks_data.cuh"
 
 __device__ BlockVariant** blockVariants = nullptr;
-__constant__ int blocksAmount = 10;
+__constant__ int blocksAmount = 4;
 
-__constant__ float epsilon = 0.0001;
+__constant__ float epsilon = 0.001;
 
 // https://stackoverflow.com/questions/61277046/convert-just-a-hue-into-rgb
 __device__ void hueToRGB(float hue, int& r, int& g, int&b){
@@ -35,14 +35,29 @@ __device__ void getPhongIllumination(Vector3 pos, Vector3 cameraPos, Vector3 nor
     // //printf("%d %d %d\n", r, g, b);
 
 	Vector3 h  = norm(Vector3(cameraPos.x - pos.x, cameraPos.y - pos.y, cameraPos.z - pos.z));
-	Vector3 dh = norm(sub(mul(normal, 2 * dot(Ln, normal)), Ln)); //https://math.stackexchange.com/questions/13261/how-to-get-a-reflection-vector
+
+    //h = mul(h, -1);
+
+	Vector3 dh = norm(sub(mul(normal, 2 * dot(Ln, normal)), Ln));
+
+    //dh = mul(dh, -1);
+
+    // if(dot(h, dh) < 0){
+    //     return;
+    // }
+
+    //dh = mul(dh, -1);
 
 	Vector3 diffuseVector = Vector3(material.diffuse, material.diffuse, material.diffuse);
 	Vector3 specularVector = Vector3(material.specular, material.specular, material.specular);
 
-	//Vector3 lighting = vmul(light.color, mul(diffuseVector, dot(normal, Ln)));
+	Vector3 lighting = vmul(light.color, mul(diffuseVector, dot(normal, Ln)));
 
-    Vector3 lighting = vmul(light.color, add(mul(diffuseVector, dot(normal, Ln)), mul(specularVector, pow(dot(h, dh), material.specularExponent))));
+    // if(isnan( pow(dot(h, dh), (int)material.specularExponent) )){
+    //     printf("%f %f\n", dot(h, dh), material.specularExponent);
+    // }
+
+    //Vector3 lighting = vmul(light.color, add(mul(diffuseVector, dot(normal, Ln)), mul(specularVector, pow(dot(dh, h), (int)material.specularExponent))));
 
 	if (lighting.x > 255)
 		lighting.x = 255;
@@ -85,8 +100,8 @@ __device__ void setPixelById(int sX, int sY, int blockX, int blockY, int blockZ,
 
     if (equals(y, (float)blockY, epsilon)) { // top
         if(textureRenderingEnabled){
-            imgX = (int)(absv(x - (int)x) * imgWidth);
-            imgY = (int)(absv(z - (int)z) * imgHeight);
+            imgX = (int)(absv(x - floor(x)) * imgWidth);
+            imgY = imgHeight - (int)(absv(z - floor(z)) * imgHeight);
 
             r = blockVariants[blockId]->texture->topImage[(imgY * imgWidth + imgX) * imgChannels];
             g = blockVariants[blockId]->texture->topImage[(imgY * imgWidth + imgX) * imgChannels + 1];
@@ -97,8 +112,8 @@ __device__ void setPixelById(int sX, int sY, int blockX, int blockY, int blockZ,
     }
     else if (equals(y, (float)blockY + 1.0, epsilon)) { // bottom
         if(textureRenderingEnabled){
-            imgX = (int)(absv(x - (int)x) * imgWidth);
-            imgY = (int)(absv(z - (int)z) * imgHeight);
+            imgX = (int)(absv(x - floor(x)) * imgWidth);
+            imgY = (int)(absv(z - floor(z)) * imgHeight);
 
             r = blockVariants[blockId]->texture->bottomImage[(imgY * imgWidth + imgX) * imgChannels];
             g = blockVariants[blockId]->texture->bottomImage[(imgY * imgWidth + imgX) * imgChannels + 1];
@@ -109,8 +124,8 @@ __device__ void setPixelById(int sX, int sY, int blockX, int blockY, int blockZ,
     }
     else if (equals(x, (float)blockX, epsilon)) { // left
         if(textureRenderingEnabled){
-            imgX = (int)(absv(z - (int)z) * imgWidth);
-            imgY = (int)(absv(y - (int)y) * imgHeight);
+            imgX = imgWidth - (int)(absv(z - floor(x)) * imgWidth);
+            imgY = (int)(absv(y - floor(y)) * imgHeight);
 
             r = blockVariants[blockId]->texture->leftImage[(imgY * imgWidth + imgX) * imgChannels];
             g = blockVariants[blockId]->texture->leftImage[(imgY * imgWidth + imgX) * imgChannels + 1];
@@ -121,8 +136,8 @@ __device__ void setPixelById(int sX, int sY, int blockX, int blockY, int blockZ,
     }
     else if (equals(x, (float)blockX + 1.0, epsilon)) { // right
         if(textureRenderingEnabled){
-            imgX = (int)(absv(z - (int)z) * imgWidth);
-            imgY = (int)(absv(y - (int)y) * imgHeight);
+            imgX = imgWidth - (int)(absv(z - ceil(x)) * imgWidth);
+            imgY = (int)(absv(y - floor(y)) * imgHeight);
 
             r = blockVariants[blockId]->texture->rightImage[(imgY * imgWidth + imgX) * imgChannels];
             g = blockVariants[blockId]->texture->rightImage[(imgY * imgWidth + imgX) * imgChannels + 1];
@@ -133,8 +148,8 @@ __device__ void setPixelById(int sX, int sY, int blockX, int blockY, int blockZ,
     }
     else if (equals(z, (float)blockZ, epsilon)) { // front
         if(textureRenderingEnabled){
-            imgX = (int)(absv(x - (int)x) * imgWidth);
-            imgY = (int)(absv(y - (int)y) * imgHeight);
+            imgX = (int)(absv(x - floor(x)) * imgWidth);
+            imgY = (int)(absv(y - floor(y)) * imgHeight);
 
             r = blockVariants[blockId]->texture->frontImage[(imgY * imgWidth + imgX) * imgChannels];
             g = blockVariants[blockId]->texture->frontImage[(imgY * imgWidth + imgX) * imgChannels + 1];
@@ -145,8 +160,8 @@ __device__ void setPixelById(int sX, int sY, int blockX, int blockY, int blockZ,
     }
     else if (equals(z, (float)blockZ + 1.0, epsilon)) { // back
         if(textureRenderingEnabled){
-            imgX = (int)(absv(x - (int)x) * imgWidth);
-            imgY = (int)(absv(y - (int)y) * imgHeight);
+            imgX = imgWidth - (int)(absv(x - floor(x)) * imgWidth);
+            imgY = (int)(absv(y - floor(y)) * imgHeight);
 
             r = blockVariants[blockId]->texture->backImage[(imgY * imgWidth + imgX) * imgChannels];
             g = blockVariants[blockId]->texture->backImage[(imgY * imgWidth + imgX) * imgChannels + 1];
@@ -155,12 +170,13 @@ __device__ void setPixelById(int sX, int sY, int blockX, int blockY, int blockZ,
 
         normal = Vector3(0, 0, 1);
     }
-    else{
+    else {
         return;
     }
     
     if(!textureRenderingEnabled) {
-        hueToRGB(float(blockId) * 2.8125 * 2.0 / 360.0, r, g, b);
+        //printf("%f\n", float(blockId));
+        hueToRGB(float(blockId) * 2.8125 / 360.0, r, g, b);
     }
 
     getPhongIllumination(Vector3(x, y, z), cameraPos, normal, material, light, r, g, b);
