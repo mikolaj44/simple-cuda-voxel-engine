@@ -78,6 +78,7 @@
         "__config": "cpp",
         "stream_ref": "cpp",
         "annotated_ptr": "cpp",
-        "pipeline": "cpp"
+        "pipeline": "cpp",
+        "inplace_vector": "cpp"
     }
 }

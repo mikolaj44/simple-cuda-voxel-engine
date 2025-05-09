@@ -9,6 +9,7 @@
 
 #include "octree.cuh"
 #include "chunk_generation.cuh"
+#include "block_texture.cuh"
 
 #include <cuda_runtime.h>
 #include <cuda_gl_interop.h>
@@ -26,8 +27,8 @@ public:
 
     static void clearVoxels();
 
-    template<typename blockPosToIdFunction>
-    static void insertVoxels(blockPosToIdFunction func, Vector3 octreeCenter = Vector3(0,0,0)) {
+    template<typename XYZToIdFunction>
+    static void insertVoxels(XYZToIdFunction func, Vector3 octreeCenter = Vector3(0,0,0)) {
         generateChunks(octree, octreeCenter, func, maxGridSize, blockSize, frameCount);
         frameCount++;
         frameCount %= UINT64_MAX;

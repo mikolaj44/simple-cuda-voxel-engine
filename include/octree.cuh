@@ -1,11 +1,8 @@
 #pragma once
 #include <string>
-#include "globals.cuh"
-#include "pixel_drawing.cuh"
-#include "blocks_data.cuh"
-#include "cuda_math.cuh"
 #include <cmath>
 #include <iostream>
+#include <globals.cuh>
 
 #include <cuda_runtime.h>
 #include <device_launch_parameters.h>
@@ -23,9 +20,7 @@ public:
 };
 
 class Octree {
-
 public:
-
 	struct Node {
 		uint8_t id; // most significant bit is 1 if the node has children, the rest of the bits are for block id
 
@@ -60,8 +55,6 @@ public:
 	unsigned char get(int x, int y, int z);
 
 	void clear();
-
-	void display(uchar4* pixels, bool showBorder = true);
 
 	__device__ void morton3Ddecode(uint32_t mortonCode, int&x, int& y, int& z);
 

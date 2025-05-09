@@ -5,17 +5,18 @@
 
 #include "renderer.cuh"
 #include "chunk_generation.cuh"
-#include "chunk.cuh"
-#include "pixel_drawing.cuh"
+#include "globals.cuh"
 
-using namespace std;
+// void Renderer::calculateFOV() {
+//     float halfHorFOV_ = atanf(SCREEN_WIDTH_HOST / (2.0 * FOCAL_LENGTH));
+//     float halfVerFOV_ = atanf(SCREEN_HEIGHT_HOST / (2.0 * FOCAL_LENGTH));
 
-void Renderer::calculateFOV() {
-    float halfHorFOV_ = atanf(SCREEN_WIDTH_HOST / (2.0 * FOCAL_LENGTH));
-    float halfVerFOV_ = atanf(SCREEN_HEIGHT_HOST / (2.0 * FOCAL_LENGTH));
+//     cudaMemcpyToSymbol(halfHorFOV, &halfHorFOV_, sizeof(float), 0, cudaMemcpyHostToDevice);
+//     cudaMemcpyToSymbol(halfVerFOV, &halfVerFOV_, sizeof(float), 0, cudaMemcpyHostToDevice);
+// }
 
-    cudaMemcpyToSymbol(halfHorFOV, &halfHorFOV_, sizeof(float), 0, cudaMemcpyHostToDevice);
-    cudaMemcpyToSymbol(halfVerFOV, &halfVerFOV_, sizeof(float), 0, cudaMemcpyHostToDevice);
+void setPixel(uchar4* pixels, int x, int y, int r, int g, int b, int a) {
+    pixels[(SCREEN_HEIGHT_DEVICE - 1 - y) * SCREEN_WIDTH_DEVICE + x] = make_uchar4(r, g, b, a);
 }
 
 __global__ void renderScreenCudaKernel(Octree* octree, float cameraAngleX, float cameraAngleY, float oX, float oY, float oZ, uchar4* pixels) {

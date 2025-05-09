@@ -38,11 +38,6 @@ constexpr float EPSILON = 0.00001;
 // chunk parameters (block amount)
 constexpr int CHUNK_W = 16;
 
-// world generation parameters
-
-constexpr float smoothing = 50;
-constexpr float amplify = 50;
-
 // player parameters
 constexpr float PLAYER_HEIGHT = 1.75;
 constexpr float CAMERA_HEIGHT = 2;

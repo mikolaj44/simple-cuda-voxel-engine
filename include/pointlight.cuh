@@ -1,12 +1,11 @@
 #pragma once
 
 #include "vector3.cuh"
+
 #include <cuda_runtime.h>
 
 class PointLight {
-
 public:
-    
     Vector3 pos;
     Vector3 color;
 

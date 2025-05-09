@@ -11,7 +11,10 @@
 #include <bitset>
 
 #include "octree.cuh"
+#include "renderer.cuh"
 #include "cuda_morton.cuh"
+#include "blocks_data.cuh"
+#include "cuda_math.cuh"
 
 #include <cmath>
 #include <cstddef>
@@ -271,138 +274,6 @@ __device__ void Octree::morton3Ddecode(uint32_t mortonCode, int& x, int& y, int&
 
 }
 
-void Octree::display(uchar4* pixels, uint32_t index, bool showBorder, int x, int y, int z, unsigned int level){
-
-	return;
-
-	if(index == 1){
-		x = xMin;
-		y = yMin;
-		z = zMin;
-		level = Octree::level;
-	}
-
-	//cout << bitset<32>(index) << endl;
-
-	uint8_t nodeId = nodes[index].id;
-
-	//cout << (int)node.blockId << " " << node.hasChildren << endl;
-
-	//if(level == 17)
-	//	cout << (int)node.blockId << " " << node.hasChildren << " " << index << " " << level << endl;
-
-	int size = 1 << level;
-
-	if ((showBorder /*&& level < 8*/) || (size == 1 && nodeId & 127 != 0)) {
-
-		//printf("%d\n", nodeId);
-
-		// if(size == 1){
-		// 	cout << nodeLevel(index, Octree::level) << " " << index << " " << Octree::level << endl;
-		// }
-
-		float coordinates[8][2];
-		float* coordinate;
-
-		coordinate = _3d2dProjection(x, y, z);
-		coordinates[0][0] = coordinate[0];
-		coordinates[0][1] = coordinate[1];
-
-		coordinate = _3d2dProjection(x + size, y, z);
-		coordinates[1][0] = coordinate[0];
-		coordinates[1][1] = coordinate[1];
-
-		coordinate = _3d2dProjection(x + size, y + size, z);
-		coordinates[2][0] = coordinate[0];
-		coordinates[2][1] = coordinate[1];
-
-		coordinate = _3d2dProjection(x, y + size, z);
-		coordinates[3][0] = coordinate[0];
-		coordinates[3][1] = coordinate[1];
-
-		coordinate = _3d2dProjection(x, y, z + size);
-		coordinates[4][0] = coordinate[0];
-		coordinates[4][1] = coordinate[1];
-
-		coordinate = _3d2dProjection(x + size, y, z + size);
-		coordinates[5][0] = coordinate[0];
-		coordinates[5][1] = coordinate[1];
-
-		coordinate = _3d2dProjection(x + size, y + size, z + size);
-		coordinates[6][0] = coordinate[0];
-		coordinates[6][1] = coordinate[1];
-
-		coordinate = _3d2dProjection(x, y + size, z + size);
-		coordinates[7][0] = coordinate[0];
-		coordinates[7][1] = coordinate[1];
-
-		//unsigned char type = 0;
-
-		//if (node->blockId != 0)
-		//	type = node->blockId;
-
-		//unsigned char* color = BlockTypeToColor(type);
-		//int color[3] = { rand() % 255, rand() % 255, rand() % 255 };
-		int color[3] = { 0, 255, 0 };
-
-		if(level == 0){
-			color[0] = 255;
-		}
-		// else if(level == 1){
-		// 	color[2] = 255;
-		// }
-
-		drawLine(pixels, (int)coordinates[0][0], (int)coordinates[0][1], (int)coordinates[1][0], (int)coordinates[1][1], color[0], color[1], color[2]);
-		drawLine(pixels, (int)coordinates[1][0], (int)coordinates[1][1], (int)coordinates[2][0], (int)coordinates[2][1], color[0], color[1], color[2]);
-		drawLine(pixels, (int)coordinates[2][0], (int)coordinates[2][1], (int)coordinates[3][0], (int)coordinates[3][1], color[0], color[1], color[2]);
-		drawLine(pixels, (int)coordinates[3][0], (int)coordinates[3][1], (int)coordinates[0][0], (int)coordinates[0][1], color[0], color[1], color[2]);
-		drawLine(pixels, (int)coordinates[4][0], (int)coordinates[4][1], (int)coordinates[5][0], (int)coordinates[5][1], color[0], color[1], color[2]);
-		drawLine(pixels, (int)coordinates[5][0], (int)coordinates[5][1], (int)coordinates[6][0], (int)coordinates[6][1], color[0], color[1], color[2]);
-		drawLine(pixels, (int)coordinates[6][0], (int)coordinates[6][1], (int)coordinates[7][0], (int)coordinates[7][1], color[0], color[1], color[2]);
-		drawLine(pixels, (int)coordinates[7][0], (int)coordinates[7][1], (int)coordinates[4][0], (int)coordinates[4][1], color[0], color[1], color[2]);
-		drawLine(pixels, (int)coordinates[0][0], (int)coordinates[0][1], (int)coordinates[4][0], (int)coordinates[4][1], color[0], color[1], color[2]);
-		drawLine(pixels, (int)coordinates[1][0], (int)coordinates[1][1], (int)coordinates[5][0], (int)coordinates[5][1], color[0], color[1], color[2]);
-		drawLine(pixels, (int)coordinates[2][0], (int)coordinates[2][1], (int)coordinates[6][0], (int)coordinates[6][1], color[0], color[1], color[2]);
-		drawLine(pixels, (int)coordinates[3][0], (int)coordinates[3][1], (int)coordinates[7][0], (int)coordinates[7][1], color[0], color[1], color[2]);
-	}
-
-	if (level <= 0 || nodeId & 128 == 0) {
-		return;
-	}
-
-	for (int i = 0; i < 8; i++) {
-		int x_ = x;
-		int y_ = y;
-		int z_ = z;
-		uint32_t index_ = index;
-		getChildXYZindex(x_, y_, z_, index_, level, i);
-		display(pixels, index_, showBorder, x_, y_, z_, level - 1);
-	}
-
-	// // For now the octree isn't sparse
-
-	// /*if (node->children[0] != nullptr)
-	// 	display(node->children[0], showBorder, ++depth);
-	// if (node->children[1] != nullptr)
-	// 	display(node->children[1], showBorder, ++depth);
-	// if (node->children[2] != nullptr)
-	// 	display(node->children[2], showBorder, ++depth);
-	// if (node->children[3] != nullptr)
-	// 	display(node->children[3], showBorder, ++depth);
-	// if (node->children[4] != nullptr)
-	// 	display(node->children[4], showBorder, ++depth);
-	// if (node->children[5] != nullptr)
-	// 	display(node->children[5], showBorder, ++depth);
-	// if (node->children[6] != nullptr)
-	// 	display(node->children[6], showBorder, ++depth);
-	// if (node->children[7] != nullptr)
-	// 	display(node->children[7], showBorder, ++depth);*/
-}
-
-void Octree::display(uchar4* pixels, bool showBorder){
-	display(pixels, 1, showBorder);
-}
-
 __device__
 unsigned char firstNode(float tx0, float ty0, float tz0, float txm, float tym, float tzm) {
 	float maxV = maxv(maxv(tx0, ty0), tz0);
@@ -472,7 +343,7 @@ __device__ void drawTexturePixel(int blockX, int blockY, int blockZ, float oX, f
 	//printf("%d %d %d\n", x, y, z);
 
 	// 1500,-500,-5000
-	setPixelById(sX, sY, blockX, blockY, blockZ, x, y, z, blockId, pixels, Vector3(oX, oY, oZ), Material(Vector3(255,255,255), 0.7, 1, 25), PointLight(Vector3(1500,-500,-5000), Vector3(255, 255, 255)), false); //oX - dX * 1000, oY - dY * 1000, oZ - dZ * 1000
+	setPixelById(sX, sY, blockX, blockY, blockZ, x, y, z, blockId, pixels, Vector3(oX, oY, oZ), PointLight(Vector3(1500,-500,-5000), Vector3(255, 255, 255)), false); //oX - dX * 1000, oY - dY * 1000, oZ - dZ * 1000
 }
 
 // the actual device insert function

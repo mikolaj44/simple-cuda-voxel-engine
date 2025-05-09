@@ -2,15 +2,13 @@
 
 #include <string>
 #include <vector>
-#include "block_variant.cuh"
-#include "pixel_drawing.cuh"
-#include "cuda_math.cuh"
 
-using namespace std;
+#include "block_variant.cuh"
+#include "pointlight.cuh"
 
 extern __device__ BlockVariant** blockVariants;
 
-__device__ void setPixelById(int sX, int sY, int blockX, int blockY, int blockZ, float x, float y, float z, unsigned char blockId, uchar4* pixels, Vector3 cameraPos, Material material, PointLight light, bool textureRenderingEnabled);
+__device__ void setPixelById(int sX, int sY, int blockX, int blockY, int blockZ, float x, float y, float z, unsigned char blockId, uchar4* pixels, Vector3 cameraPos, PointLight light, bool textureRenderingEnabled);
 
 __global__ void createBlocksData(BlockTexture** textures);
 

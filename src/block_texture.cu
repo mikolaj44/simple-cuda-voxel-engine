@@ -4,9 +4,7 @@
 #define STB_IMAGE_IMPLEMENTATION
 #include "stb_image.h"
 
-using namespace std;
-
-BlockTexture::BlockTexture(int w, int h, string top, string bottom, string left, string right, string front, string back) {
+BlockTexture::BlockTexture(int w, int h, std::string top, std::string bottom, std::string left, std::string right, std::string front, std::string back) {
 
 	width = w;
 	height = h;

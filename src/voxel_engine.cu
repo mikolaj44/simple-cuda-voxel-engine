@@ -1,6 +1,7 @@
 #include "voxel_engine.h"
 #include "renderer.cuh"
 #include "globals.cuh"
+#include "blocks_data.cuh"
 
 uint64_t VoxelEngine::frameCount = 0;
 
@@ -50,8 +51,6 @@ void VoxelEngine::init(int SCREEN_WIDTH_, int SCREEN_HEIGHT_){
     SDL_Init(SDL_INIT_VIDEO);
 
     window = SDL_CreateWindow("voxel engine", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, SCREEN_WIDTH_HOST, SCREEN_HEIGHT_HOST, SDL_WINDOW_OPENGL);
-    //renderer = SDL_CreateRenderer(window, -1, SDL_RENDERER_ACCELERATED);
-    //SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, "1");
 
     SDL_GLContext glContext = SDL_GL_CreateContext(window);
     glewInit();
@@ -82,7 +81,7 @@ void VoxelEngine::init(int SCREEN_WIDTH_, int SCREEN_HEIGHT_){
 
     SDL_FreeSurface(textSurface);
 
-    Renderer::calculateFOV();
+    //Renderer::calculateFOV();
 
     wasInitialized = true;
 }

@@ -1,13 +1,10 @@
 #pragma once
 
-#include "chunk.cuh"
 #include "octree.cuh"
 #include "globals.cuh"
 #include "cuda_noise.cuh"
 
 #include <thrust/device_vector.h>
-
-using namespace std;
 
 template<typename XYZtoIdFunction>
 __global__ void generateChunksKernel(Octree* octree, Vector3 pos, XYZtoIdFunction blockPosToIdFunction, uint64_t frameCount){

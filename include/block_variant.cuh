@@ -3,19 +3,13 @@
 #include <string>
 #include "block_texture.cuh"
 
-using namespace std;
-
-enum BlockType {
-    SOLID,
-    AIR,
-    LIQUID
-};
+#include "material.cuh"
 
 class BlockVariant {
 
 public:
-    BlockType type = SOLID;
+    Material material;
     BlockTexture* texture;
 
-    __device__ BlockVariant(BlockType type, BlockTexture* texture);
+    __device__ BlockVariant(Material material, BlockTexture* texture);
 };

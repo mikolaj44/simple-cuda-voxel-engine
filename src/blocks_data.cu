@@ -1,4 +1,6 @@
 #include "blocks_data.cuh"
+#include "cuda_math.cuh"
+#include "renderer.cuh"
 
 __device__ BlockVariant** blockVariants = nullptr;
 __constant__ int blocksAmount = 4;
@@ -78,7 +80,7 @@ __device__ void getPhongIllumination(Vector3 pos, Vector3 cameraPos, Vector3 nor
     // g = (int)material.color.z;
 }
 
-__device__ void setPixelById(int sX, int sY, int blockX, int blockY, int blockZ, float x, float y, float z, unsigned char blockId, uchar4* pixels, Vector3 cameraPos, Material material, PointLight light, bool textureRenderingEnabled) {
+__device__ void setPixelById(int sX, int sY, int blockX, int blockY, int blockZ, float x, float y, float z, unsigned char blockId, uchar4* pixels, Vector3 cameraPos, PointLight light, bool textureRenderingEnabled) {  
     if (textureRenderingEnabled && blockId >= blocksAmount) {
         return;
     }
@@ -179,7 +181,7 @@ __device__ void setPixelById(int sX, int sY, int blockX, int blockY, int blockZ,
         hueToRGB(float(blockId) * 2.8125 / 360.0, r, g, b);
     }
 
-    getPhongIllumination(Vector3(x, y, z), cameraPos, normal, material, light, r, g, b);
+    getPhongIllumination(Vector3(x, y, z), cameraPos, normal, blockVariants[blockId]->material, light, r, g, b);
 
     setPixel(pixels, sX, sY, r, g, b, 255);
 
@@ -199,6 +201,6 @@ __global__ void createBlocksData(BlockTexture** textures) {
     cudaMalloc(&blockVariants, sizeof(BlockVariant*) * blocksAmount);
 
     for (int i = 0; i < blocksAmount; i++) {
-        blockVariants[i] = new BlockVariant(SOLID, textures[i]);
+        blockVariants[i] = new BlockVariant(Material(Vector3(255,255,255), 1, 0, 20), textures[i]);
     }
 }

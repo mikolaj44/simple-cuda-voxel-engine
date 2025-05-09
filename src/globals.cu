@@ -10,7 +10,6 @@ unsigned int SCREEN_HEIGHT_HOST;
 using namespace std;
 
 std::string getPathStr() {
-
     std::string str = __FILE__;
 
     std::string path = str.substr(0, str.rfind("/"));
