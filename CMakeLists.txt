@@ -16,24 +16,6 @@ find_package(GLUT REQUIRED)
 
 include_directories(${SDL2_INCLUDE_DIRS} ${OPENGL_INCLUDE_DIRS} ${GLEW_INCLUDE_DIRS})
 
-include(cmake/CPM.cmake)
-
-CPMAddPackage(
-    NAME CCCL
-    GITHUB_REPOSITORY NVIDIA/cccl
-    GIT_TAG main
-)
-
-CPMAddPackage(
-  NAME cuco
-  GITHUB_REPOSITORY NVIDIA/cuCollections
-  GIT_TAG dev
-  OPTIONS
-     "BUILD_TESTS OFF"
-     "BUILD_BENCHMARKS OFF"
-     "BUILD_EXAMPLES OFF"
-)
-
 set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} --expt-extended-lambda -rdc=true -use_fast_math -w -Xcompiler -w")
 set(CMAKE_CUDA_ARCHITECTURES "75")
 
@@ -47,7 +29,5 @@ set_target_properties(${PROJECT_NAME} PROPERTIES CUDA_RESOLVE_DEVICE_SYMBOLS ON)
 
 target_include_directories(${PROJECT_NAME} PRIVATE include)
 
-#target_link_libraries(${PROJECT_NAME} CCCL:CCCL)
-target_link_libraries(${PROJECT_NAME} PRIVATE cuco)
 target_link_libraries(${PROJECT_NAME} PRIVATE SDL2::SDL2 SDL2_ttf::SDL2_ttf)
 target_link_libraries(${PROJECT_NAME} PRIVATE glfw GLEW::GLEW GL GLUT::GLUT)

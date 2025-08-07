@@ -13,7 +13,7 @@
 
 #include <GL/glew.h>
 
-#include "renderer.cuh"
+#include "cuda_renderer.cuh"
 #include "chunk.cuh"
 #include "chunk_generation.cuh"
 #include "octree.cuh"
@@ -175,12 +175,12 @@ void createCudaTexture() {
 }
 
 void writeAndRenderTexture() {
-    cudaArray *cudaArrayPtr;
+    cudaArray* cudaArrayPtr;
     cudaGraphicsMapResources(1, &cudaResource, 0);
     cudaGraphicsSubResourceGetMappedArray(&cudaArrayPtr, cudaResource, 0, 0);
 
     // Copy data to CUDA array
-    uchar4 *devPtr;
+    uchar4* devPtr;
     size_t pitch;
     cudaMallocPitch(&devPtr, &pitch, SCREEN_WIDTH * sizeof(uchar4), SCREEN_HEIGHT);
 
@@ -190,7 +190,11 @@ void writeAndRenderTexture() {
     // cudaEventCreate(&start);
     // cudaEventCreate(&stop);
     // cudaEventRecord(start);
-    renderScreenCuda(octree, SCREEN_WIDTH, SCREEN_HEIGHT, cameraAngle.x, cameraAngle.y, cameraPos.x, cameraPos.y, cameraPos.z, devPtr, 4096, 512);
+
+    cuda_renderer::render(devPtr, octree, SCREEN_WIDTH, SCREEN_HEIGHT, cameraAngle, cameraPos, 4096, 512);
+
+    //renderScreenCuda(octree, SCREEN_WIDTH, SCREEN_HEIGHT, cameraAngle.x, cameraAngle.y, cameraPos.x, cameraPos.y, cameraPos.z, devPtr, 4096, 512);
+
     // cudaEventRecord(stop);
     // cudaEventSynchronize(stop);
     // float milliseconds = 0;
@@ -246,7 +250,7 @@ int main(){
     cudaDeviceSetLimit(cudaLimitStackSize, 2048);
     
     cudaMallocManaged(&octree, sizeof(Octree));
-    octree->createOctree();
+    octree->createOctree(PREALLOCATE_MB_AMOUNT * size_t(1024) * size_t(1024));
 
     const int threadsPerBlock = 600;
     const int blocksPerGrid = (SCREEN_WIDTH * SCREEN_HEIGHT + threadsPerBlock - 1) / threadsPerBlock;
@@ -291,8 +295,6 @@ int main(){
     SDL_FreeSurface(textSurface);
 
     bool quit = false;
-
-    calculateFOV();
 
     int prevMouseX = 0, prevMouseY = 0;
 
