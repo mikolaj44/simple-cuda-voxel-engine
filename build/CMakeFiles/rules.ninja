@@ -17,7 +17,7 @@
 rule CUDA_COMPILER__cuda-voxel-engine_unscanned_Release
   depfile = $DEP_FILE
   deps = gcc
-  command = ${LAUNCHER}${CODE_CHECK}/usr/local/cuda-12.8/bin/nvcc -forward-unknown-to-host-compiler $DEFINES $INCLUDES $FLAGS -MD -MT $out -MF $DEP_FILE -x cu -c $in -o $out
+  command = ${LAUNCHER}${CODE_CHECK}/usr/local/cuda-12.8/bin/nvcc -forward-unknown-to-host-compiler $DEFINES $INCLUDES $FLAGS -MD -MT $out -MF $DEP_FILE -x cu -rdc=true -c $in -o $out
   description = Building CUDA object $out
 
 

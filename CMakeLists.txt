@@ -3,8 +3,8 @@ cmake_minimum_required(VERSION 3.23.1 FATAL_ERROR)
 project(cuda-voxel-engine LANGUAGES CXX CUDA)
 # cmake_policy(SET CMP00)
 
-file(GLOB SOURCES "src/*.cpp" "src/*.cu")
-file(GLOB HEADERS "include/*.h" "include/*.hpp" "include/*.cuh")
+file(GLOB_RECURSE SOURCES "src/*.cpp" "src/*.cu")
+file(GLOB_RECURSE HEADERS "include/*.h" "include/*.hpp" "include/*.cuh")
 
 find_package(CUDAToolkit REQUIRED)
 find_package(SDL2 REQUIRED)
@@ -16,13 +16,24 @@ find_package(GLUT REQUIRED)
 
 include_directories(${SDL2_INCLUDE_DIRS} ${OPENGL_INCLUDE_DIRS} ${GLEW_INCLUDE_DIRS})
 
-set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} --expt-extended-lambda -rdc=true -use_fast_math -w -Xcompiler -w")
 set(CMAKE_CUDA_ARCHITECTURES "75")
 
 set(CMAKE_CUDA_FLAGS_RELEASE "-O3 -Xptxas -O3")
 set(CMAKE_CUDA_FLAGS_RELWITHDEBINFO "-O2 -Xptxas -O2")
 
 add_executable(${PROJECT_NAME} ${SOURCES} ${HEADERS})
+
+set_target_properties(${PROJECT_NAME} PROPERTIES CUDA_SEPARABLE_COMPILATION ON)
+
+target_compile_options(${PROJECT_NAME} PRIVATE
+  $<$<COMPILE_LANGUAGE:CUDA>:
+    --expt-extended-lambda
+    -use_fast_math
+    -diag-suppress=550
+    -diag-suppress=177
+    -Xcompiler -w
+  >
+)
 
 set_target_properties(${PROJECT_NAME} PROPERTIES OUTPUT_NAME "engine")
 set_target_properties(${PROJECT_NAME} PROPERTIES CUDA_RESOLVE_DEVICE_SYMBOLS ON)

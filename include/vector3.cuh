@@ -1,9 +1,6 @@
 #pragma once
 
-#include <cuda_runtime.h>
-
-class Vector3 {
-public:
+struct alignas(4) Vector3 {
     float x = 0.0, y = 0.0, z = 0.0;
 
     __device__ __host__ Vector3() {};

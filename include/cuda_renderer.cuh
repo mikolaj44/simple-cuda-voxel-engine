@@ -1,12 +1,7 @@
 #pragma once
-#include <vector>
 
-#include "globals.cuh"
-#include "octree.cuh"
-
-#include <cuda_runtime.h>
-#include <device_launch_parameters.h>
+#include "octree/octree.cuh"
 
 namespace cuda_renderer {
-    void render(uchar4* pixels, Octree* octree, int screenWidth, int screenHeight, Vector3 cameraAngle2D, Vector3 rayOrigin, unsigned int gridSize, unsigned int blockSize);
+    void render(uchar4* pixels, Octree* octree, Vector3 cameraPos, Vector3 cameraAngle2d, int screenWidth, int screenHeight, unsigned int gridSize, unsigned int blockSize);
 }

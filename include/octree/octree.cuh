@@ -1,5 +1,13 @@
 #pragma once
 
+#include <stdint.h>
+
+#include "vector3.cuh"
+#include "octree/octree_utils.cuh"
+
+#include "cuda_math.cuh"
+#include "octree/octree_utils.cuh"
+
 class Block {
 public:
 	int x, y, z;
@@ -20,9 +28,11 @@ public:
 
 	__device__ void insert(Block block);
 
+	__device__ uint8_t getRayIntersectionData(uchar4* pixels, Vector3 rayOrigin, Vector3 rayDirection, int sX, int sY, int minNodeSize);
+
 	Vector3 getMinPos() const;
 
-	unsigned int getLevel() const;
+	unsigned int getMaxLevel() const;
 
 private:
 	struct alignas(uint8_t) Node {
@@ -48,23 +58,16 @@ private:
 	unsigned int maxLevel; // level 0 is a terminal node
 
 	size_t allocatedMemoryInBytes;
+
+	__device__ void morton3Ddecode(uint32_t mortonCode, int& x, int& y, int& z);
+
+	__device__ uint8_t traverseNewNode(octree_utils::Stack& stack, uchar4* pixels, Vector3 origRayOrigin, Vector3 origRayDirection, float tx0, float ty0, float tz0, float tx1, float ty1, float tz1, unsigned int nodeIdx, int minNodeSize, int sX, int sY);
+
+	__device__ uint8_t traverseChildNodes(octree_utils::Stack& stack, octree_utils::Stack::Frame& data, uchar4* pixels, Vector3 origRayOrigin, Vector3 origRayDirection, unsigned char a, int minNodeSize, int sX, int sY);
+
+	template<typename XYZtoIdFunction>
+	friend void generateChunks(Octree* octree, Vector3 pos, XYZtoIdFunction blockPosToIdFunction, dim3 maxGridSize, dim3 blockSize, uint64_t frameCount);
 };
 
-__device__ unsigned char firstNode(float tx0, float ty0, float tz0, float txm, float tym, float tzm);
-
-__device__ unsigned char newNode(float tx, unsigned char i1, float ty, unsigned char i2, float tz, unsigned char i3);
-
-__device__ uint32_t childMortonRevelles(uint32_t mortonCode, unsigned char revellesChildIndex);
-
-__device__ void performRaycast(Octree* octree, float oX, float oY, float oZ, float dX, float dY, float dZ, int sX, int sY, int minNodeSize = 1, uchar4*  pixels = nullptr);
-
-__device__ void drawTexturePixel(int blockX, int blockY, int blockZ, float oX, float oY, float oZ, float dX, float dY, float dZ, int sX, int sY, unsigned char blockId, uchar4* pixels, bool textureRenderingEnabled);
-
-__device__ unsigned char raycastDrawPixel(Octree* octree, float oX, float oY, float oZ, float dX, float dY, float dZ, float tx0, float ty0, float tz0, float tx1, float ty1, float tz1, unsigned char a, int minNodeSize, int sX, int sY, uchar4* pixels, float origOX, float origOY, float origOZ, bool negativeDX, bool negativeDY, bool negativeDZ);
-
-
-__device__ int proc_subtree(Octree* octree, float oX, float oY, float oZ, float dX, float dY, float dZ, float tx0, float ty0, float tz0, float tx1, float ty1, float tz1, unsigned char a, int minNodeSize, int sX, int sY, uchar4* pixels, int morton = 1);
-
-__device__ int traverseChildNodes(Stack::Frame* data, unsigned char a, int minNodeSize, int sX, int sY, float origOX, float origOY, float origOZ, float origDX, float origDY, float origDZ, uchar4* pixels, Stack& stack, Octree* octree);
-
-__device__ int traverseNewNode(float tx0, float ty0, float tz0, float&tx1, float ty1, float tz1, unsigned int nodeIdx, int minNodeSize, int sX, int sY, float origOX, float origOY, float origOZ, float origDX, float origDY, float origDZ, uchar4* pixels, Stack& stack, Octree* octree);
+template<typename XYZtoIdFunction>
+void generateChunks(Octree* octree, Vector3 pos, XYZtoIdFunction blockPosToIdFunction, dim3 maxGridSize, dim3 blockSize, uint64_t frameCount);

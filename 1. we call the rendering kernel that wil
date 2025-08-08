@@ -1,0 +1,9 @@
+1. we call the rendering kernel that will do the work for a single pixel (x,y)
+
+2. it calls the octree traverse function which will return the block position that the ray hit, the float position where exactly the hit was and the blockId:
+
+[x, y, z, x_f, y_f, z_f, blockId]
+
+3. it then takes this info and gets the light color etc from blocks_data.cuh
+
+4. renders it

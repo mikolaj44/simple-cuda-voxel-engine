@@ -6,8 +6,6 @@
 #include "pixel_drawing.cuh"
 #include "cuda_math.cuh"
 
-using namespace std;
-
 extern __device__ BlockVariant** blockVariants;
 
 __device__ void setPixelById(int sX, int sY, int blockX, int blockY, int blockZ, float x, float y, float z, unsigned char blockId, uchar4* pixels, Vector3 cameraPos, Material material, PointLight light, bool textureRenderingEnabled);

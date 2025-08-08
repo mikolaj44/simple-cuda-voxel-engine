@@ -16,9 +16,8 @@
 #include "cuda_renderer.cuh"
 #include "chunk.cuh"
 #include "chunk_generation.cuh"
-#include "octree.cuh"
+#include "octree/octree.cuh"
 #include "blocks_data.cuh"
-#include "cuda_morton.cuh"
 
 #define DB_PERLIN_IMPL
 #include "db_perlin.hpp"
@@ -38,7 +37,6 @@ BlockTexture** blockTextures = nullptr;
 uint64_t frameCount = 0;
 
 void initBlockTextures() {
-
     int blockAmount = 4;
 
     cudaMallocManaged(&blockTextures, size_t(blockAmount * sizeof(BlockTexture*)));
@@ -191,7 +189,7 @@ void writeAndRenderTexture() {
     // cudaEventCreate(&stop);
     // cudaEventRecord(start);
 
-    cuda_renderer::render(devPtr, octree, SCREEN_WIDTH, SCREEN_HEIGHT, cameraAngle, cameraPos, 4096, 512);
+    cuda_renderer::render(devPtr, octree, cameraAngle, cameraPos, SCREEN_WIDTH, SCREEN_HEIGHT, 4096, 512);
 
     //renderScreenCuda(octree, SCREEN_WIDTH, SCREEN_HEIGHT, cameraAngle.x, cameraAngle.y, cameraPos.x, cameraPos.y, cameraPos.z, devPtr, 4096, 512);
 
@@ -343,7 +341,7 @@ int main(){
                             PLAYER_SPEED *= 2;
                             break;
                         case SDLK_c:
-                            octree->textureRenderingEnabled = !octree->textureRenderingEnabled;
+                            // octree->textureRenderingEnabled = !octree->textureRenderingEnabled;
                             //doOldRendering = !doOldRendering;
                             break; 
 

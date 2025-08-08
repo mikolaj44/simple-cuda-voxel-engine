@@ -1,7 +1,7 @@
 #pragma once
 
 #include "chunk.cuh"
-#include "octree.cuh"
+#include "octree/octree.cuh"
 #include "globals.cuh"
 #include "cuda_noise.cuh"
 
@@ -55,16 +55,15 @@ __global__ void generateChunksKernel(Octree* octree, Vector3 pos, XYZtoIdFunctio
 
 template<typename XYZtoIdFunction>
 void generateChunks(Octree* octree, Vector3 pos, XYZtoIdFunction blockPosToIdFunction, dim3 maxGridSize, dim3 blockSize, uint64_t frameCount){
-
     const int length = RENDER_DISTANCE_CHUNKS * CHUNK_W * 2;
 
     octree->xMin = pos.x - length / 2;
     octree->yMin = pos.y - length / 2;
     octree->zMin = pos.z - length / 2;
-    octree->level = log2(length); // * 2) - 1
+    octree->maxLevel = log2(length); // * 2) - 1
 
-    printf("%d %d %d\n", octree->xMin, octree->yMin, octree->zMin);
-    printf("%d %d %d\n", octree->xMin + (1 << octree->level), octree->yMin + (1 << octree->level), octree->zMin + (1 << octree->level));
+    // printf("%d %d %d\n", octree->xMin, octree->yMin, octree->zMin);
+    // printf("%d %d %d\n", octree->xMin + (1 << octree->level), octree->yMin + (1 << octree->level), octree->zMin + (1 << octree->level));
 
     dim3 gridSize = dim3(min(maxGridSize.x, (length + blockSize.x - 1) / blockSize.x), min(maxGridSize.y, (length + blockSize.y - 1) / blockSize.y), min(maxGridSize.z, (length + blockSize.z - 1) / blockSize.z));
 

@@ -9,9 +9,12 @@
 #include "pixel_drawing.cuh"
 #include "globals.cuh"
 
+#include <cuda_runtime.h>
+#include <device_launch_parameters.h>
+
 namespace cuda_renderer {
     namespace {
-        __global__ void renderKernel(uchar4* pixels, Octree* octree, int screenWidth, int screenHeight, Vector3 cameraAngle2D, Vector3 rayOrigin) {
+        __global__ void renderKernel(uchar4* pixels, Octree* octree, Vector3 cameraPos, Vector3 cameraAngle2d, int screenWidth, int screenHeight) {
             unsigned int index = threadIdx.x + blockDim.x * blockIdx.x;
 
             if (index >= screenWidth * screenHeight)
@@ -20,20 +23,18 @@ namespace cuda_renderer {
             int pX = index % screenWidth;
             int pY = index / screenWidth;
 
-            float alpha = (atanf(-(pX - SCREEN_WIDTH  / 2) / FOCAL_LENGTH) - cameraAngle2D.y + M_PI / 2); // horizontal angle
-            float polar = (atanf(-(pY - SCREEN_HEIGHT / 2) / FOCAL_LENGTH) + cameraAngle2D.x + M_PI / 2); // vertical angle
+            float alpha = (atanf(-(pX - SCREEN_WIDTH  / 2) / FOCAL_LENGTH) - cameraAngle2d.y + M_PI / 2); // horizontal angle
+            float polar = (atanf(-(pY - SCREEN_HEIGHT / 2) / FOCAL_LENGTH) + cameraAngle2d.x + M_PI / 2); // vertical angle
 
             float sX = sin(polar) * cos(alpha);
             float sZ = sin(polar) * sin(alpha);
             float sY = cos(polar);
 
-            printf("%f %f %f\n", sX, sY, sZ);
-            
-            //performRaycast(octree, oX, oY, oZ, sX, sY, sZ, pX, pY, 1, pixels);
+            octree->getRayIntersectionData(pixels, cameraPos, Vector3(sX, sY, sZ), pX, pY, 1);
         }
     }
 
-    void render(uchar4* pixels, Octree* octree, int screenWidth, int screenHeight, Vector3 cameraAngle2D, Vector3 rayOrigin, unsigned int gridSize, unsigned int blockSize) {
-        renderKernel<<<gridSize,blockSize>>>(pixels, octree, screenWidth, screenHeight, cameraAngle2D, rayOrigin);
+    void render(uchar4* pixels, Octree* octree, Vector3 cameraPos, Vector3 cameraAngle2d, int screenWidth, int screenHeight, unsigned int gridSize, unsigned int blockSize) {
+        renderKernel<<<gridSize,blockSize>>>(pixels, octree, cameraPos, cameraAngle2d, screenWidth, screenHeight);
     }
 }
