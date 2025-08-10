@@ -20,20 +20,23 @@ public:
 
 class Octree {
 public:
-	void createOctree(int xMin, int yMin, int zMin, int maxLevel);
+	void createOctree(int xMin, int yMin, int zMin, unsigned int maxLevel);
 
-	void createOctree(int maxLevel);
+	void createOctree(unsigned int maxLevel);
 
 	void clear();
 
 	__device__ void insert(Block block);
 
-	__device__ uint8_t getRayIntersectionData(uchar4* pixels, Vector3 rayOrigin, Vector3 rayDirection, int sX, int sY, int minNodeSize);
+	__device__ int8_t getRayIntersectionData(uchar4* pixels, Vector3 rayOrigin, Vector3 rayDirection, int sX, int sY, int minNodeSize);
+
+	void setMinPos(Vector3 minPos);
+
+	void setMaxLevel(unsigned int maxLevel);
 
 	Vector3 getMinPos() const;
 
 	unsigned int getMaxLevel() const;
-
 private:
 	struct alignas(uint8_t) Node {
 		uint8_t id; // most significant bit is 1 if the node has children, the rest of the bits are for block id
@@ -61,13 +64,7 @@ private:
 
 	__device__ void morton3Ddecode(uint32_t mortonCode, int& x, int& y, int& z);
 
-	__device__ uint8_t traverseNewNode(octree_utils::Stack& stack, uchar4* pixels, Vector3 origRayOrigin, Vector3 origRayDirection, float tx0, float ty0, float tz0, float tx1, float ty1, float tz1, unsigned int nodeIdx, int minNodeSize, int sX, int sY);
+	__device__ int8_t traverseNewNode(octree_utils::Stack& stack, uchar4* pixels, Vector3 origRayOrigin, Vector3 origRayDirection, float tx0, float ty0, float tz0, float tx1, float ty1, float tz1, unsigned int nodeIdx, int minNodeSize, int sX, int sY);
 
-	__device__ uint8_t traverseChildNodes(octree_utils::Stack& stack, octree_utils::Stack::Frame& data, uchar4* pixels, Vector3 origRayOrigin, Vector3 origRayDirection, unsigned char a, int minNodeSize, int sX, int sY);
-
-	template<typename XYZtoIdFunction>
-	friend void generateChunks(Octree* octree, Vector3 pos, XYZtoIdFunction blockPosToIdFunction, dim3 maxGridSize, dim3 blockSize, uint64_t frameCount);
+	__device__ int8_t traverseChildNodes(octree_utils::Stack& stack, octree_utils::Stack::Frame& data, uchar4* pixels, Vector3 origRayOrigin, Vector3 origRayDirection, unsigned char a, int minNodeSize, int sX, int sY);
 };
-
-template<typename XYZtoIdFunction>
-void generateChunks(Octree* octree, Vector3 pos, XYZtoIdFunction blockPosToIdFunction, dim3 maxGridSize, dim3 blockSize, uint64_t frameCount);

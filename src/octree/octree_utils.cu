@@ -3,6 +3,7 @@
 #include "globals.cuh"
 #include "cuda_math.cuh"
 #include "blocks_data.cuh"
+#include "point_light.cuh"
 
 namespace octree_utils {
     __device__ unsigned int nodeLevel(uint32_t mortonCode, unsigned int octreeLevel){
@@ -32,7 +33,7 @@ namespace octree_utils {
         float y = oY + tmin * dY;
         float z = oZ + tmin * dZ;
         
-        setPixelById(sX, sY, blockX, blockY, blockZ, x, y, z, blockId, pixels, Vector3(oX, oY, oZ), Material(Vector3(255,255,255), 0.3, 0.6, 35), PointLight(Vector3(oX, oY, oZ), Vector3(255, 255, 255)), false);
+        setPixelById(sX, sY, blockX, blockY, blockZ, x, y, z, blockId, pixels, Vector3(oX, oY, oZ), PointLight(Vector3(1500,-500,-5000), Vector3(255, 255, 255)), textureRenderingEnabled); //oX - dX * 1000, oY - dY * 1000, oZ - dZ * 1000    }
     }
 
     namespace revelles {

@@ -11,7 +11,6 @@ using namespace std;
 
 template<typename XYZtoIdFunction>
 __global__ void generateChunksKernel(Octree* octree, Vector3 pos, XYZtoIdFunction blockPosToIdFunction, uint64_t frameCount){
-
     int x = threadIdx.x + blockIdx.x * blockDim.x;
     int y = threadIdx.y + blockIdx.y * blockDim.y;
     int z = threadIdx.z + blockIdx.z * blockDim.z;
@@ -57,11 +56,9 @@ template<typename XYZtoIdFunction>
 void generateChunks(Octree* octree, Vector3 pos, XYZtoIdFunction blockPosToIdFunction, dim3 maxGridSize, dim3 blockSize, uint64_t frameCount){
     const int length = RENDER_DISTANCE_CHUNKS * CHUNK_W * 2;
 
-    octree->xMin = pos.x - length / 2;
-    octree->yMin = pos.y - length / 2;
-    octree->zMin = pos.z - length / 2;
-    octree->maxLevel = log2(length); // * 2) - 1
-
+    octree->setMinPos(Vector3(pos.x - length / 2, pos.y - length / 2, pos.z - length / 2));
+    octree->setMaxLevel((int)log2(length)); // * 2) - 1
+    
     // printf("%d %d %d\n", octree->xMin, octree->yMin, octree->zMin);
     // printf("%d %d %d\n", octree->xMin + (1 << octree->level), octree->yMin + (1 << octree->level), octree->zMin + (1 << octree->level));
 

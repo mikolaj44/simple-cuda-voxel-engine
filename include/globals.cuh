@@ -5,7 +5,7 @@
 #include <unistd.h>
 #include <algorithm>
 
-#include "pointlight.cuh"
+#include "point_light.cuh"
 #include "material.cuh"
 
 //#include "D:\threadpool\include\BS_thread_pool.hpp"

@@ -9,33 +9,44 @@
 #include "octree/octree.cuh"
 #include "octree/octree_utils.cuh"
 #include "globals.cuh"
-#include "pixel_drawing.cuh"
 #include "blocks_data.cuh"
 #include "cuda_math.cuh"
+#include "cuda_renderer.cuh"
 
 #include <cuda_runtime.h>
 #include <device_launch_parameters.h>
 
 constexpr float epsilon = 0.00001;
-constexpr int INVALID_NODE_ID = 128;
 
 namespace {
-	inline size_t getNumOfBytesToAllocate(int maxLevel) {
-		return 2 << (3 * maxLevel + 1);
+	inline size_t getNumOfBytesToAllocate(unsigned int maxLevel) {
+		return size_t(2) << (3 * maxLevel + 1);
 	}
 }
 
-void Octree::createOctree(int xMin_, int yMin_, int zMin_, int maxLevel_) {
+void Octree::createOctree(int xMin_, int yMin_, int zMin_, unsigned int maxLevel_) {
 	xMin = xMin_;
 	yMin = yMin_;
 	zMin = zMin_;
 	maxLevel = maxLevel_;
 	allocatedMemoryInBytes = getNumOfBytesToAllocate(maxLevel_);
 
+	size_t freeBytes, totalBytes;
+	cudaMemGetInfo(&freeBytes, &totalBytes);
+
+	printf("%zu bytes free out of %zu\n", freeBytes, totalBytes);
+
+	printf("allocating %zu bytes (%d levels)\n", allocatedMemoryInBytes, maxLevel);
+
 	cudaMalloc(&nodes, allocatedMemoryInBytes);
+	cudaDeviceSynchronize();
+
+	cudaMemGetInfo(&freeBytes, &totalBytes);
+
+	printf("%zu bytes free out of %zu\n", freeBytes, totalBytes);
 }
 
-void Octree::createOctree(int maxLevel) {
+void Octree::createOctree(unsigned int maxLevel) {
 	createOctree(0, 0, 0, maxLevel);
 }
 
@@ -201,7 +212,40 @@ __device__ void Octree::insert(Block block) {
 	} while (level >= 0);
 }
 
-__device__ uint8_t Octree::traverseChildNodes(octree_utils::Stack& stack, octree_utils::Stack::Frame& data, uchar4* pixels, Vector3 origRayOrigin, Vector3 origRayDirection, unsigned char a, int minNodeSize, int sX, int sY) {
+__device__ int8_t Octree::traverseNewNode(octree_utils::Stack& stack, uchar4* pixels, Vector3 origRayOrigin, Vector3 origRayDirection, float tx0, float ty0, float tz0, float tx1, float ty1, float tz1, unsigned int nodeIdx, int minNodeSize, int sX, int sY) {
+	using namespace octree_utils::revelles;
+	using namespace octree_utils;
+	
+	if(stack.topIndex >= CUDA_STACK_SIZE - 1) return -1;
+
+	if (nodeLevel(nodeIdx, maxLevel) == 0 && nodes[nodeIdx].blockId() != 0) {
+		int blockX, blockY, blockZ;
+
+		morton3Ddecode(nodeIdx, blockX, blockY, blockZ);
+
+		drawTexturePixel(blockX, blockY, blockZ, origRayOrigin.x, origRayOrigin.y, origRayOrigin.z, origRayDirection.x, origRayDirection.y, origRayDirection.z, sX, sY, nodes[nodeIdx].blockId(), pixels, true);
+
+		return nodes[nodeIdx].blockId();
+	}
+
+	if (!nodes[nodeIdx].hasChildren() || tx1 < 0.0f || ty1 < 0.0f || tz1 < 0.0f) return -1;
+
+	const float txm = 0.5f * (tx0 + tx1);
+	const float tym = 0.5f * (ty0 + ty1);
+	const float tzm = 0.5f * (tz0 + tz1);
+
+	stack.push({
+		tx0, ty0, tz0,
+		txm, tym, tzm,
+		tx1, ty1, tz1,
+		nodeIdx,
+		firstNode(tx0, ty0, tz0, txm, tym, tzm, epsilon),
+	});
+	
+	return -1;
+}
+
+__device__ int8_t Octree::traverseChildNodes(octree_utils::Stack& stack, octree_utils::Stack::Frame& data, uchar4* pixels, Vector3 origRayOrigin, Vector3 origRayDirection, unsigned char a, int minNodeSize, int sX, int sY) {
 	using namespace octree_utils::revelles;
 	
 	switch (data.nodeIndex) {
@@ -233,90 +277,67 @@ __device__ uint8_t Octree::traverseChildNodes(octree_utils::Stack& stack, octree
 			stack.pop();
 	}
 	
-	return INVALID_NODE_ID;
+	return -1;
 }
 
-__device__ uint8_t Octree::getRayIntersectionData(uchar4* pixels, Vector3 rayOrigin, Vector3 rayDirection, int sX, int sY, int minNodeSize) {
-	// unsigned char a = 0;
+__device__ int8_t Octree::getRayIntersectionData(uchar4* pixels, Vector3 rayOrigin, Vector3 rayDirection, int sX, int sY, int minNodeSize) {
+	unsigned char a = 0;
 
-	// Vector3 origRayOrigin = rayOrigin;
-	// Vector3 origRayDirection = rayDirection;
+	Vector3 origRayOrigin = rayOrigin;
+	Vector3 origRayDirection = rayDirection;
 
-	// int size = 1 << maxLevel;
+	int size = 1 << maxLevel;
 
-	// if (rayDirection.x < 0) {
-	// 	rayOrigin.x = -rayOrigin.x + (xMin * 2 + size);
-	// 	rayDirection.x = -rayDirection.x;
-	// 	a |= 4;
-	// }
-	// if (rayDirection.y < 0) {
-	// 	rayOrigin.y = -rayOrigin.y + (yMin * 2 + size);
-	// 	rayDirection.y = -rayDirection.y;
-	// 	a |= 2;
-	// }
-	// if (rayDirection.z < 0) {
-	// 	rayOrigin.z = -rayOrigin.z + (zMin * 2 + size);
-	// 	rayDirection.z = -rayDirection.z;
-	// 	a |= 1;
-	// }
-
-	// float tx0 = (xMin - rayOrigin.x) / rayDirection.x;
-	// float tx1 = (xMin + size - rayOrigin.x) / rayDirection.x;
-	// float ty0 = (yMin - rayOrigin.y) / rayDirection.y;
-	// float ty1 = (yMin + size - rayOrigin.y) / rayDirection.y;
-	// float tz0 = (zMin - rayOrigin.z) / rayDirection.z;
-	// float tz1 = (zMin + size - rayOrigin.z) / rayDirection.z;
-
-	// uint8_t foundNodeId = 128;
-
-	// if (true) { // maxv(maxv(tx0, ty0), tz0) < minv(minv(tx1, ty1), tz1)
-	//	octree_utils::Stack stack;
-
-		// foundNodeId = traverseNewNode(stack, pixels, origRayOrigin, origRayDirection, tx0, ty0, tz0, tx1, ty1, tz1, 1, minNodeSize, sX, sY);
-
-	//	int index = 0;
-
-		// while (!stack.isEmpty() && foundNodeId == 128) {
-		// 	foundNodeId = traverseChildNodes(stack, stack.top(), pixels, origRayOrigin, origRayDirection, a, minNodeSize, sX, sY);
-		// }
-	//}
-
-	printf("%d\n", 1);
-
-	return 1;
-}
-
-__device__ uint8_t Octree::traverseNewNode(octree_utils::Stack& stack, uchar4* pixels, Vector3 origRayOrigin, Vector3 origRayDirection, float tx0, float ty0, float tz0, float tx1, float ty1, float tz1, unsigned int nodeIdx, int minNodeSize, int sX, int sY) {
-	using namespace octree_utils::revelles;
-	using namespace octree_utils;
-	
-	if(stack.topIndex >= CUDA_STACK_SIZE - 1) return INVALID_NODE_ID;
-
-	if (nodeLevel(nodeIdx, maxLevel) == 0 && nodes[nodeIdx].blockId() != 0) {
-		int blockX, blockY, blockZ;
-
-		morton3Ddecode(nodeIdx, blockX, blockY, blockZ);
-
-		drawTexturePixel(blockX, blockY, blockZ, origRayOrigin.x, origRayOrigin.y, origRayOrigin.z, origRayDirection.x, origRayDirection.y, origRayDirection.z, sX, sY, nodes[nodeIdx].blockId(), pixels, false);
-
-		return nodes[nodeIdx].blockId();
+	if (rayDirection.x < 0) {
+		rayOrigin.x = -rayOrigin.x + (xMin * 2 + size);
+		rayDirection.x = -rayDirection.x;
+		a |= 4;
+	}
+	if (rayDirection.y < 0) {
+		rayOrigin.y = -rayOrigin.y + (yMin * 2 + size);
+		rayDirection.y = -rayDirection.y;
+		a |= 2;
+	}
+	if (rayDirection.z < 0) {
+		rayOrigin.z = -rayOrigin.z + (zMin * 2 + size);
+		rayDirection.z = -rayDirection.z;
+		a |= 1;
 	}
 
-	if (!nodes[nodeIdx].hasChildren() || tx1 < 0.0f || ty1 < 0.0f || tz1 < 0.0f) return INVALID_NODE_ID;
+	float tx0 = (xMin - rayOrigin.x) / rayDirection.x;
+	float tx1 = (xMin + size - rayOrigin.x) / rayDirection.x;
+	float ty0 = (yMin - rayOrigin.y) / rayDirection.y;
+	float ty1 = (yMin + size - rayOrigin.y) / rayDirection.y;
+	float tz0 = (zMin - rayOrigin.z) / rayDirection.z;
+	float tz1 = (zMin + size - rayOrigin.z) / rayDirection.z;
 
-	const float txm = 0.5f * (tx0 + tx1);
-	const float tym = 0.5f * (ty0 + ty1);
-	const float tzm = 0.5f * (tz0 + tz1);
+	int8_t foundNodeId = -1;
 
-	stack.push({
-		tx0, ty0, tz0,
-		txm, tym, tzm,
-		tx1, ty1, tz1,
-		nodeIdx,
-		firstNode(tx0, ty0, tz0, txm, tym, tzm, epsilon),
-	});
-	
-	return INVALID_NODE_ID;
+	if (maxv(maxv(tx0, ty0), tz0) < minv(minv(tx1, ty1), tz1)) {
+		octree_utils::Stack stack;
+
+		foundNodeId = traverseNewNode(stack, pixels, origRayOrigin, origRayDirection, tx0, ty0, tz0, tx1, ty1, tz1, 1, minNodeSize, sX, sY);
+
+		while (!stack.isEmpty() && foundNodeId == -1) {
+			foundNodeId = traverseChildNodes(stack, stack.top(), pixels, origRayOrigin, origRayDirection, a, minNodeSize, sX, sY);
+		}
+	}
+
+	if(foundNodeId == -1) {
+		cuda_renderer::setPixel(pixels, sX, sY, 0, 0, 255, 255);
+	}
+
+	return foundNodeId;
+}
+
+void Octree::setMinPos(Vector3 minPos) {
+	xMin = minPos.x;
+	yMin = minPos.y;
+	zMin = minPos.z;
+}
+
+void Octree::setMaxLevel(unsigned int maxLevel_) {
+	maxLevel = maxLevel_;
 }
 
 Vector3 Octree::getMinPos() const {

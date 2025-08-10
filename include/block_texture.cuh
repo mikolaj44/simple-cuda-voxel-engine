@@ -4,12 +4,9 @@
 #include <cuda_runtime.h>
 #include <device_launch_parameters.h>
 
-using namespace std;
-
 class BlockTexture {
 
 public:
-	
 	int width = 16, height = 16, channels = 3;
 
 	unsigned char* topImage = nullptr;
@@ -21,7 +18,7 @@ public:
 
 	BlockTexture(){};
 
-	BlockTexture(int w, int h, string top, string bottom, string left, string right, string front, string back);
+	BlockTexture(int w, int h, std::string top, std::string bottom, std::string left, std::string right, std::string front, std::string back);
 
-	BlockTexture(int w, int h, string path) : BlockTexture(w, h, path, path, path, path, path, path) {};
+	BlockTexture(int w, int h, std::string path) : BlockTexture(w, h, path, path, path, path, path, path) {};
 };

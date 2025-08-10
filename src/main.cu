@@ -41,11 +41,11 @@ void initBlockTextures() {
 
     cudaMallocManaged(&blockTextures, size_t(blockAmount * sizeof(BlockTexture*)));
 
-    for (int i = 1; i < blockAmount + 1; i++) {
-
-        string currPathStr = pathStr + "/res/textures/" + to_string(i);
+    for (int i = 0; i < blockAmount; i++) {
+        string currPathStr = pathStr + "/res/textures/" + to_string(i + 1);
 
         cudaMallocManaged(&blockTextures[i], sizeof(BlockTexture));
+        
         new (blockTextures[i]) BlockTexture(16, 16, currPathStr + "/top.png", currPathStr + "/bottom.png", currPathStr + "/left.png", currPathStr + "/right.png", currPathStr + "/front.png", currPathStr + "/back.png");
     }
 
@@ -81,12 +81,10 @@ dim3 maxGridSize(32768,32768,32768);
 dim3 blockSize(9,9,9);
 
 inline void reinsertGeometry(){
-
     // Returns -1 if nothing should be inserted
     auto blockPosToIdFunction = [] __device__ (int x, int y, int z, uint64_t frameCount){
-
         int maxIterations = 7;
-        //int deltaIterations = 3;
+        // int deltaIterations = 3;
 
         float newX = float(x) / 450.0;
         float newY = float(y) / 450.0;
@@ -135,10 +133,10 @@ inline void reinsertGeometry(){
         //     return -1;
         // }
 
-        //if(x > -100 && x < 100 && y > -100 && y < 100 && z > -100 && z < 100)
+        if(x > -100 && x < 100 && y > -100 && y < 100 && z > -100 && z < 100)
         //if(x*x + y*y + z*z <= 50 * 50 * 50)
-            return int(sqrtf(float(x*x) + float(y*y) + float(z*z))) % 127 + 1;
-        //return -1;
+            return int(sqrtf(float(x*x) + float(y*y) + float(z*z))) % 4 + 1;
+        return -1;
     };
 
     //Uint64 start = SDL_GetPerformanceCounter();
@@ -189,7 +187,14 @@ void writeAndRenderTexture() {
     // cudaEventCreate(&stop);
     // cudaEventRecord(start);
 
-    cuda_renderer::render(devPtr, octree, cameraAngle, cameraPos, SCREEN_WIDTH, SCREEN_HEIGHT, 4096, 512);
+    cudaError_t error = cudaGetLastError();
+            
+    if(error != cudaSuccess)
+        printf("CUDA error: %s\n", cudaGetErrorString(error));
+
+    // printf("%f %f %f\n", cameraPos.x, cameraPos.y, cameraPos.z);
+
+    cuda_renderer::render(devPtr, octree, cameraPos, cameraAngle, SCREEN_WIDTH, SCREEN_HEIGHT, 4096, 512);
 
     //renderScreenCuda(octree, SCREEN_WIDTH, SCREEN_HEIGHT, cameraAngle.x, cameraAngle.y, cameraPos.x, cameraPos.y, cameraPos.z, devPtr, 4096, 512);
 
@@ -248,7 +253,10 @@ int main(){
     cudaDeviceSetLimit(cudaLimitStackSize, 2048);
     
     cudaMallocManaged(&octree, sizeof(Octree));
-    octree->createOctree(PREALLOCATE_MB_AMOUNT * size_t(1024) * size_t(1024));
+    
+    octree->createOctree(10);
+
+    // printf("%d\n", (int)log2(RENDER_DISTANCE_CHUNKS * CHUNK_W * 2));
 
     const int threadsPerBlock = 600;
     const int blocksPerGrid = (SCREEN_WIDTH * SCREEN_HEIGHT + threadsPerBlock - 1) / threadsPerBlock;
@@ -303,9 +311,7 @@ int main(){
         SDL_Event event_;
 
         while (SDL_PollEvent(&event_)) {
-
             switch (event_.type) {
-
                 int x, y, z;
 
                 case SDL_MOUSEMOTION:

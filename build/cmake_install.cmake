@@ -1,8 +1,8 @@
-# Install script for directory: /home/mikolaj/Desktop/cuda-voxel-engine
+# Install script for directory: /home/mikolaj/Desktop/cuda-voxel-engine orig
 
 # Set the install prefix
 if(NOT DEFINED CMAKE_INSTALL_PREFIX)
-  set(CMAKE_INSTALL_PREFIX "/home/mikolaj/Desktop/cuda-voxel-engine/out/install/Configure preset using toolchain file")
+  set(CMAKE_INSTALL_PREFIX "/home/mikolaj/Desktop/cuda-voxel-engine orig/out/install/Configure preset using toolchain file")
 endif()
 string(REGEX REPLACE "/$" "" CMAKE_INSTALL_PREFIX "${CMAKE_INSTALL_PREFIX}")
 
@@ -45,7 +45,7 @@ endif()
 string(REPLACE ";" "\n" CMAKE_INSTALL_MANIFEST_CONTENT
        "${CMAKE_INSTALL_MANIFEST_FILES}")
 if(CMAKE_INSTALL_LOCAL_ONLY)
-  file(WRITE "/home/mikolaj/Desktop/cuda-voxel-engine/build/install_local_manifest.txt"
+  file(WRITE "/home/mikolaj/Desktop/cuda-voxel-engine orig/build/install_local_manifest.txt"
      "${CMAKE_INSTALL_MANIFEST_CONTENT}")
 endif()
 if(CMAKE_INSTALL_COMPONENT)
@@ -61,6 +61,6 @@ else()
 endif()
 
 if(NOT CMAKE_INSTALL_LOCAL_ONLY)
-  file(WRITE "/home/mikolaj/Desktop/cuda-voxel-engine/build/${CMAKE_INSTALL_MANIFEST}"
+  file(WRITE "/home/mikolaj/Desktop/cuda-voxel-engine orig/build/${CMAKE_INSTALL_MANIFEST}"
      "${CMAKE_INSTALL_MANIFEST_CONTENT}")
 endif()
