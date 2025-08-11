@@ -82,60 +82,60 @@ dim3 blockSize(9,9,9);
 inline void reinsertGeometry(){
     // Returns -1 if nothing should be inserted
     auto blockPosToIdFunction = [] __device__ (int x, int y, int z, uint64_t frameCount){
-        // int maxIterations = 7;
-        // // int deltaIterations = 3;
+        int maxIterations = 7;
+        // int deltaIterations = 3;
 
-        // float newX = float(x) / 450.0;
-        // float newY = float(y) / 450.0;
-        // float newZ = float(z) / 450.0;
+        float newX = float(x) / 450.0;
+        float newY = float(y) / 450.0;
+        float newZ = float(z) / 450.0;
 
-        // float wX = newX;
-        // float wY = newY;
-        // float wZ = newZ;
+        float wX = newX;
+        float wY = newY;
+        float wZ = newZ;
 
-        // int iterations = maxIterations;
+        int iterations = maxIterations;
 
-        // //printf("%f %f %f\n", newX, newY, newZ);
+        //printf("%f %f %f\n", newX, newY, newZ);
 
-        // while(iterations--){
-        //     float x_ = wX;
-        //     float y_ = wY;
-        //     float z_ = wZ;
+        while(iterations--){
+            float x_ = wX;
+            float y_ = wY;
+            float z_ = wZ;
 
-        //     float x2 = x_*x_;
-        //     float y2 = y_*y_;
-        //     float z2 = z_*z_;
+            float x2 = x_*x_;
+            float y2 = y_*y_;
+            float z2 = z_*z_;
 
-        //     float x4 = x2*x2;
-        //     float y4 = y2*y2;
-        //     float z4 = z2*z2;
+            float x4 = x2*x2;
+            float y4 = y2*y2;
+            float z4 = z2*z2;
 
-        //     float k3 = x2 + z2;
-        //     float k2 = 1.0 / sqrt(k3*k3*k3*k3*k3*k3*k3);
-        //     float k1 = x4 + y4 + z4 - 6.0*y2*z2 - 6.0*x2*y2 + 2.0*z2*x2;
-        //     float k4 = x2 - y2 + z2;
+            float k3 = x2 + z2;
+            float k2 = 1.0 / sqrt(k3*k3*k3*k3*k3*k3*k3);
+            float k1 = x4 + y4 + z4 - 6.0*y2*z2 - 6.0*x2*y2 + 2.0*z2*x2;
+            float k4 = x2 - y2 + z2;
 
-        //     wX =  64.0*x_*y_*z_*(x2-z2)*k4*(x4-6.0*x2*z2+z4)*k1*k2;
-        //     wY = -16.0*y2*k3*k4*k4 + k1*k1;
-        //     wZ = -8.0*y_*k4*(x4*x4 - 28.0*x4*x2*z2 + 70.0*x4*z4 - 28.0*x2*z2*z4 + z4*z4)*k1*k2;
+            wX =  64.0*x_*y_*z_*(x2-z2)*k4*(x4-6.0*x2*z2+z4)*k1*k2;
+            wY = -16.0*y2*k3*k4*k4 + k1*k1;
+            wZ = -8.0*y_*k4*(x4*x4 - 28.0*x4*x2*z2 + 70.0*x4*z4 - 28.0*x2*z2*z4 + z4*z4)*k1*k2;
 
-        //     wX += newX;
-        //     wY += newY;
-        //     wZ += newZ;
+            wX += newX;
+            wY += newY;
+            wZ += newZ;
 
-        //     if(wX * wX + wY * wY + wZ * wZ > 4.0){
-        //         return -1;
-        //     }
-        // }
+            if(wX * wX + wY * wY + wZ * wZ > 4.0){
+                return -1;
+            }
+        }
 
         // if(!(iterations > maxIterations - deltaIterations && iterations < maxIterations)){
         //     return -1;
         // }
 
-        if(x > -100 && x < 100 && y > -100 && y < 100 && z > -100 && z < 100)
+        //if(x > -100 && x < 100 && y > -100 && y < 100 && z > -100 && z < 100)
         //if(x*x + y*y + z*z <= 50 * 50 * 50)
-            return 1;
-        return -1;
+            return (x*x + y*y + z*z) % 4 + 1;
+        //return -1;
     };
 
     //Uint64 start = SDL_GetPerformanceCounter();
@@ -181,28 +181,26 @@ void writeAndRenderTexture() {
 
     //printf("launch\n");
 
-    // cudaEvent_t start, stop;
-    // cudaEventCreate(&start);
-    // cudaEventCreate(&stop);
-    // cudaEventRecord(start);
+    cudaEvent_t start, stop;
+    cudaEventCreate(&start);
+    cudaEventCreate(&stop);
+    cudaEventRecord(start);
 
-    cudaError_t error = cudaGetLastError();
+    // cudaError_t error = cudaGetLastError();
             
-    if(error != cudaSuccess)
-        printf("CUDA error: %s\n", cudaGetErrorString(error));
+    // if(error != cudaSuccess)
+    //     printf("CUDA error: %s\n", cudaGetErrorString(error));
 
     // printf("%f %f %f\n", cameraPos.x, cameraPos.y, cameraPos.z);
 
     cuda_renderer::render(devPtr, octree, cameraPos, cameraAngle, SCREEN_WIDTH, SCREEN_HEIGHT, true, 4096, 512);
 
-    //renderScreenCuda(octree, SCREEN_WIDTH, SCREEN_HEIGHT, cameraAngle.x, cameraAngle.y, cameraPos.x, cameraPos.y, cameraPos.z, devPtr, 4096, 512);
-
-    // cudaEventRecord(stop);
-    // cudaEventSynchronize(stop);
-    // float milliseconds = 0;
-    // cudaEventElapsedTime(&milliseconds, start, stop);
-    // printf("Kernel execution time: %f ms (%f fps)\n", milliseconds, 1.0 / (milliseconds / 1000.0));
-    // cudaDeviceSynchronize();
+    cudaEventRecord(stop);
+    cudaEventSynchronize(stop);
+    float milliseconds = 0;
+    cudaEventElapsedTime(&milliseconds, start, stop);
+    printf("Kernel execution time: %f ms (%f fps)\n", milliseconds, 1.0 / (milliseconds / 1000.0));
+    cudaDeviceSynchronize();
 
     // Copy memory from CUDA device to OpenGL texture
     cudaMemcpy2DToArray(cudaArrayPtr, 0, 0, devPtr, pitch, SCREEN_WIDTH * sizeof(uchar4), SCREEN_HEIGHT, cudaMemcpyDeviceToDevice);

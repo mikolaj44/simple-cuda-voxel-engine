@@ -38,13 +38,15 @@ namespace octree_utils {
         A first;
         B second;
 
+        __device__ Pair() : first(A{}), second(B{}) {};
+
         __device__ Pair(const A& first_, const B& second_) : first(first_), second(second_) {};
 
-        friend __device__ __host__ bool operator==(const Pair<A,B>& p1, const Pair<A,B>& p2){
+        friend __device__ bool operator==(const Pair<A, B>& p1, const Pair<A, B>& p2){
             return p1.first == p2.first && p1.second == p2.second;
         }
     
-        friend __device__ __host__ bool operator!=(const Pair<A,B>& p1, const Pair<A,B>& p2){
+        friend __device__ bool operator!=(const Pair<A, B>& p1, const Pair<A, B>& p2){
             return !(p1 == p2);
         }
     };

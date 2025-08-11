@@ -20,7 +20,7 @@ namespace octree_utils {
 
     __device__ Vector3<> getBlockHitPos(Vector3<int> blockPos, Vector3<> rayOrigin, Vector3<> rayDirection) {
         if (rayDirection.x == 0 || rayDirection.y == 0 || rayDirection.z == 0) {
-            return;
+            return Vector3<>();
         }
         
         float tmin =  minv(static_cast<float>(static_cast<float>(blockPos.x) - rayOrigin.x) / rayDirection.x, static_cast<float>(static_cast<float>(blockPos.x) + 1.0 - rayOrigin.x) / rayDirection.x);

@@ -12,6 +12,9 @@
 #include <cuda_runtime.h>
 #include <device_launch_parameters.h>
 
+constexpr int blocksAmount = 4;
+constexpr float epsilon = 0.0001;
+
 namespace cuda_renderer {
     namespace {
         __global__ void renderKernel(uchar4* pixels, Octree* octree, Vector3<> cameraPos, Vector3<> cameraAngle2d, int screenWidth, int screenHeight, bool textureRenderingEnabled) {            
@@ -32,12 +35,55 @@ namespace cuda_renderer {
 
             octree_utils::Pair<BlockInfo<>, BlockInfo<float>> intersectionData = octree->getRayIntersectionData(pixels, cameraPos, Vector3<>(dX, dY, dZ), sX, sY, 1);
 
-            if(intersectionData == octree_utils::Pair<BlockInfo<int>, BlockInfo<float>>(BlockInfo<int>::invalidBlockInfo(), BlockInfo<float>::invalidBlockInfo())) {
+            if(intersectionData.first.id == 0) {
                 cuda_renderer::setPixel(pixels, sX, sY, 0, 0, 255, 255);
             }
             else {
                 setPixelByHitInfo(pixels, intersectionData, cameraPos, sX, sY, textureRenderingEnabled);
             }
+        }
+
+        // https://stackoverflow.com/questions/61277046/convert-just-a-hue-into-rgb
+        __device__ void hueToRGB(float hue, int& r, int& g, int&b){
+            float kr = remainderf(5 + hue * 6, 6);
+            float kg = remainderf(3 + hue * 6, 6);
+            float kb = remainderf(1 + hue * 6, 6);
+
+            r = (1 - maxv(minv(minv(kr, 4-kr), 1.0f), 0.0f)) * 255;
+            g = (1 - maxv(minv(minv(kg, 4-kg), 1.0f), 0.0f)) * 255;
+            b = (1 - maxv(minv(minv(kb, 4-kb), 1.0f), 0.0f)) * 255;
+        }
+
+        __device__ Vector3<int> getPhongIllumination(Vector3<> startColor, Vector3<> pos, Vector3<> cameraPos, Vector3<> normal, Material material, PointLight light){
+            material.color = startColor;
+        
+            float r = 0;
+            float g = 0;
+            float b = 0;
+        
+            Vector3<> ln = Vector3<>(light.pos.x - pos.x, light.pos.y - pos.y, light.pos.z - pos.z).norm();
+        
+            if (normal.dot(ln) < 0) {
+                return Vector3<int>(0, 0, 0);
+            }
+                
+            Vector3<> h = Vector3<>(cameraPos.x - pos.x, cameraPos.y - pos.y, cameraPos.z - pos.z).norm();
+
+            Vector3<> dh = normal.mul(2 * ln.dot(normal)).sub(ln).norm();
+
+            Vector3<> lighting = light.color.mul(material.diffuse * normal.dot(ln));
+            
+            if (lighting.x > 255)
+                lighting.x = 255;
+            if (lighting.y > 255)
+                lighting.y = 255;
+            if (lighting.z > 255)
+                lighting.z = 255;
+        
+            lighting = lighting.div(255.0);
+            lighting = lighting.mul(material.color);
+        
+            return Vector3<int>((int)lighting.x, (int)lighting.y, (int)lighting.z);
         }
     }
 
@@ -46,12 +92,10 @@ namespace cuda_renderer {
     }
 
     __device__ void setPixelByHitInfo(uchar4* pixels, octree_utils::Pair<BlockInfo<>, BlockInfo<float>> intersectionData, Vector3<> cameraPos, int sX, int sY, bool textureRenderingEnabled) {
-        int blocksAmount = 4;
-        float epsilon = 0.0001;
-
         uint8_t blockId = intersectionData.first.id;
         
         if (blockId == 0 || (textureRenderingEnabled && blockId > blocksAmount)) {
+            printf("%d\n", blockId);
             return;
         }
 
@@ -157,13 +201,12 @@ namespace cuda_renderer {
         }
         
         if(!textureRenderingEnabled) {
-            //printf("%f\n", float(blockId));
             hueToRGB(float(blockId + 1) * 2.8125 / 360.0, r, g, b);
         }
 
-        // getPhongIllumination(Vector3(x, y, z), cameraPos, normal, blockVariants[blockId % blocksAmount]->material, light, r, g, b);
+        Vector3<int> color = getPhongIllumination(Vector3<>(r, g, b), Vector3<>(x, y, z), cameraPos, normal, blockVariants[blockId % blocksAmount]->material, PointLight(cameraPos, Vector3<>(255,255,255)));
 
-        cuda_renderer::setPixel(pixels, sX, sY, r, g, b, 255);
+        cuda_renderer::setPixel(pixels, sX, sY, color.x, color.y, color.z, 255);
     }
 
     __device__ void setPixel(uchar4* pixels, int sX, int sY, int r, int g, int b, int a) {

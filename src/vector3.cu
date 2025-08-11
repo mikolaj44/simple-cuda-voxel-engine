@@ -12,7 +12,7 @@ __device__ __host__ float Vector3<T>::len(){
 
 template <typename T>
 __device__ __host__ Vector3<T>& Vector3<T>::norm(){
-    div(*this, len(*this));
+    (*this).div((*this).len());
     return *this;
 }
 
@@ -60,9 +60,9 @@ __device__ __host__ Vector3<T>& Vector3<T>::pow(T val){
         y = static_cast<T>(powf(y, val));
         z = static_cast<T>(powf(z, val));
     #else
-        x = static_cast<T>(pow(x, val));
-        y = static_cast<T>(pow(y, val));
-        z = static_cast<T>(pow(z, val));
+        x = static_cast<T>(std::pow(x, val));
+        y = static_cast<T>(std::pow(y, val));
+        z = static_cast<T>(std::pow(z, val));
     #endif
     
     return *this;
@@ -99,3 +99,6 @@ __device__ __host__ Vector3<T>& Vector3<T>::div(const Vector3<T>& other){
     z = static_cast<T>(z / other.z);
     return *this;
 }
+
+template class Vector3<int>;
+template class Vector3<float>;

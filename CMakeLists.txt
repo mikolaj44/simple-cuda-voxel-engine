@@ -18,8 +18,8 @@ include_directories(${SDL2_INCLUDE_DIRS} ${OPENGL_INCLUDE_DIRS} ${GLEW_INCLUDE_D
 
 set(CMAKE_CUDA_ARCHITECTURES "75")
 
-set(CMAKE_CUDA_FLAGS_RELEASE "-O3 -Xptxas -O3")
-set(CMAKE_CUDA_FLAGS_RELWITHDEBINFO "-O2 -Xptxas -O2")
+# set(CMAKE_CUDA_FLAGS_RELEASE "-O3 -Xptxas -O3")
+# set(CMAKE_CUDA_FLAGS_RELWITHDEBINFO "-O2 -Xptxas -O2")
 
 add_executable(${PROJECT_NAME} ${SOURCES} ${HEADERS})
 
@@ -32,6 +32,12 @@ target_compile_options(${PROJECT_NAME} PRIVATE
     -diag-suppress=550
     -diag-suppress=177
     -Xcompiler -w
+  >
+)
+
+target_compile_options(${PROJECT_NAME} PRIVATE
+  $<$<COMPILE_LANGUAGE:CXX>:
+    -O3
   >
 )
 

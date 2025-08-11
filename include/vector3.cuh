@@ -1,7 +1,8 @@
 #pragma once
 
 template<typename T = float>
-struct alignas(4) Vector3 {
+class alignas(4) Vector3 {
+public:
     T x;
     T y;
     T z;
