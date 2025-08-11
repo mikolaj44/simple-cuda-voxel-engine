@@ -64,12 +64,12 @@ extern int shiftZ;
 
 std::string getPathStr();
 
-extern Vector3 cameraPos;
-extern Vector3 cameraAngle;
+extern Vector3<> cameraPos;
+extern Vector3<> cameraAngle;
 
 extern PointLight pointLight;
 
 extern Material mainMaterial;
 
-extern Vector3 unitCubeCoords[8];
+extern Vector3<> unitCubeCoords[8];
 //extern BS::thread_pool threadPool;

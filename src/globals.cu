@@ -3,7 +3,6 @@
 using namespace std;
 
 std::string getPathStr() {
-
     std::string str = __FILE__;
 
     std::string path = str.substr(0, str.rfind("/"));
@@ -12,13 +11,13 @@ std::string getPathStr() {
     return str;
 }
 
-Vector3 unitCubeCoords[8] = { Vector3(0,0,0), Vector3(1,0,0), Vector3(1,1,0), Vector3(0,1,0), Vector3(0,0,1), Vector3(1,0,1), Vector3(1,1,1), Vector3(0,1,1) };
-Vector3 cameraPos(0, 0, -1000);
-Vector3 cameraAngle(0, 0, 0);
+Vector3<> unitCubeCoords[8] = { Vector3<>(0,0,0), Vector3<>(1,0,0), Vector3<>(1,1,0), Vector3<>(0,1,0), Vector3<>(0,0,1), Vector3<>(1,0,1), Vector3<>(1,1,1), Vector3<>(0,1,1) };
+Vector3<> cameraPos(0, 0, -1000);
+Vector3<> cameraAngle(0, 0, 0);
 
-PointLight pointLight(Vector3(0,0,0), Vector3(255, 255, 255));
+PointLight pointLight(Vector3<>(0,0,0), Vector3<>(255, 255, 255));
 
-Material mainMaterial(Vector3(255, 255, 255), 0, 0, 0);
+Material mainMaterial(Vector3<>(255, 255, 255), 0, 0, 0);
 
 std::string pathStr = getPathStr();
 

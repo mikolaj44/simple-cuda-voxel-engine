@@ -8,14 +8,27 @@
 #include "cuda_math.cuh"
 #include "octree/octree_utils.cuh"
 
-class Block {
+template<typename T = int>
+class BlockInfo {
 public:
-	int x, y, z;
-	uint8_t blockId;
+	Vector3<T> pos;
+	uint8_t id;
 
-	__device__ __host__ Block() {};
+	__device__ __host__ BlockInfo() : pos(Vector3<T>{}), id(uint8_t{}) {};
 
-	__device__ __host__ Block(int x_, int y_, int z_, uint8_t blockId_) : x(x_), y(y_), z(z_), blockId(blockId_) {};
+	__device__ __host__ BlockInfo(Vector3<T> pos_, uint8_t id_) : pos(pos_), id(id_) {};
+
+	static __device__ __host__ BlockInfo<T> invalidBlockInfo() {
+		return BlockInfo<T>(Vector3<T>(0, 0, 0), 255);
+	}
+	
+	friend __device__ __host__ bool operator==(const BlockInfo<T>& b1, const BlockInfo<T>& b2){
+        return b1.pos == b2.pos && b1.id == b2.id;
+    }
+
+    friend __device__ __host__ bool operator!=(const BlockInfo<T>& b1, const BlockInfo<T>& b2){
+        return !(b2 == b2);
+    }
 };
 
 class Octree {
@@ -26,15 +39,15 @@ public:
 
 	void clear();
 
-	__device__ void insert(Block block);
+	__device__ void insert(BlockInfo<>& block);
 
-	__device__ int8_t getRayIntersectionData(uchar4* pixels, Vector3 rayOrigin, Vector3 rayDirection, int sX, int sY, int minNodeSize);
+	__device__ octree_utils::Pair<BlockInfo<int>, BlockInfo<float>> getRayIntersectionData(uchar4* pixels, Vector3<> rayOrigin, Vector3<> rayDirection, int sX, int sY, int minNodeSize);
 
-	void setMinPos(Vector3 minPos);
+	void setMinPos(Vector3<> minPos);
 
 	void setMaxLevel(unsigned int maxLevel);
 
-	Vector3 getMinPos() const;
+	Vector3<> getMinPos() const;
 
 	unsigned int getMaxLevel() const;
 private:
@@ -62,9 +75,9 @@ private:
 
 	size_t allocatedMemoryInBytes;
 
-	__device__ void morton3Ddecode(uint32_t mortonCode, int& x, int& y, int& z);
+	__device__ Vector3<int> morton3Ddecode(uint32_t mortonCode);
 
-	__device__ int8_t traverseNewNode(octree_utils::Stack& stack, uchar4* pixels, Vector3 origRayOrigin, Vector3 origRayDirection, float tx0, float ty0, float tz0, float tx1, float ty1, float tz1, unsigned int nodeIdx, int minNodeSize, int sX, int sY);
+	__device__ octree_utils::Pair<BlockInfo<int>, BlockInfo<float>> traverseNewNode(octree_utils::Stack& stack, uchar4* pixels, Vector3<> origRayOrigin, Vector3<> origRayDirection, float tx0, float ty0, float tz0, float tx1, float ty1, float tz1, unsigned int nodeIdx, int minNodeSize, int sX, int sY);
 
-	__device__ int8_t traverseChildNodes(octree_utils::Stack& stack, octree_utils::Stack::Frame& data, uchar4* pixels, Vector3 origRayOrigin, Vector3 origRayDirection, unsigned char a, int minNodeSize, int sX, int sY);
+	__device__ octree_utils::Pair<BlockInfo<int>, BlockInfo<float>> traverseChildNodes(octree_utils::Stack& stack, octree_utils::Stack::Frame& data, uchar4* pixels, Vector3<> origRayOrigin, Vector3<> origRayDirection, unsigned char a, int minNodeSize, int sX, int sY);
 };

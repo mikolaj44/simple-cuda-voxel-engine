@@ -6,10 +6,10 @@
 
 class PointLight {
 public:
-    Vector3 pos;
-    Vector3 color;
+    Vector3<> pos;
+    Vector3<> color;
 
     __device__ PointLight() {};
 
-    __device__ PointLight(Vector3 pos_, Vector3 color_) : pos(pos_), color(color_) {};
+    __device__ PointLight(Vector3<> pos_, Vector3<> color_) : pos(pos_), color(color_) {};
 };

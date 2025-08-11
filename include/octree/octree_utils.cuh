@@ -32,11 +32,28 @@ namespace octree_utils {
         }
     };
 
+    template<typename A, typename B>
+    class Pair {
+    public:
+        A first;
+        B second;
+
+        __device__ Pair(const A& first_, const B& second_) : first(first_), second(second_) {};
+
+        friend __device__ __host__ bool operator==(const Pair<A,B>& p1, const Pair<A,B>& p2){
+            return p1.first == p2.first && p1.second == p2.second;
+        }
+    
+        friend __device__ __host__ bool operator!=(const Pair<A,B>& p1, const Pair<A,B>& p2){
+            return !(p1 == p2);
+        }
+    };
+
     __device__ unsigned int nodeLevel(uint32_t mortonCode, unsigned int octreeLevel);
 
     __device__ unsigned int nodeSize(uint32_t mortonCode, unsigned int octreeLevel);
 
-    __device__ void drawTexturePixel(int blockX, int blockY, int blockZ, float oX, float oY, float oZ, float dX, float dY, float dZ, int sX, int sY, unsigned char blockId, uchar4* pixels, bool textureRenderingEnabled);
+    __device__ Vector3<> getBlockHitPos(Vector3<int> blockPos, Vector3<> rayOrigin, Vector3<> rayDirection);
 
     namespace revelles {
         __device__ unsigned char firstNode(float tx0, float ty0, float tz0, float txm, float tym, float tzm, float epsilon);

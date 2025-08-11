@@ -1,27 +1,44 @@
 #pragma once
 
+template<typename T = float>
 struct alignas(4) Vector3 {
-    float x = 0.0, y = 0.0, z = 0.0;
+    T x;
+    T y;
+    T z;
 
-    __device__ __host__ Vector3() {};
+    __device__ __host__ Vector3() : x(T{}), y(T{}), z(T{}) {};
 
-    __device__ __host__ Vector3(float x_, float y_, float z_) : x(x_), y(y_), z(z_) {};
+    __device__ __host__ Vector3(T x_, T y_, T z_) : x(x_), y(y_), z(z_) {};
+
+    __device__ __host__ float len();
+
+    __device__ __host__ Vector3<T>& norm();
+
+    __device__ __host__ float dot(const Vector3<T>& other);
+    
+    __device__ __host__ Vector3<T>& add(T val);
+
+    __device__ __host__ Vector3<T>& sub(T val);
+
+    __device__ __host__ Vector3<T>& mul(T val);
+
+    __device__ __host__ Vector3<T>& div(T val);
+
+    __device__ __host__ Vector3<T>& pow(T val);
+
+    __device__ __host__ Vector3<T>& add(const Vector3<T>& other);
+
+    __device__ __host__ Vector3<T>& sub(const Vector3<T>& other);
+
+    __device__ __host__ Vector3<T>& mul(const Vector3<T>& other);
+
+    __device__ __host__ Vector3<T>& div(const Vector3<T>& other);
+
+    friend __device__ __host__ bool operator==(const Vector3<T>& v1, const Vector3<T>& v2){
+        return v1.x == v2.x && v1.y == v2.y && v1.z == v2.z;
+    }
+
+    friend __device__ __host__ bool operator!=(const Vector3<T>& v1, const Vector3<T>& v2){
+        return !(v1 == v2);
+    }
 };
-
-__device__ __host__ float len(Vector3 v);
-
-__device__ __host__ float dot(Vector3 v1, Vector3 v2);
-
-__device__ __host__ Vector3 mul(Vector3 v, float val);
-
-__device__ __host__ Vector3 div(Vector3 v, float val);
-
-__device__ __host__ Vector3 norm(Vector3 v);
-
-__device__ __host__ Vector3 vmul(Vector3 v1, Vector3 v2);
-
-__device__ __host__ Vector3 add(Vector3 v1, Vector3 v2);
-
-__device__ __host__ Vector3 sub(Vector3 v1, Vector3 v2);
-
-__device__ __host__ Vector3 pow(Vector3 v, float val);

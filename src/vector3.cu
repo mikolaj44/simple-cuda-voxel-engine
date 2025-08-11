@@ -1,46 +1,101 @@
 #include "vector3.cuh"
 
-float len(Vector3 v){
+template <typename T>
+__device__ __host__ float Vector3<T>::len(){
     #ifdef __CUDA_ARCH__
-        return sqrtf(v.x * v.x + v.y * v.y + v.z * v.z);
+        return sqrtf(static_cast<float>(x) * static_cast<float>(x)+ static_cast<float>(y) * static_cast<float>(y) + static_cast<float>(z) * static_cast<float>(z));
 	#else
-        return sqrt(v.x * v.x + v.y * v.y + v.z * v.z);
+        return sqrt(static_cast<float>(x) * static_cast<float>(x)+ static_cast<float>(y) * static_cast<float>(y) + static_cast<float>(z) * static_cast<float>(z));
 	#endif
     
 }
 
-float dot(Vector3 v1, Vector3 v2){
-    return v1.x * v2.x + v1.y * v2.y + v1.z * v2.z;
+template <typename T>
+__device__ __host__ Vector3<T>& Vector3<T>::norm(){
+    div(*this, len(*this));
+    return *this;
 }
 
-Vector3 mul(Vector3 v, float val){
-    return Vector3(v.x * val, v.y * val, v.z * val);
+template <typename T>
+__device__ __host__ float Vector3<T>::dot(const Vector3<T>& other){
+    return static_cast<float>(x) * static_cast<float>(other.x) + static_cast<float>(y)* static_cast<float>(other.y) + static_cast<float>(z) * static_cast<float>(other.z);
 }
 
-Vector3 div(Vector3 v, float val){
-    return Vector3(v.x / val, v.y / val, v.z / val);
+template <typename T>
+__device__ __host__ Vector3<T>& Vector3<T>::add(T val){
+    x = static_cast<T>(x + val);
+    y = static_cast<T>(y + val);
+    z = static_cast<T>(z + val);
+    return *this;
 }
 
-Vector3 norm(Vector3 v){
-    return div(v, len(v));
+template <typename T>
+__device__ __host__ Vector3<T>& Vector3<T>::sub(T val){
+    x = static_cast<T>(x - val);
+    y = static_cast<T>(y - val);
+    z = static_cast<T>(z - val);
+    return *this;
 }
 
-Vector3 add(Vector3 v1, Vector3 v2){
-    return Vector3(v1.x + v2.x, v1.y + v2.y, v1.z + v2.z);
+template <typename T>
+__device__ __host__ Vector3<T>& Vector3<T>::mul(T val){
+    x = static_cast<T>(x * val);
+    y = static_cast<T>(y * val);
+    z = static_cast<T>(z * val);
+    return *this;
 }
 
-Vector3 sub(Vector3 v1, Vector3 v2){
-    return Vector3(v1.x - v2.x, v1.y - v2.y, v1.z - v2.z);
+template <typename T>
+__device__ __host__ Vector3<T>& Vector3<T>::div(T val){
+    x = static_cast<T>(x / val);
+    y = static_cast<T>(y / val);
+    z = static_cast<T>(z / val);
+    return *this;
 }
 
-Vector3 vmul(Vector3 v1, Vector3 v2){
-    return Vector3(v1.x * v2.x, v1.y * v2.y, v1.z * v2.z);
-}
-
-Vector3 pow(Vector3 v, float val){
+template <typename T>
+__device__ __host__ Vector3<T>& Vector3<T>::pow(T val){
     #ifdef __CUDA_ARCH__
-        return Vector3(powf(v.x, val), powf(v.y, val), powf(v.z, val));
+        x = static_cast<T>(powf(x, val));
+        y = static_cast<T>(powf(y, val));
+        z = static_cast<T>(powf(z, val));
     #else
-        return Vector3(pow(v.x, val), pow(v.y, val), pow(v.z, val));
-	#endif
+        x = static_cast<T>(pow(x, val));
+        y = static_cast<T>(pow(y, val));
+        z = static_cast<T>(pow(z, val));
+    #endif
+    
+    return *this;
+}
+
+template <typename T>
+__device__ __host__ Vector3<T>& Vector3<T>::add(const Vector3<T>& other){
+    x = static_cast<T>(x + other.x);
+    y = static_cast<T>(y + other.y);
+    z = static_cast<T>(z + other.z);
+    return *this;
+}
+
+template <typename T>
+__device__ __host__ Vector3<T>& Vector3<T>::sub(const Vector3<T>& other){
+    x = static_cast<T>(x - other.x);
+    y = static_cast<T>(y - other.y);
+    z = static_cast<T>(z - other.z);
+    return *this;
+}
+
+template <typename T>
+__device__ __host__ Vector3<T>& Vector3<T>::mul(const Vector3<T>& other){
+    x = static_cast<T>(x * other.x);
+    y = static_cast<T>(y * other.y);
+    z = static_cast<T>(z * other.z);
+    return *this;
+}
+
+template <typename T>
+__device__ __host__ Vector3<T>& Vector3<T>::div(const Vector3<T>& other){
+    x = static_cast<T>(x / other.x);
+    y = static_cast<T>(y / other.y);
+    z = static_cast<T>(z / other.z);
+    return *this;
 }

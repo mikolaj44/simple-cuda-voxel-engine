@@ -10,7 +10,7 @@
 using namespace std;
 
 template<typename XYZtoIdFunction>
-__global__ void generateChunksKernel(Octree* octree, Vector3 pos, XYZtoIdFunction blockPosToIdFunction, uint64_t frameCount){
+__global__ void generateChunksKernel(Octree* octree, Vector3<> pos, XYZtoIdFunction blockPosToIdFunction, uint64_t frameCount){
     int x = threadIdx.x + blockIdx.x * blockDim.x;
     int y = threadIdx.y + blockIdx.y * blockDim.y;
     int z = threadIdx.z + blockIdx.z * blockDim.z;
@@ -31,8 +31,10 @@ __global__ void generateChunksKernel(Octree* octree, Vector3 pos, XYZtoIdFunctio
 
     char id = blockPosToIdFunction(x, y, z, frameCount);
 
+    BlockInfo<> b = BlockInfo<>(Vector3<int>(x, y, z), id);
+
     if(id != -1){
-        octree->insert(Block(x, y, z, id));
+        octree->insert(b);
     }
 
     // float val = pseudoRandom(x ^ y ^ z ^ frameCount | 88172645463325252LL);//cudaNoise::perlinNoise(make_float3(float(x) / smoothing, 0, float(z) / smoothing), 1, 0) * amplify;
@@ -53,10 +55,10 @@ __global__ void generateChunksKernel(Octree* octree, Vector3 pos, XYZtoIdFunctio
 }
 
 template<typename XYZtoIdFunction>
-void generateChunks(Octree* octree, Vector3 pos, XYZtoIdFunction blockPosToIdFunction, dim3 maxGridSize, dim3 blockSize, uint64_t frameCount){
+void generateChunks(Octree* octree, Vector3<> pos, XYZtoIdFunction blockPosToIdFunction, dim3 maxGridSize, dim3 blockSize, uint64_t frameCount){
     const int length = RENDER_DISTANCE_CHUNKS * CHUNK_W * 2;
 
-    octree->setMinPos(Vector3(pos.x - length / 2, pos.y - length / 2, pos.z - length / 2));
+    octree->setMinPos(Vector3<>(pos.x - length / 2, pos.y - length / 2, pos.z - length / 2));
     octree->setMaxLevel((int)log2(length)); // * 2) - 1
     
     // printf("%d %d %d\n", octree->xMin, octree->yMin, octree->zMin);

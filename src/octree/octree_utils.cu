@@ -18,22 +18,18 @@ namespace octree_utils {
         return 1 << nodeLevel(mortonCode, octreeLevel);
     }
 
-    __device__ void drawTexturePixel(int blockX, int blockY, int blockZ, float oX, float oY, float oZ, float dX, float dY, float dZ, int sX, int sY, unsigned char blockId, uchar4* pixels, bool textureRenderingEnabled) {
-        if (dX == 0 || dY == 0 || dZ == 0) { // for now
+    __device__ Vector3<> getBlockHitPos(Vector3<int> blockPos, Vector3<> rayOrigin, Vector3<> rayDirection) {
+        if (rayDirection.x == 0 || rayDirection.y == 0 || rayDirection.z == 0) {
             return;
         }
         
-        float tmin =  minv((float)((float)blockX - oX) / dX, (float)((float)blockX + 1.0 - oX) / dX);
-        float tymin = minv((float)((float)blockY - oY) / dY, (float)((float)blockY + 1.0 - oY) / dY);
-        float tzmin = minv((float)((float)blockZ - oZ) / dZ, (float)((float)blockZ + 1.0 - oZ) / dZ);
+        float tmin =  minv(static_cast<float>(static_cast<float>(blockPos.x) - rayOrigin.x) / rayDirection.x, static_cast<float>(static_cast<float>(blockPos.x) + 1.0 - rayOrigin.x) / rayDirection.x);
+        float tymin = minv(static_cast<float>(static_cast<float>(blockPos.y) - rayOrigin.y) / rayDirection.y, static_cast<float>(static_cast<float>(blockPos.y) + 1.0 - rayOrigin.y) / rayDirection.y);
+        float tzmin = minv(static_cast<float>(static_cast<float>(blockPos.z) - rayOrigin.z) / rayDirection.z, static_cast<float>(static_cast<float>(blockPos.z) + 1.0 - rayOrigin.z) / rayDirection.z);
     
         tmin = maxv(maxv(tmin, tymin), tzmin);
-    
-        float x = oX + tmin * dX;
-        float y = oY + tmin * dY;
-        float z = oZ + tmin * dZ;
-        
-        setPixelById(sX, sY, blockX, blockY, blockZ, x, y, z, blockId, pixels, Vector3(oX, oY, oZ), PointLight(Vector3(1500,-500,-5000), Vector3(255, 255, 255)), textureRenderingEnabled); //oX - dX * 1000, oY - dY * 1000, oZ - dZ * 1000    }
+
+        return Vector3<>(rayOrigin.x + tmin * rayDirection.x, rayOrigin.y + tmin * rayDirection.y, rayOrigin.z + tmin * rayDirection.z);
     }
 
     namespace revelles {
