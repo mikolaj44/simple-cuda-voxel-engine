@@ -215,12 +215,11 @@ __device__ void Octree::insert(BlockInfo<>& block) {
 	} while (level >= 0);
 }
 
-__device__ void Octree::traverseNewNode(bool& foundSolid, octree_utils::Pair<BlockInfo<int>, BlockInfo<float>>& intersectionData, octree_utils::Stack& stack, uchar4* pixels, Vector3<> origRayOrigin, Vector3<> origRayDirection, float tx0, float ty0, float tz0, float tx1, float ty1, float tz1, unsigned int nodeIdx, int minNodeSize, int sX, int sY) {
+__device__ void Octree::traverseNewNode(bool& foundSolid, Triple<Vector3<int>, Vector3<>, uint8_t>& intersectionData, octree_utils::Stack& stack, uchar4* pixels, Vector3<> origRayOrigin, Vector3<> origRayDirection, float tx0, float ty0, float tz0, float tx1, float ty1, float tz1, unsigned int nodeIdx, int minNodeSize, int sX, int sY) {
 	using namespace octree_utils::revelles;
 	using namespace octree_utils;
 	
 	if(stack.topIndex >= CUDA_STACK_SIZE - 1) {
-		foundSolid = false;
 		return;
 	}
 
@@ -229,14 +228,16 @@ __device__ void Octree::traverseNewNode(bool& foundSolid, octree_utils::Pair<Blo
 
 		Vector3<> hitPos = getBlockHitPos(blockPos, origRayOrigin, origRayDirection);
 
-		intersectionData.first 	= BlockInfo<int>(blockPos, nodes[nodeIdx].blockId());
-		intersectionData.second = BlockInfo<float>(hitPos, nodes[nodeIdx].blockId());
+		intersectionData.first = blockPos;
+		intersectionData.second = hitPos;
+		intersectionData.third = nodes[nodeIdx].blockId();
+		
+		// TODO: return multiplecheck if the block is not translucent before setting this to true:
 		foundSolid = true;
 		return;
 	}
 
 	if (!nodes[nodeIdx].hasChildren() || tx1 < 0.0f || ty1 < 0.0f || tz1 < 0.0f){
-		foundSolid = false;
 		return;
 	}
 
@@ -251,11 +252,9 @@ __device__ void Octree::traverseNewNode(bool& foundSolid, octree_utils::Pair<Blo
 		nodeIdx,
 		firstNode(tx0, ty0, tz0, txm, tym, tzm, epsilon),
 	});
-	
-	foundSolid = false;
 }
 
-__device__ void Octree::traverseChildNodes(bool& foundSolid, octree_utils::Pair<BlockInfo<int>, BlockInfo<float>>& intersectionData, octree_utils::Stack& stack, octree_utils::Stack::Frame& data, uchar4* pixels, Vector3<> origRayOrigin, Vector3<> origRayDirection, unsigned char a, int minNodeSize, int sX, int sY) {
+__device__ void Octree::traverseChildNodes(bool& foundSolid, Triple<Vector3<int>, Vector3<>, uint8_t>& intersectionData, octree_utils::Stack& stack, octree_utils::Stack::Frame& data, uchar4* pixels, Vector3<> origRayOrigin, Vector3<> origRayDirection, unsigned char a, int minNodeSize, int sX, int sY) {
 	using namespace octree_utils::revelles;
 	
 	switch (data.nodeIndex) {
@@ -286,11 +285,9 @@ __device__ void Octree::traverseChildNodes(bool& foundSolid, octree_utils::Pair<
 		case 8:
 			stack.pop();
 	}
-	
-	foundSolid = false;
 }
 
-__device__ octree_utils::Pair<BlockInfo<int>, BlockInfo<float>> Octree::getRayIntersectionData(uchar4* pixels, Vector3<> rayOrigin, Vector3<> rayDirection, int sX, int sY, int minNodeSize) {
+__device__ Triple<Vector3<int>, Vector3<>, uint8_t> Octree::getRayIntersectionData(uchar4* pixels, Vector3<> rayOrigin, Vector3<> rayDirection, int sX, int sY, int minNodeSize) {
 	unsigned char a = 0;
 
 	Vector3<> origRayOrigin = rayOrigin;
@@ -321,7 +318,7 @@ __device__ octree_utils::Pair<BlockInfo<int>, BlockInfo<float>> Octree::getRayIn
 	float tz0 = (zMin - rayOrigin.z) / rayDirection.z;
 	float tz1 = (zMin + size - rayOrigin.z) / rayDirection.z;
 	
-	octree_utils::Pair<BlockInfo<int>, BlockInfo<float>> intersectionData;
+	Triple<Vector3<int>, Vector3<>, uint8_t> intersectionData;
 
 	if (maxv(maxv(tx0, ty0), tz0) < minv(minv(tx1, ty1), tz1)) {
 		octree_utils::Stack stack;

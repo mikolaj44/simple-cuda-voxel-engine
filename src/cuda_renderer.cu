@@ -5,7 +5,6 @@
 
 #include "cuda_renderer.cuh"
 #include "chunk_generation.cuh"
-#include "chunk.cuh"
 #include "globals.cuh"
 #include "blocks_data.cuh"
 
@@ -33,9 +32,9 @@ namespace cuda_renderer {
             float dZ = sin(polar) * sin(alpha);
             float dY = cos(polar);
 
-            octree_utils::Pair<BlockInfo<>, BlockInfo<float>> intersectionData = octree->getRayIntersectionData(pixels, cameraPos, Vector3<>(dX, dY, dZ), sX, sY, 1);
+            Triple<Vector3<int>, Vector3<>, uint8_t> intersectionData = octree->getRayIntersectionData(pixels, cameraPos, Vector3<>(dX, dY, dZ), sX, sY, 1);
 
-            if(intersectionData.first.id == 0) {
+            if(intersectionData.third == 0) {
                 cuda_renderer::setPixel(pixels, sX, sY, 0, 0, 255, 255);
             }
             else {
@@ -91,8 +90,8 @@ namespace cuda_renderer {
         renderKernel<<<gridSize,blockSize>>>(pixels, octree, cameraPos, cameraAngle2d, screenWidth, screenHeight, textureRenderingEnabled);
     }
 
-    __device__ void setPixelByHitInfo(uchar4* pixels, octree_utils::Pair<BlockInfo<>, BlockInfo<float>> intersectionData, Vector3<> cameraPos, int sX, int sY, bool textureRenderingEnabled) {
-        uint8_t blockId = intersectionData.first.id;
+    __device__ void setPixelByHitInfo(uchar4* pixels, Triple<Vector3<int>, Vector3<float>, uint8_t> intersectionData, Vector3<> cameraPos, int sX, int sY, bool textureRenderingEnabled) {
+        uint8_t blockId = intersectionData.third;
         
         if (blockId == 0 || (textureRenderingEnabled && blockId > blocksAmount)) {
             printf("%d\n", blockId);
@@ -109,13 +108,13 @@ namespace cuda_renderer {
             imgChannels = blockVariants[blockId]->texture->channels;
         }
 
-        float x = intersectionData.second.pos.x;
-        float y = intersectionData.second.pos.y;
-        float z = intersectionData.second.pos.z;
+        int blockX = intersectionData.first.x;
+        int blockY = intersectionData.first.y;
+        int blockZ = intersectionData.first.z;
 
-        int blockX = intersectionData.first.pos.x;
-        int blockY = intersectionData.first.pos.y;
-        int blockZ = intersectionData.first.pos.z;
+        float x = intersectionData.second.x;
+        float y = intersectionData.second.y;
+        float z = intersectionData.second.z;
 
         int imgX = 0, imgY = 0;
 

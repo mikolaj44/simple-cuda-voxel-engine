@@ -6,7 +6,6 @@
 #include "material.cuh"
 
 class BlockVariant {
-
 public:
     Material material;
     BlockTexture* texture;

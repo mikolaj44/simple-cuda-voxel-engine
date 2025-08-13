@@ -14,7 +14,6 @@
 #include <GL/glew.h>
 
 #include "cuda_renderer.cuh"
-#include "chunk.cuh"
 #include "chunk_generation.cuh"
 #include "octree/octree.cuh"
 #include "blocks_data.cuh"

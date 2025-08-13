@@ -1,6 +1,5 @@
 #pragma once
 
-#include "chunk.cuh"
 #include "octree/octree.cuh"
 #include "globals.cuh"
 #include "cuda_noise.cuh"

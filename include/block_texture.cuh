@@ -5,7 +5,6 @@
 #include <device_launch_parameters.h>
 
 class BlockTexture {
-
 public:
 	int width = 16, height = 16, channels = 3;
 
