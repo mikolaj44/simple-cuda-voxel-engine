@@ -1,6 +1,6 @@
 #include "blocks_data.cuh"
 #include "cuda_math.cuh"
-#include "cuda_renderer.cuh"
+#include "renderer/cuda_renderer.cuh"
 
 __device__ BlockVariant** blockVariants = nullptr;
 __constant__ int blocksAmount = 4;

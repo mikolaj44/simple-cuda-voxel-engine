@@ -34,6 +34,8 @@ rule CUDA_EXECUTABLE_DEVICE_LINKER__cuda-voxel-engine_Release
 # Rule for linking CUDA executable.
 
 rule CUDA_EXECUTABLE_LINKER__cuda-voxel-engine_Release
+  depfile = $DEP_FILE
+  deps = gcc
   command = $PRE_LINK && /usr/bin/g++ $LINK_FLAGS $in -o $TARGET_FILE $LINK_PATH $LINK_LIBRARIES -L"/usr/local/cuda-12.8/targets/x86_64-linux/lib/stubs" -L"/usr/local/cuda-12.8/targets/x86_64-linux/lib" && $POST_BUILD
   description = Linking CUDA executable $TARGET_FILE
   restat = $RESTAT

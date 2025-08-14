@@ -12,9 +12,11 @@
 
 class Octree {
 public:
-	cudaError_t createOctree(int xMin, int yMin, int zMin, unsigned int maxLevel);
+	cudaError_t create(int xMin, int yMin, int zMin, unsigned int maxLevel);
 
-	cudaError_t createOctree(unsigned int maxLevel);
+	cudaError_t create(unsigned int maxLevel);
+
+	cudaError_t cleanup();
 
 	cudaError_t clear();
 

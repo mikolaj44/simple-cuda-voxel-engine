@@ -11,7 +11,7 @@
 #include "globals.cuh"
 #include "blocks_data.cuh"
 #include "cuda_math.cuh"
-#include "cuda_renderer.cuh"
+#include "renderer/cuda_renderer.cuh"
 
 #include <cuda_runtime.h>
 #include <device_launch_parameters.h>
@@ -24,7 +24,7 @@ namespace {
 	}
 }
 
-cudaError_t Octree::createOctree(int xMin_, int yMin_, int zMin_, unsigned int maxLevel_) {
+cudaError_t Octree::create(int xMin_, int yMin_, int zMin_, unsigned int maxLevel_) {
 	xMin = xMin_;
 	yMin = yMin_;
 	zMin = zMin_;
@@ -47,8 +47,12 @@ cudaError_t Octree::createOctree(int xMin_, int yMin_, int zMin_, unsigned int m
 	return error;
 }
 
-cudaError_t Octree::createOctree(unsigned int maxLevel) {
-	return createOctree(0, 0, 0, maxLevel);
+cudaError_t Octree::create(unsigned int maxLevel) {
+	return create(0, 0, 0, maxLevel);
+}
+
+cudaError_t Octree::cleanup() {
+	return cudaFree(nodes);
 }
 
 cudaError_t Octree::clear() {
@@ -224,12 +228,8 @@ __device__ void Octree::traverseNewNode(bool& foundSolid, Triple<Vector3<int>, V
 	}
 
 	if (nodeLevel(nodeIdx, maxLevel) == 0 && nodes[nodeIdx].blockId() != 0) {
-		Vector3<int> blockPos = morton3Ddecode(nodeIdx);
-
-		Vector3<> hitPos = getBlockHitPos(blockPos, origRayOrigin, origRayDirection);
-
-		intersectionData.first = blockPos;
-		intersectionData.second = hitPos;
+		intersectionData.first = morton3Ddecode(nodeIdx);
+		intersectionData.second = getBlockHitPos(intersectionData.first, origRayOrigin, origRayDirection);
 		intersectionData.third = nodes[nodeIdx].blockId();
 		
 		// TODO: return multiplecheck if the block is not translucent before setting this to true:
