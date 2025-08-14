@@ -12,25 +12,25 @@
 
 class Octree {
 public:
-	cudaError_t create(int xMin, int yMin, int zMin, unsigned int maxLevel);
+	__host__ cudaError_t create(int xMin, int yMin, int zMin, unsigned int maxLevel);
 
-	cudaError_t create(unsigned int maxLevel);
+	__host__ cudaError_t create(unsigned int maxLevel);
 
-	cudaError_t cleanup();
+	__host__ cudaError_t cleanup();
 
-	cudaError_t clear();
+	__host__ cudaError_t clear();
 
 	__device__ void insert(BlockInfo<>& block);
 
 	__device__ Triple<Vector3<int>, Vector3<float>, uint8_t> getRayIntersectionData(uchar4* pixels, Vector3<> rayOrigin, Vector3<> rayDirection, int sX, int sY, int minNodeSize);
 
-	void setMinPos(Vector3<> minPos);
+	__device__ __host__ void setMinPos(Vector3<> minPos);
 
-	void setMaxLevel(unsigned int maxLevel);
+	__host__ cudaError_t setMaxLevel(unsigned int maxLevel);
 
-	Vector3<> getMinPos() const;
+	__device__ __host__ Vector3<> getMinPos() const;
 
-	unsigned int getMaxLevel() const;
+	__device__ __host__ unsigned int getMaxLevel() const;
 private:
 	struct alignas(uint8_t) Node {
 		uint8_t id; // most significant bit is 1 if the node has children, the rest of the bits are for block id
@@ -52,9 +52,11 @@ private:
 
 	int xMin, yMin, zMin;
 
-	unsigned int maxLevel; // level 0 is a terminal node
+	unsigned int maxLevel = 0; // level 0 is a terminal node
 
 	size_t allocatedMemoryInBytes;
+
+	__host__ cudaError_t allocateByMaxLevel(unsigned int newMaxLevel);
 
 	__device__ Vector3<int> morton3Ddecode(uint32_t mortonCode);
 

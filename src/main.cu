@@ -3,7 +3,7 @@
 #include <iostream>
 
 int main() {
-    VoxelEngine::init(1920, 1080);
+    VoxelEngine::init(1920, 1080, 10);
 
     auto blockPosToIdFunction = [] __device__ (int x, int y, int z, uint64_t frameCount) {
         if(x*x + y*y + z*z <= 128 * 128)
@@ -11,11 +11,9 @@ int main() {
         return -1;
     };
 
+    // VoxelEngine::setMaxOctreeDepth(4);
+
     VoxelEngine::insertVoxels(blockPosToIdFunction);
 
-    VoxelEngine::cleanup();
-
-    VoxelEngine::init(1920, 1080);
-
-    VoxelEngine::cleanup();
+    VoxelEngine::inputLoop();
 }

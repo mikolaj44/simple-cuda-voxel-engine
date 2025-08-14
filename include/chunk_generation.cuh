@@ -18,9 +18,9 @@ __global__ void generateChunksKernel(Octree* octree, Vector3<> pos, XYZtoIdFunct
     // y %= RENDER_DISTANCE_CHUNKS * CHUNK_W * 2;
     // z %= RENDER_DISTANCE_CHUNKS * CHUNK_W * 2;
 
-	if(x > RENDER_DISTANCE_CHUNKS * CHUNK_W * 2 || y > RENDER_DISTANCE_CHUNKS * CHUNK_W * 2 || z > RENDER_DISTANCE_CHUNKS * CHUNK_W * 2){
-		return;
-	}
+	// if(x > RENDER_DISTANCE_CHUNKS * CHUNK_W * 2 || y > RENDER_DISTANCE_CHUNKS * CHUNK_W * 2 || z > RENDER_DISTANCE_CHUNKS * CHUNK_W * 2){
+	// 	return;
+	// }
 
     x += pos.x - CHUNK_W * RENDER_DISTANCE_CHUNKS;
     y += pos.y - CHUNK_W * RENDER_DISTANCE_CHUNKS;
@@ -58,7 +58,7 @@ void generateChunks(Octree* octree, Vector3<> pos, XYZtoIdFunction blockPosToIdF
     const int length = RENDER_DISTANCE_CHUNKS * CHUNK_W * 2;
 
     octree->setMinPos(Vector3<>(pos.x - length / 2, pos.y - length / 2, pos.z - length / 2));
-    octree->setMaxLevel((int)log2(length)); // * 2) - 1
+    // octree->setMaxLevel((int)log2(length)); // * 2) - 1
     
     // printf("%d %d %d\n", octree->xMin, octree->yMin, octree->zMin);
     // printf("%d %d %d\n", octree->xMin + (1 << octree->level), octree->yMin + (1 << octree->level), octree->zMin + (1 << octree->level));

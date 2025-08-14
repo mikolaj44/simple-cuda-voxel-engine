@@ -1,6 +1,7 @@
 #pragma once
 
 #include "octree/octree.cuh"
+#include "octree/octree_insertion_methods.cuh"
 
 #include <cuda_runtime.h>
 
@@ -8,17 +9,21 @@
 
 class VoxelEngine {
 public:
-    static cudaError_t init(int windowWidth, int windowHeight);
+    static cudaError_t init(unsigned int windowWidth, unsigned int windowHeight, unsigned int initialMaxOctreeDepth = 1);
     
     static cudaError_t cleanup();
 
     static cudaError_t clearVoxels();
 
+    static cudaError_t setMaxOctreeDepth(int depth);
+
     static void displayFrame();
 
-    template<typename XYZToIdFunction>
-    static void insertVoxels(XYZToIdFunction func, Vector3<> octreeCenter = Vector3<>()) {
-        generateChunks(octree, octreeCenter, func, maxGridSize, blockSize, frameNumber);
+    static void setOctreeMinPos(Vector3<> pos);
+
+    template<typename XYZFrameToIdFunction>
+    static void insertVoxels(XYZFrameToIdFunction func) {
+        octree_insertion_methods::insertBlockByXYZFrameFunction(octree, func, frameNumber, 65535, 900);
         frameNumber++;
         frameNumber %= UINT64_MAX;
     }

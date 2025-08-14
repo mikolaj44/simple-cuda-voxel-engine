@@ -19,43 +19,52 @@
 constexpr float epsilon = 0.00001;
 
 namespace {
-	inline size_t getNumOfBytesToAllocate(unsigned int maxLevel) {
+	size_t getAllocatedMemoryInBytes(unsigned int maxLevel) {
 		return size_t(2) << (3 * maxLevel + 1);
 	}
 }
 
-cudaError_t Octree::create(int xMin_, int yMin_, int zMin_, unsigned int maxLevel_) {
-	xMin = xMin_;
-	yMin = yMin_;
-	zMin = zMin_;
-	maxLevel = maxLevel_;
-	allocatedMemoryInBytes = getNumOfBytesToAllocate(maxLevel_);
+__host__  cudaError_t Octree::allocateByMaxLevel(unsigned int newMaxLevel) {
+	allocatedMemoryInBytes = getAllocatedMemoryInBytes(newMaxLevel);
+	maxLevel = newMaxLevel;
+
+	cudaFree(nodes);
+	cudaError_t error = cudaMalloc(&nodes, allocatedMemoryInBytes);
+
+	if(error != cudaSuccess) {
+		return error;
+	}
 
 	size_t freeBytes, totalBytes;
 	cudaMemGetInfo(&freeBytes, &totalBytes);
 
-	printf("%zu bytes free out of %zu\n", freeBytes, totalBytes);
+	printf("\n%zu bytes free out of %zu\n", freeBytes, totalBytes);
 
 	printf("allocating %zu bytes (%d levels)\n", allocatedMemoryInBytes, maxLevel);
-
-	cudaError_t error = cudaMalloc(&nodes, allocatedMemoryInBytes);
 
 	cudaMemGetInfo(&freeBytes, &totalBytes);
 
 	printf("%zu bytes free out of %zu\n", freeBytes, totalBytes);
 
-	return error;
+	return cudaSuccess;
 }
 
-cudaError_t Octree::create(unsigned int maxLevel) {
+__host__ cudaError_t Octree::create(int xMin_, int yMin_, int zMin_, unsigned int maxLevel_) {
+	xMin = xMin_;
+	yMin = yMin_;
+	zMin = zMin_;
+	return allocateByMaxLevel(maxLevel_);
+}
+
+__host__ cudaError_t Octree::create(unsigned int maxLevel) {
 	return create(0, 0, 0, maxLevel);
 }
 
-cudaError_t Octree::cleanup() {
+__host__ cudaError_t Octree::cleanup() {
 	return cudaFree(nodes);
 }
 
-cudaError_t Octree::clear() {
+__host__ cudaError_t Octree::clear() {
 	return cudaMemset(nodes, 0, allocatedMemoryInBytes);
 }
 
@@ -334,20 +343,20 @@ __device__ Triple<Vector3<int>, Vector3<>, uint8_t> Octree::getRayIntersectionDa
 	return intersectionData;
 }
 
-void Octree::setMinPos(Vector3<> minPos) {
+__device__ __host__ void Octree::setMinPos(Vector3<> minPos) {
 	xMin = minPos.x;
 	yMin = minPos.y;
 	zMin = minPos.z;
 }
 
-void Octree::setMaxLevel(unsigned int maxLevel_) {
-	maxLevel = maxLevel_;
+__host__ cudaError_t Octree::setMaxLevel(unsigned int maxLevel_) {
+	return allocateByMaxLevel(maxLevel_);
 }
 
-Vector3<> Octree::getMinPos() const {
+__device__ __host__ Vector3<> Octree::getMinPos() const {
 	return Vector3<>(xMin, yMin, zMin);
 };
 
-unsigned int Octree::getMaxLevel() const {
+__device__ __host__ unsigned int Octree::getMaxLevel() const {
 	return maxLevel;
 }
