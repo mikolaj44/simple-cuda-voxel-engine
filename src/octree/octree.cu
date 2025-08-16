@@ -27,6 +27,9 @@ namespace {
 __host__  cudaError_t Octree::allocateByMaxLevel(unsigned int newMaxLevel) {
 	allocatedMemoryInBytes = getAllocatedMemoryInBytes(newMaxLevel);
 	maxLevel = newMaxLevel;
+	maxSize = 1 << maxLevel;
+
+	// TODO: copy from the old node array
 
 	cudaFree(nodes);
 	cudaError_t error = cudaMalloc(&nodes, allocatedMemoryInBytes);
@@ -68,58 +71,6 @@ __host__ cudaError_t Octree::clear() {
 	return cudaMemset(nodes, 0, allocatedMemoryInBytes);
 }
 
-namespace {
-	__device__ void getChildXYZindex(int& x, int& y, int& z, uint32_t& index, unsigned int level, unsigned int childIndex) {
-		int size = 1 << level;
-		index <<= 3;
-
-		switch (childIndex) {
-			case 0:
-				break;
-			case 1:
-				z += size / 2;
-				index |= (1 << 2);
-				break;
-			case 2:
-				y += size / 2;
-				index |= (1 << 1);
-				break;
-			case 3:
-				y += size / 2;
-				z += size / 2;
-				index |= (1 << 1);
-				index |= (1 << 2);
-				break;
-			case 4:
-				x += size / 2;
-				index |= 1;
-				break;
-			case 5:
-				x += size / 2;
-				z += size / 2;
-				index |= 1;
-				index |= (1 << 2);
-				break;
-			case 6:
-				x += size / 2;
-				y += size / 2;
-				index |= 1;
-				index |= (1 << 1);
-				break;
-			case 7:
-				x += size / 2;
-				y += size / 2;
-				z += size / 2;
-				index |= (1 << 1);
-				index |= (1 << 2);
-				index |= 1;
-				break;
-			default:
-				break;
-		}
-	}
-}
-
 __device__ Vector3<int> Octree::morton3Ddecode(uint32_t mortonCode){
 	static const uint32_t mostSignificant1 = uint32_t(1) << 31;
 
@@ -136,12 +87,9 @@ __device__ Vector3<int> Octree::morton3Ddecode(uint32_t mortonCode){
 	int y = yMin;
 	int z = zMin;
 	
-	int level = Octree::maxLevel;
-	int size;
+	int size = maxSize;
 
-	while(index > 0){
-		size = 1 << level;
-		
+	while(size >= 1){
 		if(mortonCode & mostSignificant1){
 			z += size / 2;
 		}
@@ -153,9 +101,7 @@ __device__ Vector3<int> Octree::morton3Ddecode(uint32_t mortonCode){
 		}
 
 		mortonCode <<= 3;
-		index -= 3;
-
-		level--;
+		size /= 2;
 	}
 
 	return Vector3<int>(x, y, z);
@@ -166,8 +112,7 @@ __device__ void Octree::insert(BlockInfo<>& block) {
 	int y = block.pos.y;
 	int z = block.pos.z;
 
-	int level = Octree::maxLevel;
-	int size = 1 << level;
+	int size = maxSize;
 
 	int xMin = 0;
 	int yMin = 0;
@@ -175,18 +120,13 @@ __device__ void Octree::insert(BlockInfo<>& block) {
 
 	int xM, yM, zM;
 
-	// If the voxel is out of bounds (we don't grow the octree)
-	if(x < 0 || y < 0 || z < 0 || x >= size || y >= size || z >= size){
-		return;
-	}
-
 	uint32_t index = 1; // root node index
 	uint32_t prevIndex = 1;
 
 	// Iterate over all node levels up until the leaf node
 	do {
 		// Get the node at index (to insert the right block data)
-		if (level == 0) {
+		if (size == 1) {
 			nodes[index].id = block.id;
 			return;
 		}
@@ -217,10 +157,9 @@ __device__ void Octree::insert(BlockInfo<>& block) {
 
 		nodes[prevIndex].id = block.id | 128;
 
-		level--;
-		size = 1 << level;
+		size /= 2;
 
-	} while (level >= 0);
+	} while (size >= 1);
 }
 
 __device__ void Octree::traverseNewNode(bool& foundSolid, Triple<Vector3<int>, Vector3<>, uint8_t>& intersectionData, octree_utils::Stack& stack, uchar4* pixels, Vector3<> origRayOrigin, Vector3<> origRayDirection, float tx0, float ty0, float tz0, float tx1, float ty1, float tz1, unsigned int nodeIdx, int minNodeSize, int sX, int sY) {
@@ -297,30 +236,28 @@ __device__ Triple<Vector3<int>, Vector3<>, uint8_t> Octree::getRayIntersectionDa
 	Vector3<> origRayOrigin = rayOrigin;
 	Vector3<> origRayDirection = rayDirection;
 
-	int size = 1 << maxLevel;
-
 	if (rayDirection.x < 0) {
-		rayOrigin.x = -rayOrigin.x + (xMin * 2 + size);
+		rayOrigin.x = -rayOrigin.x + (xMin * 2 + maxSize);
 		rayDirection.x = -rayDirection.x;
 		a |= 4;
 	}
 	if (rayDirection.y < 0) {
-		rayOrigin.y = -rayOrigin.y + (yMin * 2 + size);
+		rayOrigin.y = -rayOrigin.y + (yMin * 2 + maxSize);
 		rayDirection.y = -rayDirection.y;
 		a |= 2;
 	}
 	if (rayDirection.z < 0) {
-		rayOrigin.z = -rayOrigin.z + (zMin * 2 + size);
+		rayOrigin.z = -rayOrigin.z + (zMin * 2 + maxSize);
 		rayDirection.z = -rayDirection.z;
 		a |= 1;
 	}
 
 	float tx0 = (xMin - rayOrigin.x) / rayDirection.x;
-	float tx1 = (xMin + size - rayOrigin.x) / rayDirection.x;
+	float tx1 = (xMin + maxSize - rayOrigin.x) / rayDirection.x;
 	float ty0 = (yMin - rayOrigin.y) / rayDirection.y;
-	float ty1 = (yMin + size - rayOrigin.y) / rayDirection.y;
+	float ty1 = (yMin + maxSize - rayOrigin.y) / rayDirection.y;
 	float tz0 = (zMin - rayOrigin.z) / rayDirection.z;
-	float tz1 = (zMin + size - rayOrigin.z) / rayDirection.z;
+	float tz1 = (zMin + maxSize - rayOrigin.z) / rayDirection.z;
 	
 	Triple<Vector3<int>, Vector3<>, uint8_t> intersectionData;
 
@@ -354,4 +291,8 @@ __device__ __host__ Vector3<> Octree::getMinPos() const {
 
 __device__ __host__ unsigned int Octree::getMaxLevel() const {
 	return maxLevel;
+}
+
+__device__ __host__ unsigned int Octree::getMaxSize() const {
+	return maxSize;
 }

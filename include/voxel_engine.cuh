@@ -1,7 +1,6 @@
 #pragma once
 
 #include "octree/octree.cuh"
-#include "octree/octree_insertion_methods.cuh"
 
 #include <cuda_runtime.h>
 
@@ -31,12 +30,12 @@ public:
 
     template<typename XYZFrameToIdFunction>
     static void insertVoxels(XYZFrameToIdFunction func) {
-        uint64_t totalVoxels = 1 << octree->getMaxLevel();
+        uint64_t totalVoxels = octree->getMaxSize();
         totalVoxels = totalVoxels * totalVoxels * totalVoxels;
 
         unsigned int blockSize = 512;
 
-        octree_insertion_methods::insertBlockByXYZFrameFunction(octree, func, frameNumber, (totalVoxels + blockSize - 1) / blockSize,  blockSize);
+        octree->insertBlockByXYZFrameFunction(func, frameNumber, (totalVoxels + blockSize - 1) / blockSize,  blockSize);
         
         frameNumber++;
         frameNumber %= UINT64_MAX;

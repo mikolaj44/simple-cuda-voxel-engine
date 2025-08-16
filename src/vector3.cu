@@ -3,16 +3,16 @@
 template <typename T>
 __device__ __host__ float Vector3<T>::len(){
     #ifdef __CUDA_ARCH__
-        return sqrtf(static_cast<float>(x) * static_cast<float>(x)+ static_cast<float>(y) * static_cast<float>(y) + static_cast<float>(z) * static_cast<float>(z));
+        return sqrtf(static_cast<float>(x) * static_cast<float>(x) + static_cast<float>(y) * static_cast<float>(y) + static_cast<float>(z) * static_cast<float>(z));
 	#else
-        return sqrt(static_cast<float>(x) * static_cast<float>(x)+ static_cast<float>(y) * static_cast<float>(y) + static_cast<float>(z) * static_cast<float>(z));
+        return sqrt(static_cast<float>(x) * static_cast<float>(x) + static_cast<float>(y) * static_cast<float>(y) + static_cast<float>(z) * static_cast<float>(z));
 	#endif
     
 }
 
 template <typename T>
 __device__ __host__ Vector3<T>& Vector3<T>::norm(){
-    (*this).div((*this).len());
+    *this = (*this).div((*this).len());
     return *this;
 }
 
@@ -67,6 +67,21 @@ __device__ __host__ Vector3<T>& Vector3<T>::pow(T val){
     
     return *this;
 }
+
+template <typename T>
+__device__ __host__ Vector3<T>& Vector3<T>::clamp(T val){
+    if (x > val) {
+        x = val;
+    }
+    if (y > val) {
+        y = val;
+    }
+    if (z > val) {
+        z = val;
+    }
+    
+    return *this;
+}            
 
 template <typename T>
 __device__ __host__ Vector3<T>& Vector3<T>::add(const Vector3<T>& other){

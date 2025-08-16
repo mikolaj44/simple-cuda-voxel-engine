@@ -27,6 +27,8 @@ public:
 
     __device__ __host__ Vector3<T>& pow(T val);
 
+    __device__ __host__ Vector3<T>& clamp(T val);
+
     __device__ __host__ Vector3<T>& add(const Vector3<T>& other);
 
     __device__ __host__ Vector3<T>& sub(const Vector3<T>& other);
