@@ -15,3 +15,7 @@
 6	5825	1755381266226407840	CMakeFiles/cuda-voxel-engine.dir/src/main.cu.o	e5058d28e12382bf
 5825	5954	1755381272045651968	CMakeFiles/cuda-voxel-engine.dir/cmake_device_link.o	5f6b55a4d8126537
 5954	6388	1755381272175657399	engine	10d3eda707beb8c4
+5	5771	1755381411950015014	CMakeFiles/cuda-voxel-engine.dir/src/main.cu.o	e5058d28e12382bf
+6	7807	1755381411951015049	CMakeFiles/cuda-voxel-engine.dir/src/renderer/cuda_renderer.cu.o	f2a063ec032fc700
+7807	7927	1755381419752288211	CMakeFiles/cuda-voxel-engine.dir/cmake_device_link.o	5f6b55a4d8126537
+7927	8369	1755381419872292395	engine	10d3eda707beb8c4
