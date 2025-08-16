@@ -169,11 +169,6 @@ __device__ void Octree::insert(BlockInfo<>& block) {
 	int level = Octree::maxLevel;
 	int size = 1 << level;
 
-	// Octree coordinate system is positive only, convert the coordinates to this system
-	x -= Octree::xMin;
-	y -= Octree::yMin;
-	z -= Octree::zMin;
-
 	int xMin = 0;
 	int yMin = 0;
 	int zMin = 0;

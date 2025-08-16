@@ -17,20 +17,33 @@ public:
 
     static cudaError_t setMaxOctreeDepth(int depth);
 
+    static void setCameraPos(Vector3<> pos);
+
     static void displayFrame();
 
     static void setOctreeMinPos(Vector3<> pos);
 
+    static Vector3<> getCameraPos();
+    
+    static void setCameraAngle2D(Vector3<> angle);
+    
+    static Vector3<> getCameraAngle2D();
+
     template<typename XYZFrameToIdFunction>
     static void insertVoxels(XYZFrameToIdFunction func) {
-        octree_insertion_methods::insertBlockByXYZFrameFunction(octree, func, frameNumber, 65535, 900);
+        uint64_t totalVoxels = 1 << octree->getMaxLevel();
+        totalVoxels = totalVoxels * totalVoxels * totalVoxels;
+
+        unsigned int blockSize = 512;
+
+        octree_insertion_methods::insertBlockByXYZFrameFunction(octree, func, frameNumber, (totalVoxels + blockSize - 1) / blockSize,  blockSize);
+        
         frameNumber++;
         frameNumber %= UINT64_MAX;
     }
 
     template <bool displayFrame = true>
     static void inputLoop(void (*func)() = nullptr);
-
 
     static int getWindowWidth();
 
