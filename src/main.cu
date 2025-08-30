@@ -82,8 +82,12 @@ int main() {
             }
         }
 
-        return int(sqrtf(absv(x) * absv(x) * absv(x) + absv(x) + absv(y) + absv(z))) % 4 + 1; 
+        return int(sqrtf(x*x + y*y + z*z)) % 127 + 1; 
+
+        // return int(sqrtf(absv(x) * absv(x) * absv(x) + absv(x) + absv(y) + absv(z))) % 127 + 1; 
     };
+
+    VoxelEngine::setTextureRenderingEnabled(false);
 
     VoxelEngine::insertVoxels(blockPosFrameToIdFunction);
 

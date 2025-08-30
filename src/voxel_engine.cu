@@ -1,0 +1,278 @@
+#include "voxel_engine.cuh"
+#include "block_texture.cuh"
+#include "blocks_data.cuh"
+
+#include "renderer/cuda_renderer.cuh"
+#include "renderer/cuda_renderer_utils.cuh"
+#include "chunk_generation.cuh"
+#include "octree/octree.cuh"
+
+#define DB_PERLIN_IMPL
+#include "db_perlin.hpp"
+
+#include <cuda_runtime.h>
+#include <cuda_gl_interop.h>
+#include <device_launch_parameters.h>
+
+bool VoxelEngine::wasInitialized = false;
+bool VoxelEngine::isTextureRenderingEnabled = true;
+
+unsigned int VoxelEngine::windowWidth;
+unsigned int VoxelEngine::windowHeight;
+
+Octree* VoxelEngine::octree;
+
+uint64_t VoxelEngine::frameNumber = 0;
+
+dim3 VoxelEngine::maxGridSize(32768,32768,32768);
+dim3 VoxelEngine::blockSize(9,9,9);
+
+void VoxelEngine::handleCameraMovement(int mouseX, int mouseY, int& prevMouseX, int& prevMouseY) {
+    mouseX -= SCREEN_WIDTH / 2;
+    mouseY -= SCREEN_HEIGHT / 2;
+
+    cameraAngle.y -= (prevMouseX - mouseX) * MOUSE_SENSITIVITY;
+    cameraAngle.x += (prevMouseY - mouseY) * MOUSE_SENSITIVITY;
+
+    if (cameraAngle.x < -M_PI / 2.0) {
+        cameraAngle.x = -M_PI / 2.0;
+    }
+    else if (cameraAngle.x > M_PI / 2.0) {
+        cameraAngle.x = M_PI / 2.0;
+    }
+
+    //cout << cameraAngle.x << endl;
+
+    prevMouseX = mouseX;
+    prevMouseY = mouseY;
+}
+
+void VoxelEngine::initBlockTextures() {
+    BlockTexture** blockTextures = nullptr;
+    int blockAmount = 4;
+
+    cudaMallocManaged(&blockTextures, size_t(blockAmount * sizeof(BlockTexture*)));
+
+    for (int i = 0; i < blockAmount; i++) {
+        std::string currPathStr = pathStr + "/res/textures/" + std::to_string(i + 1);
+
+        cudaMallocManaged(&blockTextures[i], sizeof(BlockTexture));
+        
+        new (blockTextures[i]) BlockTexture(16, 16, currPathStr + "/top.png", currPathStr + "/bottom.png", currPathStr + "/left.png", currPathStr + "/right.png", currPathStr + "/front.png", currPathStr + "/back.png");
+    }
+
+    createBlocksData<<<1,1>>>(blockTextures);
+
+    cudaDeviceSynchronize();
+}
+
+cudaError_t VoxelEngine::clearVoxels(){
+    return octree->clear();
+}
+
+template <bool displayFrame>
+void VoxelEngine::inputLoop(void (*func)()) {
+    bool quit = false;
+
+    int prevMouseX = 0, prevMouseY = 0;
+
+    while (!quit) {
+        SDL_Event event_;
+
+        while (SDL_PollEvent(&event_)) {
+            switch (event_.type) {
+                int x, y, z;
+
+                case SDL_MOUSEMOTION:
+                    if (mouseControls) {
+                        handleCameraMovement(event_.motion.x, event_.motion.y, prevMouseX, prevMouseY);
+                    }
+                    break;
+
+                case SDL_WINDOWEVENT:
+                    switch (event_.window.event) {
+                        case SDL_WINDOWEVENT_CLOSE:   // exit game
+                            return;
+                        default:
+                            break;
+                    }
+                    break;
+
+                case SDL_QUIT:
+                    return;
+
+                case SDL_KEYDOWN:
+
+                    switch (event_.key.keysym.sym) {
+
+                        case SDLK_z:
+                            PLAYER_SPEED /= 2;
+                            break;
+                        case SDLK_x:
+                            PLAYER_SPEED *= 2;
+                            break;
+                        case SDLK_c:
+                            // octree->isTextureRenderingEnabled = !octree->isTextureRenderingEnabled;
+                            break; 
+
+                        case SDLK_UP:
+                            cameraPos.x += sin(cameraAngle.y) * PLAYER_SPEED;
+                            cameraPos.z += cos(cameraAngle.y) * PLAYER_SPEED;
+                            break;
+                        case SDLK_DOWN:
+                            cameraPos.x -= sin(cameraAngle.y) * PLAYER_SPEED;
+                            cameraPos.z -= cos(cameraAngle.y) * PLAYER_SPEED;
+                            break;
+
+                        case SDLK_LEFT:
+                            cameraPos.x -= sin(cameraAngle.y + M_PI/2) * PLAYER_SPEED;
+                            cameraPos.z -= cos(cameraAngle.y + M_PI/2) * PLAYER_SPEED;
+                            break;
+                        case SDLK_RIGHT:
+                            cameraPos.x += sin(cameraAngle.y + M_PI/2) * PLAYER_SPEED;
+                            cameraPos.z += cos(cameraAngle.y + M_PI/2) * PLAYER_SPEED;
+                            break;
+
+                        case SDLK_s:
+                            cameraPos.y += PLAYER_SPEED;
+                            break;
+                        case SDLK_w:
+                            cameraPos.y -= PLAYER_SPEED;
+                            break;
+
+                        case SDLK_q:
+                            cameraAngle.y -= PLAYER_TURN_Y_SPEED;
+                            break;
+                        case SDLK_e:
+                            cameraAngle.y += PLAYER_TURN_Y_SPEED;
+                            break;
+
+                        case SDLK_r:
+                            cameraAngle.x += 0.1;
+                            if (cameraAngle.x > 2 * M_PI)
+                                cameraAngle.x = 0;
+                            break;
+
+                        case SDLK_f:
+                            cameraAngle.x -= 0.1;
+                            if (cameraAngle.x < 0)
+                                cameraAngle.x = 2 * M_PI;
+                            break;
+
+                        case SDLK_t:
+                            doOldRendering = !doOldRendering;
+                            break;
+                            
+                        default:
+                            break;
+                    }
+            }
+        }
+
+        if constexpr (displayFrame){
+            cuda_renderer::render(octree, cameraPos, cameraAngle, windowWidth, windowHeight, isTextureRenderingEnabled, 4096, 512);
+            SDL_GL_SwapWindow(window);
+        }
+
+        if(func != nullptr) {
+            func();
+        }
+    }
+}
+
+
+cudaError_t VoxelEngine::init(unsigned int windowWidth_, unsigned int windowHeight_, unsigned int initialMaxOctreeDepth) {
+    if(wasInitialized) {
+        throw "The engine has already been initialized.";
+    }
+
+    VoxelEngine::windowWidth = windowWidth_;
+    VoxelEngine::windowHeight = windowHeight_;
+
+    cudaError_t error = cudaMallocManaged(&octree, sizeof(Octree));
+
+    if(error != cudaSuccess) {
+        return error;
+    }
+
+    error = octree->create(initialMaxOctreeDepth);
+
+    if(error != cudaSuccess) {
+        return error;
+    }
+
+    const int threadsPerBlock = 600;
+    const int blocksPerGrid = (windowWidth_ * windowHeight_ + threadsPerBlock - 1) / threadsPerBlock;
+
+    initBlockTextures();
+
+    cuda_renderer::init(windowWidth_, windowHeight_);
+
+    wasInitialized = true;
+
+    return error;
+}
+
+cudaError_t VoxelEngine::cleanup() {
+    octree->cleanup();
+    cudaError_t error = cudaFree(octree);
+
+    if(error != cudaSuccess) {
+        return error;
+    }
+
+    size_t freeBytes, totalBytes;
+    cudaMemGetInfo(&freeBytes, &totalBytes);
+
+    printf("\n%zu bytes free out of %zu\n\n", freeBytes, totalBytes);
+
+    cuda_renderer::cleanup();
+
+    wasInitialized = false;
+
+    return cudaSuccess;
+}
+
+cudaError_t VoxelEngine::setMaxOctreeDepth(int depth) {
+    return octree->setMaxLevel(depth);
+}
+
+void VoxelEngine::setOctreeMinPos(Vector3<> pos) {
+    octree->setMinPos(pos);
+}
+
+int VoxelEngine::getWindowWidth() {
+    return windowWidth;
+}
+
+int VoxelEngine::getWindowHeight() {
+    return windowHeight;
+}
+
+uint64_t VoxelEngine::getFrameNumber() {
+    return frameNumber;
+}
+
+void VoxelEngine::setCameraPos(Vector3<> pos) {
+    cameraPos = pos;
+}
+
+Vector3<> VoxelEngine::getCameraPos() {
+    return cameraPos;
+}
+
+void VoxelEngine::setCameraAngle2D(Vector3<> angle) {
+    cameraAngle = angle;
+}
+
+Vector3<> VoxelEngine::getCameraAngle2D() {
+    return cameraAngle;
+}
+
+void VoxelEngine::setTextureRenderingEnabled(bool isEnabled) {
+    isTextureRenderingEnabled = isEnabled;
+}
+
+
+template void VoxelEngine::inputLoop<true>(void (*func)());
+template void VoxelEngine::inputLoop<false>(void (*func)());

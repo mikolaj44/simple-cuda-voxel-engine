@@ -28,6 +28,8 @@ public:
     
     static Vector3<> getCameraAngle2D();
 
+    static void setTextureRenderingEnabled(bool isEnabled);
+
     template<typename XYZFrameToIdFunction>
     static void insertVoxels(XYZFrameToIdFunction func) {
         uint64_t totalVoxels = octree->getMaxSize();
@@ -51,6 +53,8 @@ public:
     static uint64_t getFrameNumber();
 private:
     static bool wasInitialized;
+
+    static bool isTextureRenderingEnabled;
 
     static unsigned int windowWidth, windowHeight;
 

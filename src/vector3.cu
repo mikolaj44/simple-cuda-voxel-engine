@@ -12,7 +12,7 @@ __device__ __host__ float Vector3<T>::len(){
 
 template <typename T>
 __device__ __host__ Vector3<T>& Vector3<T>::norm(){
-    *this = (*this).div((*this).len());
+    div(len());
     return *this;
 }
 
