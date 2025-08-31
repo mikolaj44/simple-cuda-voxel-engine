@@ -71,13 +71,15 @@ __host__ cudaError_t Octree::clear() {
 	return cudaMemset(nodes, 0, allocatedMemoryInBytes);
 }
 
-__device__ Vector3<int> Octree::morton3Ddecode(uint32_t mortonCode){
+__device__ Vector3<int> Octree::morton3Ddecode(uint32_t mortonCode) {
 	static const uint32_t mostSignificant1 = uint32_t(1) << 31;
 
 	int index = 0;
 	uint32_t code = mortonCode;
 
-	while(code >>= 1){
+	// 0000101001
+
+	while(code >>= 1) {
 		index++;
 	}
 
@@ -89,8 +91,8 @@ __device__ Vector3<int> Octree::morton3Ddecode(uint32_t mortonCode){
 	
 	int size = maxSize;
 
-	while(size >= 1){
-		if(mortonCode & mostSignificant1){
+	while(size >= 1) {
+		if(mortonCode & mostSignificant1) {
 			z += size / 2;
 		}
 		if(mortonCode & (mostSignificant1 >> 1)){
@@ -107,6 +109,51 @@ __device__ Vector3<int> Octree::morton3Ddecode(uint32_t mortonCode){
 	return Vector3<int>(x, y, z);
 }
 
+// TODO: change this to a more efficient method, at least "magic bits": https://forceflow.be/2013/10/07/morton-encodingdecoding-through-bit-interleaving-implementations/
+__device__ uint32_t Octree::morton3Dencode(Vector3<int> pos) {
+	uint32_t mortonCode = 1;
+
+	int x = pos.x;
+	int y = pos.y;
+	int z = pos.z;
+
+	int xMinCopy = xMin;
+	int yMinCopy = yMin;
+	int zMinCopy = zMin;
+	
+	int size = maxSize;
+
+	while(size >= 1) {
+		mortonCode <<= 3;
+
+		if(x < xMinCopy + size / 2) {
+			mortonCode |= 0b001;
+		}
+		else {
+			xMinCopy += size / 2;
+		}
+
+		if(y < yMinCopy + size / 2) {
+			mortonCode |= 0b010;
+		}
+		else {
+			yMinCopy += size / 2;
+		}
+
+		if(z < zMinCopy + size / 2) {
+			mortonCode |= 0b100;
+		}
+		else {
+			zMinCopy += size / 2;
+		}
+
+		size /= 2;
+	}
+
+	return mortonCode;
+}
+
+// First part of the insertion (top-down): inserting the correct leaf-voxel data
 __device__ void Octree::insert(BlockInfo<>& block) {
 	int x = block.pos.x;
 	int y = block.pos.y;
@@ -118,10 +165,12 @@ __device__ void Octree::insert(BlockInfo<>& block) {
 	int yMin = 0;
 	int zMin = 0;
 
-	int xM, yM, zM;
+	int xM;
+	int yM;
+	int zM;
 
 	uint32_t index = 1; // root node index
-	uint32_t prevIndex = 1;
+	// uint32_t prevIndex = 1;
 
 	// Iterate over all node levels up until the leaf node
 	do {
@@ -131,12 +180,14 @@ __device__ void Octree::insert(BlockInfo<>& block) {
 			return;
 		}
 
-		prevIndex = index;
+		nodes[index].id = 128;
+
+		// prevIndex = index;
 
 		// Get the midpoint
-		int xM = (2 * xMin + size) / 2;
-		int yM = (2 * yMin + size) / 2;
-		int zM = (2 * zMin + size) / 2;
+		xM = (2 * xMin + size) / 2;
+		yM = (2 * yMin + size) / 2;
+		zM = (2 * zMin + size) / 2;
 
 		index <<= 3;
 
@@ -155,24 +206,44 @@ __device__ void Octree::insert(BlockInfo<>& block) {
 			index |= 4;
 		}
 
-		nodes[prevIndex].id = block.id | 128;
+		// nodes[prevIndex].id = 128;
 
 		size /= 2;
 
 	} while (size >= 1);
 }
 
+// Second and final part of the insertion (bottom-up): fixing the LOD data (determining if nodes are solid)
+__device__ void Octree::insertFixLOD(uint32_t mortonCode, uint8_t blockId) {
+	static uint8_t combinations[8] = {0b000, 0b001, 0b010, 0b011, 0b100, 0b101, 0b110, 0b111};
+
+	for(int i = 0; i < 8; i++) {
+		mortonCode &= ~combinations[7]; // clear the last 3 bits
+		mortonCode |= combinations[i];  // set them to the correct combination
+
+		if(nodes[mortonCode].id != blockId) {
+			return;
+		}
+	}
+
+	mortonCode >>= 3;
+
+	nodes[mortonCode].id = blockId;
+}
+
 __device__ void Octree::traverseNewNode(bool& foundSolid, Triple<Vector3<int>, Vector3<>, uint8_t>& intersectionData, octree_utils::Stack& stack, uchar4* pixels, Vector3<> origRayOrigin, Vector3<> origRayDirection, float tx0, float ty0, float tz0, float tx1, float ty1, float tz1, unsigned int nodeIdx, int minNodeSize, int sX, int sY) {
 	using namespace octree_utils::revelles;
 	using namespace octree_utils;
 	
+	// TODO: calculate CUDA_STACK_SIZE when maxSize is calculated
 	if(stack.topIndex >= CUDA_STACK_SIZE - 1) {
 		return;
 	}
 
-	if (nodeLevel(nodeIdx, maxLevel) == 0 && nodes[nodeIdx].blockId() != 0) {
-		intersectionData.first = morton3Ddecode(nodeIdx);
-		intersectionData.second = getBlockHitPos(intersectionData.first, origRayOrigin, origRayDirection);
+	if (!nodes[nodeIdx].isNotSolid() && nodes[nodeIdx].blockId() != 0) { // nodeLevel(nodeIdx, maxLevel) == 0 && nodes[nodeIdx].blockId() != 0
+		// intersectionData.first = morton3Ddecode(nodeIdx);
+		// intersectionData.second = getBlockHitPos(intersectionData.first, origRayOrigin, origRayDirection);
+		
 		intersectionData.third = nodes[nodeIdx].blockId();
 		
 		// TODO: return multiplecheck if the block is not translucent before setting this to true:
@@ -180,7 +251,8 @@ __device__ void Octree::traverseNewNode(bool& foundSolid, Triple<Vector3<int>, V
 		return;
 	}
 
-	if (!nodes[nodeIdx].hasChildren() || tx1 < 0.0f || ty1 < 0.0f || tz1 < 0.0f){
+	// (!nodes[nodeIdx].isNotSolid() && nodes[nodeIdx].blockId() == 0)
+	if (tx1 < 0.0f || ty1 < 0.0f || tz1 < 0.0f) { // !nodes[nodeIdx].isNotSolid()
 		return;
 	}
 

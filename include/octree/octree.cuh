@@ -23,6 +23,10 @@ public:
 	template<typename XYZFrametoIdFunction>
     void insertBlockByXYZFrameFunction(XYZFrametoIdFunction blockPosToIdFunction, uint64_t frameNumber, unsigned int gridSize, unsigned int blockSize) {
         insertBlockByXYZFrameFunctionKernel<<<gridSize, blockSize>>>(this, blockPosToIdFunction, frameNumber);
+				
+		for(int level = 0; level <= maxLevel; level++) {
+			insertFixLODKernel<<<gridSize, blockSize>>>(this, blockPosToIdFunction, frameNumber, level);
+		}
     }
 
 	__device__ Triple<Vector3<int>, Vector3<float>, uint8_t> getRayIntersectionData(uchar4* pixels, Vector3<> rayOrigin, Vector3<> rayDirection, int sX, int sY, int minNodeSize);
@@ -38,13 +42,15 @@ public:
 	__device__ __host__ unsigned int getMaxSize() const;
 private:
 	struct alignas(uint8_t) Node {
-		uint8_t id; // most significant bit is 1 if the node has children, the rest of the bits are for block id
+		// most significant bit is 1 if the node is not solid - solid (0) means either leaf or all children with id of one type
+		// the rest of the bits are for block id (0 reserved for air / empty node)
+		uint8_t id;
 
 		__device__ Node() {};
 
 		__device__ Node(uint8_t id_) : id(id_) {};
 
-		__device__ inline bool hasChildren() const {
+		__device__ inline bool isNotSolid() const {
 			return id & 128;
 		}
 
@@ -63,11 +69,23 @@ private:
 
 	size_t allocatedMemoryInBytes;
 
+
+
 	__device__ void insert(BlockInfo<>& block);
+
+	__device__ void insertFixLOD(uint32_t mortonCode, uint8_t blockId);
+
+
 
 	__host__ cudaError_t allocateByMaxLevel(unsigned int newMaxLevel);
 
+
+
 	__device__ Vector3<int> morton3Ddecode(uint32_t mortonCode);
+
+	__device__ uint32_t morton3Dencode(Vector3<int> pos);
+
+
 
 	__device__ void traverseNewNode(bool& foundSolid, Triple<Vector3<int>, Vector3<float>, uint8_t>& intersectionData, octree_utils::Stack& stack, uchar4* pixels, Vector3<> origRayOrigin, Vector3<> origRayDirection, float tx0, float ty0, float tz0, float tx1, float ty1, float tz1, unsigned int nodeIdx, int minNodeSize, int sX, int sY);
 
@@ -75,6 +93,9 @@ private:
 
 	template<typename XYZFrametoIdFunction>
 	friend __global__ void insertBlockByXYZFrameFunctionKernel(Octree* octree, XYZFrametoIdFunction blockPosToIdFunction, uint64_t frameNumber);
+
+	template<typename XYZFrametoIdFunction>
+	friend __global__ void insertFixLODKernel(Octree* octree, XYZFrametoIdFunction blockPosToIdFunction, uint64_t frameNumber, unsigned int level);
 };
 
 template<typename XYZFrametoIdFunction>
@@ -95,9 +116,43 @@ __global__ void insertBlockByXYZFrameFunctionKernel(Octree* octree, XYZFrametoId
 
     uint8_t id = blockPosToIdFunction(x + minPos.x, y + minPos.y, z + minPos.z, frameNumber);
 
-    BlockInfo<> b = BlockInfo<>(Vector3<int>(x, y, z), id);
+    BlockInfo<> blockInfo = BlockInfo<>(Vector3<int>(x, y, z), id);
 	
-    if(id != 0){
-        octree->insert(b);
+    if(id != 0) {
+        octree->insert(blockInfo);
     }
- }
+}
+
+
+template<typename XYZFrametoIdFunction>
+__global__ void insertFixLODKernel(Octree* octree, XYZFrametoIdFunction blockPosToIdFunction, uint64_t frameNumber, unsigned int level) {
+	unsigned int size = octree->getMaxSize();
+
+	unsigned int index = threadIdx.x + blockIdx.x * blockDim.x;
+
+    int x = index % size;
+    int y = (index / size) % size;
+    int z = index / (size * size);
+
+    if(x >= size || y >= size || z >= size) {
+        return;
+    }
+
+	Vector3<> minPos = octree->getMinPos();
+
+    uint8_t id = blockPosToIdFunction(x + minPos.x, y + minPos.y, z + minPos.z, frameNumber);
+
+
+
+
+	uint32_t encoded = octree->morton3Dencode(Vector3<int>(x, y, z));
+
+	Vector3<int> decoded = octree->morton3Ddecode(encoded);
+
+	printf("%d %d %d -> %d %d %d\n", x, y, z, decoded.x, decoded.y, decoded.z);
+
+
+	
+	
+    octree->insertFixLOD(octree->morton3Dencode(Vector3<int>(x, y, z)) >> (level * 3), id);
+}

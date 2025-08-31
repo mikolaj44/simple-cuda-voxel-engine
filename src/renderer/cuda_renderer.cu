@@ -183,14 +183,18 @@ namespace cuda_renderer {
             float dZ = sin(polar) * sin(alpha);
             float dY = cos(polar);
 
-            Triple<Vector3<int>, Vector3<>, uint8_t> intersectionData = octree->getRayIntersectionData(pixels, cameraPos, Vector3<>(dX, dY, dZ), sX, sY, 1);
+            setPixel(pixels, sX, sY, 0, 0, 255, 255);
 
-            if(intersectionData.third == 0) {
-                setPixel(pixels, sX, sY, 0, 0, 255, 255);
-            }
-            else {
-                setPixelByHitInfo(pixels, intersectionData, cameraPos, sX, sY, isTextureRenderingEnabled);
-            }
+            // Triple<Vector3<int>, Vector3<>, uint8_t> intersectionData = octree->getRayIntersectionData(pixels, cameraPos, Vector3<>(dX, dY, dZ), sX, sY, 1);
+
+            // if(intersectionData.third == 0) {
+            //     setPixel(pixels, sX, sY, 0, 0, 255, 255);
+            // }
+            // else {
+            //     setPixel(pixels, sX, sY, intersectionData.third, 0, 0, 255);
+
+            //     // setPixelByHitInfo(pixels, intersectionData, cameraPos, sX, sY, isTextureRenderingEnabled);
+            // }
         }
     }
 
