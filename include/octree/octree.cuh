@@ -23,10 +23,23 @@ public:
 	template<typename XYZFrametoIdFunction>
     void insertBlockByXYZFrameFunction(XYZFrametoIdFunction blockPosToIdFunction, uint64_t frameNumber, unsigned int gridSize, unsigned int blockSize) {
         insertBlockByXYZFrameFunctionKernel<<<gridSize, blockSize>>>(this, blockPosToIdFunction, frameNumber);
-				
+
 		for(int level = 0; level <= maxLevel; level++) {
+			// printf("grid size: %d, total: %d, side length: %d\n", gridSize, gridSize * blockSize, (int)cbrtf(float(gridSize) * float(blockSize)));
+
 			insertFixLODKernel<<<gridSize, blockSize>>>(this, blockPosToIdFunction, frameNumber, level);
+
+			if(blockSize >= 8) {
+				blockSize /= 8;
+			}
+			else if(gridSize >= 8) {
+				gridSize /= 8;
+			}
 		}
+
+		cudaDeviceSynchronize();
+
+		// printf("synchronized\n");
     }
 
 	__device__ Triple<Vector3<int>, Vector3<float>, uint8_t> getRayIntersectionData(uchar4* pixels, Vector3<> rayOrigin, Vector3<> rayDirection, int sX, int sY, int minNodeSize);
@@ -35,7 +48,7 @@ public:
 
 	__host__ cudaError_t setMaxLevel(unsigned int maxLevel);
 
-	__device__ __host__ Vector3<> getMinPos() const;
+	__device__ __host__ Vector3<int> getMinPos() const;
 
 	__device__ __host__ unsigned int getMaxLevel() const;
 
@@ -112,7 +125,7 @@ __global__ void insertBlockByXYZFrameFunctionKernel(Octree* octree, XYZFrametoId
         return;
     }
 
-    Vector3<> minPos = octree->getMinPos();
+    Vector3<int> minPos = octree->getMinPos();
 
     uint8_t id = blockPosToIdFunction(x + minPos.x, y + minPos.y, z + minPos.z, frameNumber);
 
@@ -138,21 +151,22 @@ __global__ void insertFixLODKernel(Octree* octree, XYZFrametoIdFunction blockPos
         return;
     }
 
-	Vector3<> minPos = octree->getMinPos();
+	Vector3<int> minPos = octree->getMinPos().add(Vector3<int>(x, y, z));
 
-    uint8_t id = blockPosToIdFunction(x + minPos.x, y + minPos.y, z + minPos.z, frameNumber);
-
-
+    uint8_t id = blockPosToIdFunction(minPos.x, minPos.y, minPos.z, frameNumber);
 
 
-	uint32_t encoded = octree->morton3Dencode(Vector3<int>(x, y, z));
 
-	Vector3<int> decoded = octree->morton3Ddecode(encoded);
+	// Vector3<int> original = Vector3<int>(x + minPos.x, y + minPos.y, z + minPos.z);
 
-	printf("%d %d %d -> %d %d %d\n", x, y, z, decoded.x, decoded.y, decoded.z);
+	// Vector3<int> decoded = octree->morton3Ddecode(octree->morton3Dencode(original));
+
+	// if(original != decoded)
+	// 	printf("%d %d %d -> %d %d %d\n", original.x, original.y, original.z, decoded.x, decoded.y, decoded.z);
 
 
 	
-	
-    octree->insertFixLOD(octree->morton3Dencode(Vector3<int>(x, y, z)) >> (level * 3), id);
+    octree->insertFixLOD(octree->morton3Dencode(minPos) >> (level * 3), id);
+
+	// printf("1\n");
 }

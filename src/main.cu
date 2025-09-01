@@ -39,7 +39,7 @@ int main() {
     VoxelEngine::setOctreeMinPos(Vector3<>(-512, -512, -512));
 
     auto blockPosFrameToIdFunction = [] __device__ (int x, int y, int z, uint64_t frameNumber) {
-        int maxIterations = 7;
+        int maxIterations = 2;
 
         float newX = float(x) / 450.0;
         float newY = float(y) / 450.0;
@@ -82,7 +82,9 @@ int main() {
             }
         }
 
-        return int(sqrtf(x*x + y*y + z*z)) % 127 + 1; 
+        //if(x < 100)
+            return int(sqrtf(x*x + y*y + z*z)) % 127 + 1;
+        //return 0;
 
         // return int(sqrtf(absv(x) * absv(x) * absv(x) + absv(x) + absv(y) + absv(z))) % 127 + 1; 
     };
@@ -90,6 +92,8 @@ int main() {
     VoxelEngine::setTextureRenderingEnabled(false);
 
     VoxelEngine::insertVoxels(blockPosFrameToIdFunction);
+
+    printf("done inserting\n");
 
     // VoxelEngine::setCameraPos(Vector3<>(0, 0, -100));
 

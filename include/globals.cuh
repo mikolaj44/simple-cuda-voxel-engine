@@ -8,6 +8,8 @@
 #include "point_light.cuh"
 #include "material.cuh"
 
+# define ERROR_PRINT() cudaDeviceSynchronize(); cudaError_t error = cudaGetLastError(); printf("CUDA error: %s\n", cudaGetErrorString(error));
+
 //#include "D:\threadpool\include\BS_thread_pool.hpp"
 
 // files

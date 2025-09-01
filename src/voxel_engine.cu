@@ -169,7 +169,7 @@ void VoxelEngine::inputLoop(void (*func)()) {
             }
         }
 
-        if constexpr (displayFrame){
+        if constexpr (displayFrame) {
             cuda_renderer::render(octree, cameraPos, cameraAngle, windowWidth, windowHeight, isTextureRenderingEnabled, 4096, 512);
             SDL_GL_SwapWindow(window);
         }

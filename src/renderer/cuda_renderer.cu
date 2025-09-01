@@ -183,18 +183,16 @@ namespace cuda_renderer {
             float dZ = sin(polar) * sin(alpha);
             float dY = cos(polar);
 
-            setPixel(pixels, sX, sY, 0, 0, 255, 255);
+            Triple<Vector3<int>, Vector3<>, uint8_t> intersectionData = octree->getRayIntersectionData(pixels, cameraPos, Vector3<>(dX, dY, dZ), sX, sY, 1);
 
-            // Triple<Vector3<int>, Vector3<>, uint8_t> intersectionData = octree->getRayIntersectionData(pixels, cameraPos, Vector3<>(dX, dY, dZ), sX, sY, 1);
+            if(intersectionData.third == 0) {
+                setPixel(pixels, sX, sY, 0, 0, 255, 255);
+            }
+            else {
+                setPixel(pixels, sX, sY, intersectionData.third, intersectionData.third, intersectionData.third, 255);
 
-            // if(intersectionData.third == 0) {
-            //     setPixel(pixels, sX, sY, 0, 0, 255, 255);
-            // }
-            // else {
-            //     setPixel(pixels, sX, sY, intersectionData.third, 0, 0, 255);
-
-            //     // setPixelByHitInfo(pixels, intersectionData, cameraPos, sX, sY, isTextureRenderingEnabled);
-            // }
+                // setPixelByHitInfo(pixels, intersectionData, cameraPos, sX, sY, isTextureRenderingEnabled);
+            }
         }
     }
 
@@ -218,24 +216,19 @@ namespace cuda_renderer {
         size_t pitch;
         cudaMallocPitch(&devPtr, &pitch, windowWidth * sizeof(uchar4), windowHeight);
     
-        // cudaEvent_t start, stop;
-        // cudaEventCreate(&start);
-        // cudaEventCreate(&stop);
-        // cudaEventRecord(start);
-    
-        // cudaError_t error = cudaGetLastError();
-                
-        // if(error != cudaSuccess)
-        //     printf("CUDA error: %s\n", cudaGetErrorString(error));
-    
+        cudaEvent_t start, stop;
+        cudaEventCreate(&start);
+        cudaEventCreate(&stop);
+        cudaEventRecord(start);
+        
         renderKernel<<<gridSize,blockSize>>>(devPtr, octree, cameraPos, cameraAngle2d, windowWidth, windowHeight, isTextureRenderingEnabled);
     
-        // cudaEventRecord(stop);
-        // cudaEventSynchronize(stop);
-        // float milliseconds = 0;
-        // cudaEventElapsedTime(&milliseconds, start, stop);
-        // printf("Kernel execution time: %f ms (%f fps)\n", milliseconds, 1.0 / (milliseconds / 1000.0));
-        // cudaDeviceSynchronize();
+        cudaEventRecord(stop);
+        cudaEventSynchronize(stop);
+        float milliseconds = 0;
+        cudaEventElapsedTime(&milliseconds, start, stop);
+        printf("Kernel execution time: %f ms (%f fps)\n", milliseconds, 1.0 / (milliseconds / 1000.0));
+        cudaDeviceSynchronize();
     
         // Copy memory from CUDA device to OpenGL texture
         cudaMemcpy2DToArray(cudaArrayPtr, 0, 0, devPtr, pitch, SCREEN_WIDTH * sizeof(uchar4), SCREEN_HEIGHT, cudaMemcpyDeviceToDevice);

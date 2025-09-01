@@ -91,7 +91,7 @@ __device__ Vector3<int> Octree::morton3Ddecode(uint32_t mortonCode) {
 	
 	int size = maxSize;
 
-	while(size >= 1) {
+	while(size > 1) {
 		if(mortonCode & mostSignificant1) {
 			z += size / 2;
 		}
@@ -109,41 +109,34 @@ __device__ Vector3<int> Octree::morton3Ddecode(uint32_t mortonCode) {
 	return Vector3<int>(x, y, z);
 }
 
-// TODO: change this to a more efficient method, at least "magic bits": https://forceflow.be/2013/10/07/morton-encodingdecoding-through-bit-interleaving-implementations/
 __device__ uint32_t Octree::morton3Dencode(Vector3<int> pos) {
 	uint32_t mortonCode = 1;
 
-	int x = pos.x;
-	int y = pos.y;
-	int z = pos.z;
+	int x = pos.x - xMin;
+	int y = pos.y - yMin;
+	int z = pos.z - zMin;
 
-	int xMinCopy = xMin;
-	int yMinCopy = yMin;
-	int zMinCopy = zMin;
+	int xMinCopy = 0;
+	int yMinCopy = 0;
+	int zMinCopy = 0;
 	
 	int size = maxSize;
 
-	while(size >= 1) {
+	while(size > 1) {
 		mortonCode <<= 3;
 
-		if(x < xMinCopy + size / 2) {
+		if(x >= xMinCopy + size / 2) {
 			mortonCode |= 0b001;
-		}
-		else {
 			xMinCopy += size / 2;
 		}
 
-		if(y < yMinCopy + size / 2) {
+		if(y >= yMinCopy + size / 2) {
 			mortonCode |= 0b010;
-		}
-		else {
 			yMinCopy += size / 2;
 		}
 
-		if(z < zMinCopy + size / 2) {
+		if(z >= zMinCopy + size / 2) {
 			mortonCode |= 0b100;
-		}
-		else {
 			zMinCopy += size / 2;
 		}
 
@@ -251,8 +244,7 @@ __device__ void Octree::traverseNewNode(bool& foundSolid, Triple<Vector3<int>, V
 		return;
 	}
 
-	// (!nodes[nodeIdx].isNotSolid() && nodes[nodeIdx].blockId() == 0)
-	if (tx1 < 0.0f || ty1 < 0.0f || tz1 < 0.0f) { // !nodes[nodeIdx].isNotSolid()
+	if ((!nodes[nodeIdx].isNotSolid() && nodes[nodeIdx].blockId() == 0) || tx1 < 0.0f || ty1 < 0.0f || tz1 < 0.0f) { // !nodes[nodeIdx].isNotSolid()
 		return;
 	}
 
@@ -357,8 +349,8 @@ __host__ cudaError_t Octree::setMaxLevel(unsigned int maxLevel_) {
 	return allocateByMaxLevel(maxLevel_);
 }
 
-__device__ __host__ Vector3<> Octree::getMinPos() const {
-	return Vector3<>(xMin, yMin, zMin);
+__device__ __host__ Vector3<int> Octree::getMinPos() const {
+	return Vector3<int>(xMin, yMin, zMin);
 };
 
 __device__ __host__ unsigned int Octree::getMaxLevel() const {
