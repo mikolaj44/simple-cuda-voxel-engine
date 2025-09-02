@@ -31,6 +31,7 @@ target_compile_options(${PROJECT_NAME} PRIVATE
     -use_fast_math
     -diag-suppress=550
     -diag-suppress=177
+    -diag-suppress=1650
     -Xcompiler -w
   >
 )

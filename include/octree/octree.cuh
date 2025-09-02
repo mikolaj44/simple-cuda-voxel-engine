@@ -21,19 +21,21 @@ public:
 	__host__ cudaError_t clear();
 
 	template<typename XYZFrametoIdFunction>
-    void insertBlockByXYZFrameFunction(XYZFrametoIdFunction blockPosToIdFunction, uint64_t frameNumber, unsigned int gridSize, unsigned int blockSize) {
+    void insertBlockByXYZFrameFunction(XYZFrametoIdFunction blockPosToIdFunction, uint64_t frameNumber, bool isCalculatingInsertLODsEnabled, unsigned int gridSize, unsigned int blockSize) {
         insertBlockByXYZFrameFunctionKernel<<<gridSize, blockSize>>>(this, blockPosToIdFunction, frameNumber);
 
-		for(int level = 0; level <= maxLevel; level++) {
-			// printf("grid size: %d, total: %d, side length: %d\n", gridSize, gridSize * blockSize, (int)cbrtf(float(gridSize) * float(blockSize)));
+		if(isCalculatingInsertLODsEnabled) {
+			for(int level = 0; level <= maxLevel; level++) {
+				// printf("grid size: %d, total: %d, side length: %d\n", gridSize, gridSize * blockSize, (int)cbrtf(float(gridSize) * float(blockSize)));
 
-			insertFixLODKernel<<<gridSize, blockSize>>>(this, blockPosToIdFunction, frameNumber, level);
+				insertFixLODKernel<<<gridSize, blockSize>>>(this, blockPosToIdFunction, frameNumber, level);
 
-			if(blockSize >= 8) {
-				blockSize /= 8;
-			}
-			else if(gridSize >= 8) {
-				gridSize /= 8;
+				if(blockSize >= 8) {
+					blockSize /= 8;
+				}
+				else if(gridSize >= 8) {
+					gridSize /= 8;
+				}
 			}
 		}
 
@@ -63,7 +65,7 @@ private:
 
 		__device__ Node(uint8_t id_) : id(id_) {};
 
-		__device__ inline bool isNotSolid() const {
+		__device__ inline bool isMixed() const {
 			return id & 128;
 		}
 

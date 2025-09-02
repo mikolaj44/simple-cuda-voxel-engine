@@ -38,6 +38,12 @@ __host__  cudaError_t Octree::allocateByMaxLevel(unsigned int newMaxLevel) {
 		return error;
 	}
 
+	error = cudaMemset(nodes, 0, allocatedMemoryInBytes);
+
+	if(error != cudaSuccess) {
+		return error;
+	}
+
 	size_t freeBytes, totalBytes;
 	cudaMemGetInfo(&freeBytes, &totalBytes);
 
@@ -233,18 +239,17 @@ __device__ void Octree::traverseNewNode(bool& foundSolid, Triple<Vector3<int>, V
 		return;
 	}
 
-	if (!nodes[nodeIdx].isNotSolid() && nodes[nodeIdx].blockId() != 0) { // nodeLevel(nodeIdx, maxLevel) == 0 && nodes[nodeIdx].blockId() != 0
-		// intersectionData.first = morton3Ddecode(nodeIdx);
-		// intersectionData.second = getBlockHitPos(intersectionData.first, origRayOrigin, origRayDirection);
-		
+	if (!nodes[nodeIdx].isMixed() && nodes[nodeIdx].blockId() != 0) { // nodeLevel(nodeIdx, maxLevel) == 0 && nodes[nodeIdx].blockId() != 0
+		intersectionData.first = morton3Ddecode(nodeIdx);
+		intersectionData.second = getBlockHitPos(intersectionData.first, origRayOrigin, origRayDirection);
 		intersectionData.third = nodes[nodeIdx].blockId();
 		
-		// TODO: return multiplecheck if the block is not translucent before setting this to true:
 		foundSolid = true;
 		return;
 	}
 
-	if ((!nodes[nodeIdx].isNotSolid() && nodes[nodeIdx].blockId() == 0) || tx1 < 0.0f || ty1 < 0.0f || tz1 < 0.0f) { // !nodes[nodeIdx].isNotSolid()
+	// (!nodes[nodeIdx].isMixed() && nodes[nodeIdx].blockId() == 0)
+	if (nodes[nodeIdx].id == 0 || tx1 < 0.0f || ty1 < 0.0f || tz1 < 0.0f) { // !nodes[nodeIdx].isNotSolid()
 		return;
 	}
 

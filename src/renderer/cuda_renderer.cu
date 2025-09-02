@@ -61,9 +61,10 @@ namespace cuda_renderer {
     
             if(isTextureRenderingEnabled){
                 blockId -= 1;
-                imgWidth = blockVariants[blockId]->texture->width;
-                imgHeight = blockVariants[blockId]->texture->height;
-                imgChannels = blockVariants[blockId]->texture->channels;
+                // TODO: temporary TOP index
+                imgWidth = blockVariants[blockId]->texture->getWidth(ImagePosition::TOP);
+                imgHeight = blockVariants[blockId]->texture->getHeight(ImagePosition::TOP);
+                imgChannels = blockVariants[blockId]->texture->getChannels();
             }
     
             int blockX = intersectionData.first.x;
@@ -85,9 +86,9 @@ namespace cuda_renderer {
                     imgX = (int)(absv(x - (int)x) * imgWidth);
                     imgY = (int)(absv(z - (int)z) * imgHeight);
     
-                    r = blockVariants[blockId]->texture->topImage[(imgY * imgWidth + imgX) * imgChannels];
-                    g = blockVariants[blockId]->texture->topImage[(imgY * imgWidth + imgX) * imgChannels + 1];
-                    b = blockVariants[blockId]->texture->topImage[(imgY * imgWidth + imgX) * imgChannels + 2];
+                    r = blockVariants[blockId]->texture->getImage(ImagePosition::TOP)[(imgY * imgWidth + imgX) * imgChannels];
+                    g = blockVariants[blockId]->texture->getImage(ImagePosition::TOP)[(imgY * imgWidth + imgX) * imgChannels + 1];
+                    b = blockVariants[blockId]->texture->getImage(ImagePosition::TOP)[(imgY * imgWidth + imgX) * imgChannels + 2];
                 }
     
                 normal = Vector3<>(0, -1, 0);
@@ -97,9 +98,9 @@ namespace cuda_renderer {
                     imgX = (int)(absv(x - (int)x) * imgWidth);
                     imgY = (int)(absv(z - (int)z) * imgHeight);
     
-                    r = blockVariants[blockId]->texture->bottomImage[(imgY * imgWidth + imgX) * imgChannels];
-                    g = blockVariants[blockId]->texture->bottomImage[(imgY * imgWidth + imgX) * imgChannels + 1];
-                    b = blockVariants[blockId]->texture->bottomImage[(imgY * imgWidth + imgX) * imgChannels + 2];
+                    r = blockVariants[blockId]->texture->getImage(ImagePosition::BOTTOM)[(imgY * imgWidth + imgX) * imgChannels];
+                    g = blockVariants[blockId]->texture->getImage(ImagePosition::BOTTOM)[(imgY * imgWidth + imgX) * imgChannels + 1];
+                    b = blockVariants[blockId]->texture->getImage(ImagePosition::BOTTOM)[(imgY * imgWidth + imgX) * imgChannels + 2];
                 }
     
                 normal = Vector3<>(0, 1, 0);
@@ -109,9 +110,9 @@ namespace cuda_renderer {
                     imgX = (int)(absv(z - (int)z) * imgWidth);
                     imgY = (int)(absv(y - (int)y) * imgHeight);
     
-                    r = blockVariants[blockId]->texture->leftImage[(imgY * imgWidth + imgX) * imgChannels];
-                    g = blockVariants[blockId]->texture->leftImage[(imgY * imgWidth + imgX) * imgChannels + 1];
-                    b = blockVariants[blockId]->texture->leftImage[(imgY * imgWidth + imgX) * imgChannels + 2];
+                    r = blockVariants[blockId]->texture->getImage(ImagePosition::LEFT)[(imgY * imgWidth + imgX) * imgChannels];
+                    g = blockVariants[blockId]->texture->getImage(ImagePosition::LEFT)[(imgY * imgWidth + imgX) * imgChannels + 1];
+                    b = blockVariants[blockId]->texture->getImage(ImagePosition::LEFT)[(imgY * imgWidth + imgX) * imgChannels + 2];
                 }
     
                 normal = Vector3<>(-1, 0, 0);
@@ -121,9 +122,9 @@ namespace cuda_renderer {
                     imgX = (int)(absv(z - (int)z) * imgWidth);
                     imgY = (int)(absv(y - (int)y) * imgHeight);
     
-                    r = blockVariants[blockId]->texture->rightImage[(imgY * imgWidth + imgX) * imgChannels];
-                    g = blockVariants[blockId]->texture->rightImage[(imgY * imgWidth + imgX) * imgChannels + 1];
-                    b = blockVariants[blockId]->texture->rightImage[(imgY * imgWidth + imgX) * imgChannels + 2];
+                    r = blockVariants[blockId]->texture->getImage(ImagePosition::RIGHT)[(imgY * imgWidth + imgX) * imgChannels];
+                    g = blockVariants[blockId]->texture->getImage(ImagePosition::RIGHT)[(imgY * imgWidth + imgX) * imgChannels + 1];
+                    b = blockVariants[blockId]->texture->getImage(ImagePosition::RIGHT)[(imgY * imgWidth + imgX) * imgChannels + 2];
                 }
     
                 normal = Vector3<>(1, 0, 0);
@@ -133,9 +134,9 @@ namespace cuda_renderer {
                     imgX = (int)(absv(x - (int)x) * imgWidth);
                     imgY = (int)(absv(y - (int)y) * imgHeight);
     
-                    r = blockVariants[blockId]->texture->frontImage[(imgY * imgWidth + imgX) * imgChannels];
-                    g = blockVariants[blockId]->texture->frontImage[(imgY * imgWidth + imgX) * imgChannels + 1];
-                    b = blockVariants[blockId]->texture->frontImage[(imgY * imgWidth + imgX) * imgChannels + 2];
+                    r = blockVariants[blockId]->texture->getImage(ImagePosition::FRONT)[(imgY * imgWidth + imgX) * imgChannels];
+                    g = blockVariants[blockId]->texture->getImage(ImagePosition::FRONT)[(imgY * imgWidth + imgX) * imgChannels + 1];
+                    b = blockVariants[blockId]->texture->getImage(ImagePosition::FRONT)[(imgY * imgWidth + imgX) * imgChannels + 2];
                 }
     
                 normal = Vector3<>(0, 0, -1);
@@ -145,9 +146,9 @@ namespace cuda_renderer {
                     imgX = (int)(absv(x - (int)x) * imgWidth);
                     imgY = (int)(absv(y - (int)y) * imgHeight);
     
-                    r = blockVariants[blockId]->texture->backImage[(imgY * imgWidth + imgX) * imgChannels];
-                    g = blockVariants[blockId]->texture->backImage[(imgY * imgWidth + imgX) * imgChannels + 1];
-                    b = blockVariants[blockId]->texture->backImage[(imgY * imgWidth + imgX) * imgChannels + 2];
+                    r = blockVariants[blockId]->texture->getImage(ImagePosition::BACK)[(imgY * imgWidth + imgX) * imgChannels];
+                    g = blockVariants[blockId]->texture->getImage(ImagePosition::BACK)[(imgY * imgWidth + imgX) * imgChannels + 1];
+                    b = blockVariants[blockId]->texture->getImage(ImagePosition::BACK)[(imgY * imgWidth + imgX) * imgChannels + 2];
                 }
     
                 normal = Vector3<>(0, 0, 1);
@@ -189,9 +190,9 @@ namespace cuda_renderer {
                 setPixel(pixels, sX, sY, 0, 0, 255, 255);
             }
             else {
-                setPixel(pixels, sX, sY, intersectionData.third, intersectionData.third, intersectionData.third, 255);
+                // setPixel(pixels, sX, sY, intersectionData.third, intersectionData.third, intersectionData.third, 255);
 
-                // setPixelByHitInfo(pixels, intersectionData, cameraPos, sX, sY, isTextureRenderingEnabled);
+                setPixelByHitInfo(pixels, intersectionData, cameraPos, sX, sY, isTextureRenderingEnabled);
             }
         }
     }
@@ -216,19 +217,19 @@ namespace cuda_renderer {
         size_t pitch;
         cudaMallocPitch(&devPtr, &pitch, windowWidth * sizeof(uchar4), windowHeight);
     
-        cudaEvent_t start, stop;
-        cudaEventCreate(&start);
-        cudaEventCreate(&stop);
-        cudaEventRecord(start);
+        // cudaEvent_t start, stop;
+        // cudaEventCreate(&start);
+        // cudaEventCreate(&stop);
+        // cudaEventRecord(start);
         
         renderKernel<<<gridSize,blockSize>>>(devPtr, octree, cameraPos, cameraAngle2d, windowWidth, windowHeight, isTextureRenderingEnabled);
     
-        cudaEventRecord(stop);
-        cudaEventSynchronize(stop);
-        float milliseconds = 0;
-        cudaEventElapsedTime(&milliseconds, start, stop);
-        printf("Kernel execution time: %f ms (%f fps)\n", milliseconds, 1.0 / (milliseconds / 1000.0));
-        cudaDeviceSynchronize();
+        // cudaEventRecord(stop);
+        // cudaEventSynchronize(stop);
+        // float milliseconds = 0;
+        // cudaEventElapsedTime(&milliseconds, start, stop);
+        // printf("Kernel execution time: %f ms (%f fps)\n", milliseconds, 1.0 / (milliseconds / 1000.0));
+        // cudaDeviceSynchronize();
     
         // Copy memory from CUDA device to OpenGL texture
         cudaMemcpy2DToArray(cudaArrayPtr, 0, 0, devPtr, pitch, SCREEN_WIDTH * sizeof(uchar4), SCREEN_HEIGHT, cudaMemcpyDeviceToDevice);

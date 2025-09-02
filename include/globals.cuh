@@ -72,6 +72,3 @@ extern Vector3<> cameraAngle;
 extern PointLight pointLight;
 
 extern Material mainMaterial;
-
-extern Vector3<> unitCubeCoords[8];
-//extern BS::thread_pool threadPool;

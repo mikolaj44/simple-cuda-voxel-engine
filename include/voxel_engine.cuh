@@ -30,6 +30,12 @@ public:
 
     static void setTextureRenderingEnabled(bool isEnabled);
 
+    static bool getTextureRenderingEnabled();
+
+    static void setCalculatingInsertLODsEnabled(bool isEnabled);
+
+    static bool getCalculatingInsertLODsEnabled();
+
     template<typename XYZFrameToIdFunction>
     static void insertVoxels(XYZFrameToIdFunction func) {
         uint64_t totalVoxels = octree->getMaxSize();
@@ -37,7 +43,7 @@ public:
 
         unsigned int blockSize = 512;
 
-        octree->insertBlockByXYZFrameFunction(func, frameNumber, (totalVoxels + blockSize - 1) / blockSize,  blockSize);
+        octree->insertBlockByXYZFrameFunction(func, frameNumber, isCalculatingInsertLODsEnabled, (totalVoxels + blockSize - 1) / blockSize,  blockSize);
         
         frameNumber++;
         frameNumber %= UINT64_MAX;
@@ -55,6 +61,8 @@ private:
     static bool wasInitialized;
 
     static bool isTextureRenderingEnabled;
+
+    static bool isCalculatingInsertLODsEnabled;
 
     static unsigned int windowWidth, windowHeight;
 

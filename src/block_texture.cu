@@ -1,50 +1,86 @@
-#include <iostream>
-#include "block_texture.cuh"
-
 #define STB_IMAGE_IMPLEMENTATION
+
+#include "block_texture.cuh"
 #include "stb_image.h"
 
-BlockTexture::BlockTexture(int w, int h, std::string top, std::string bottom, std::string left, std::string right, std::string front, std::string back) {
-	width = w;
-	height = h;
+#include <iostream>
 
-	int channelsInImg = 4;
+std::string imagePositionName[6] = {"top", "bottom", "left", "right", "front", "back"};
 
-	size_t imgSize = size_t(width * height * channels);
+// https://stackoverflow.com/questions/10111784/get-image-resolution-from-image-file
+bool getPngImageResolution(std::string imagePath, int& imageWidth, int& imageHeight) {
+	FILE *f = fopen(imagePath.c_str(), "rb");
 
-	// temporarily load images on host side
+	if(f == 0) {
+		return false;
+	}
 
-	unsigned char* topImageHost = stbi_load(top.c_str(), &width, &height, &channelsInImg, channels);
-	unsigned char* bottomImageHost = stbi_load(bottom.c_str(), &width, &height, &channelsInImg, channels);
-	unsigned char* leftImageHost = stbi_load(left.c_str(), &width, &height, &channelsInImg, channels);
-	unsigned char* rightImageHost = stbi_load(right.c_str(), &width, &height, &channelsInImg, channels);
-	unsigned char* frontImageHost = stbi_load(front.c_str(), &width, &height, &channelsInImg, channels);
-	unsigned char* backImageHost = stbi_load(back.c_str(), &width, &height, &channelsInImg, channels);
+    fseek(f, 0, SEEK_END); 
 
-	// malloc for the images to be stored on device side
+    long len=ftell(f); 
 
-	cudaMallocManaged(&topImage, imgSize);
-	cudaMallocManaged(&bottomImage, imgSize);
-	cudaMallocManaged(&leftImage, imgSize);
-	cudaMallocManaged(&rightImage, imgSize);
-	cudaMallocManaged(&frontImage, imgSize);
-	cudaMallocManaged(&backImage, imgSize);
+    fseek(f, 0, SEEK_SET); 
 
-	// copy data to gpu
+    if(len < 24) {
+    	fclose(f); 
+        return false;
+    }
 
-	memcpy(topImage, topImageHost, imgSize);
-	memcpy(bottomImage, bottomImageHost, imgSize);
-	memcpy(leftImage, leftImageHost, imgSize);
-	memcpy(rightImage, rightImageHost, imgSize);
-	memcpy(frontImage, frontImageHost, imgSize);
-	memcpy(backImage, backImageHost, imgSize);
+    unsigned char buf[24];
+	
+	fread(buf, 1, 24, f);
 
-	// free temp host data
+	fclose(f);
 
-	stbi_image_free(topImageHost);
-	stbi_image_free(bottomImageHost);
-	stbi_image_free(leftImageHost);
-	stbi_image_free(rightImageHost);
-	stbi_image_free(frontImageHost);
-	stbi_image_free(backImageHost);
+	if(buf[0] == 0x89 && buf[1] == 'P' && buf[2] == 'N' && buf[3] == 'G' && buf[4] == 0x0D && buf[5] == 0x0A && buf[6] == 0x1A && buf[7] == 0x0A && buf[12] == 'I' && buf[13] == 'H' && buf[14] == 'D' && buf[15] == 'R') {
+		imageWidth  = (buf[16] << 24) + (buf[17] << 16) + (buf[18] << 8) + (buf[19] << 0);
+		imageHeight = (buf[20] << 24) + (buf[21] << 16) + (buf[22] << 8) + (buf[23] << 0);
+		return true;
+	}
+
+	return false;
+}
+
+__host__ BlockTexture::BlockTexture(int channelsInImg_, std::string* paths) {
+	channelsInImg = channelsInImg_;
+
+	unsigned char* hostImages[6] = {nullptr, nullptr, nullptr, nullptr, nullptr, nullptr};
+
+	for(int i = 0; i < 6; i++) {
+		bool imageLoaded = getPngImageResolution(paths[i], widths[i], heights[i]);
+
+		if(!imageLoaded) {
+			throw "Could not load the " + imagePositionName[i] + "side image. Make sure that \"" + imagePositionName[i] + ".png\" is present. Also verify that all images have " + std::to_string(channelsInImg_) + " channels.";
+		}
+
+		hostImages[i] = stbi_load(paths[0].c_str(), &widths[i], &heights[i], &channelsInImg, channels);
+
+		size_t imgSize = size_t(widths[i] * heights[i] * channels);
+
+		cudaMallocManaged(&images[i], imgSize);
+
+		cudaMemcpy(images[i], hostImages[i], imgSize, cudaMemcpyHostToDevice);
+
+		stbi_image_free(hostImages[i]);
+	}
+}
+
+__host__ __device__ int BlockTexture::getChannels() const {
+	return channels;
+}
+
+__host__ __device__ int BlockTexture::getChannelsInImg() const {
+	return channelsInImg;
+}
+
+__host__ __device__ int BlockTexture::getWidth(ImagePosition position) const {
+	return widths[position];
+}
+
+__host__ __device__ int BlockTexture::getHeight(ImagePosition position) const {
+	return heights[position];
+}
+
+__host__ __device__ unsigned char* BlockTexture::getImage(ImagePosition position) const {
+	return images[position];
 }

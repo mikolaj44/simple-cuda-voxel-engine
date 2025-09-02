@@ -10,12 +10,16 @@
 #define DB_PERLIN_IMPL
 #include "db_perlin.hpp"
 
+#include <iostream>
+#include <filesystem>
+
 #include <cuda_runtime.h>
 #include <cuda_gl_interop.h>
 #include <device_launch_parameters.h>
 
 bool VoxelEngine::wasInitialized = false;
 bool VoxelEngine::isTextureRenderingEnabled = true;
+bool VoxelEngine::isCalculatingInsertLODsEnabled = true;
 
 unsigned int VoxelEngine::windowWidth;
 unsigned int VoxelEngine::windowHeight;
@@ -49,16 +53,40 @@ void VoxelEngine::handleCameraMovement(int mouseX, int mouseY, int& prevMouseX, 
 
 void VoxelEngine::initBlockTextures() {
     BlockTexture** blockTextures = nullptr;
-    int blockAmount = 4;
 
-    cudaMallocManaged(&blockTextures, size_t(blockAmount * sizeof(BlockTexture*)));
+    cudaMallocManaged(&blockTextures, size_t(127 * sizeof(BlockTexture*)));
 
-    for (int i = 0; i < blockAmount; i++) {
-        std::string currPathStr = pathStr + "/res/textures/" + std::to_string(i + 1);
+    std::filesystem::path textureDirPath = std::filesystem::current_path().parent_path() += "/res/textures/";
 
-        cudaMallocManaged(&blockTextures[i], sizeof(BlockTexture));
+    if(!std::filesystem::exists(textureDirPath)) {
+        return;
+    }
+
+    int textureIndex = 0;
+
+    while(textureIndex <= 127) {
+        std::filesystem::path currentPath = textureDirPath;
+
+        currentPath += std::to_string(textureIndex + 1);
+
+        if(!std::filesystem::exists(currentPath)) {
+            textureIndex++;
+            continue;
+        }
+
+        cudaMallocManaged(&blockTextures[textureIndex], sizeof(BlockTexture));
+
+        std::string paths[6] = {currentPath.string() + "/top.png", currentPath.string() + "/bottom.png", currentPath.string() + "/left.png", currentPath.string() + "/right.png", currentPath.string() + "/front.png", currentPath.string() + "/back.png"};
         
-        new (blockTextures[i]) BlockTexture(16, 16, currPathStr + "/top.png", currPathStr + "/bottom.png", currPathStr + "/left.png", currPathStr + "/right.png", currPathStr + "/front.png", currPathStr + "/back.png");
+        try {
+            new (blockTextures[textureIndex]) BlockTexture(4, paths);
+        }
+        catch (std::string exceptionMessage) {
+            std::cerr << exceptionMessage << std::endl;
+            abort();
+        }
+    
+        textureIndex++;
     }
 
     createBlocksData<<<1,1>>>(blockTextures);
@@ -271,6 +299,18 @@ Vector3<> VoxelEngine::getCameraAngle2D() {
 
 void VoxelEngine::setTextureRenderingEnabled(bool isEnabled) {
     isTextureRenderingEnabled = isEnabled;
+}
+
+bool VoxelEngine::getTextureRenderingEnabled() {
+    return isTextureRenderingEnabled;
+}
+
+void VoxelEngine::setCalculatingInsertLODsEnabled(bool isEnabled) {
+    isCalculatingInsertLODsEnabled = isEnabled;
+}
+
+bool VoxelEngine::getCalculatingInsertLODsEnabled() {
+    return isCalculatingInsertLODsEnabled;
 }
 
 

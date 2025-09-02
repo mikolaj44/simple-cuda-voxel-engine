@@ -4,20 +4,34 @@
 #include <cuda_runtime.h>
 #include <device_launch_parameters.h>
 
+enum ImagePosition {
+	TOP,
+	BOTTOM,
+	LEFT,
+	RIGHT,
+	FRONT,
+	BACK
+};
+
 class BlockTexture {
 public:
-	int width = 16, height = 16, channels = 3;
+	__host__ BlockTexture(int channelsInImg, std::string* paths);
 
-	unsigned char* topImage = nullptr;
-	unsigned char* bottomImage = nullptr;
-	unsigned char* leftImage = nullptr;
-	unsigned char* rightImage = nullptr;
-	unsigned char* frontImage = nullptr;
-	unsigned char* backImage = nullptr;
+	__host__ __device__ int getChannels() const;
 
-	BlockTexture(){};
+	__host__ __device__ int getChannelsInImg() const;
 
-	BlockTexture(int w, int h, std::string top, std::string bottom, std::string left, std::string right, std::string front, std::string back);
+	__host__ __device__ int getWidth(ImagePosition position) const;
 
-	BlockTexture(int w, int h, std::string path) : BlockTexture(w, h, path, path, path, path, path, path) {};
+	__host__ __device__ int getHeight(ImagePosition position) const;
+
+	__host__ __device__ unsigned char* getImage(ImagePosition position) const;
+private:
+	int channels = 3;
+	int channelsInImg;
+
+	int widths[6] = {0, 0, 0, 0, 0, 0};
+	int heights[6] = {0, 0, 0, 0, 0, 0};
+
+	unsigned char* images[6] = {nullptr, nullptr, nullptr, nullptr, nullptr, nullptr};
 };
