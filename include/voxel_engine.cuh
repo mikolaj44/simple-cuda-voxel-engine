@@ -3,6 +3,7 @@
 #include "octree/octree.cuh"
 
 #include <cuda_runtime.h>
+#include "block_variant/block_variant_manager.cuh"
 
 class VoxelEngine {
 public:
@@ -26,6 +27,8 @@ public:
     
     static Vector3<> getCameraAngle2D();
 
+    static bool getIsInitialized();
+
     static void setTextureRenderingEnabled(bool isEnabled);
 
     static bool getTextureRenderingEnabled();
@@ -34,17 +37,23 @@ public:
 
     static bool getCalculatingInsertLODsEnabled();
 
+    static void setMaterialColorOnlyEnabled(bool isEnabled);
+
+    static bool getMaterialColorOnlyEnabled();
+
     static int getMaxOctreeLevelByGPU();
 
     template<typename XYZFrameToIdFunction>
-    static void insertVoxels(XYZFrameToIdFunction func) {
+    static cudaError_t insertVoxels(XYZFrameToIdFunction func) {
         uint64_t totalVoxels = octree->getMaxSize();
         totalVoxels = totalVoxels * totalVoxels * totalVoxels;
 
-        octree->insertBlockByXYZFrameFunction(func, frameNumber, isCalculatingInsertLODsEnabled, (totalVoxels + insertionBlockSize - 1) / insertionBlockSize,  insertionBlockSize);
-        
-        frameNumber++;
-        frameNumber %= UINT64_MAX;
+        return octree->insertBlockByXYZFrameFunction(func, frameNumber, isCalculatingInsertLODsEnabled, (totalVoxels + insertionBlockSize - 1) / insertionBlockSize,  insertionBlockSize);
+    }
+
+    template<typename IdFrameToMaterialFunction>
+    static void setMaterials(IdFrameToMaterialFunction func) {
+        block_variant_manager::setMaterials(func, frameNumber);
     }
 
     template <bool displayFrame = true>
@@ -56,11 +65,13 @@ public:
 
     static uint64_t getFrameNumber();
 private:
-    static bool wasInitialized;
+    static bool isInitialized;
 
     static bool isTextureRenderingEnabled;
 
     static bool isCalculatingInsertLODsEnabled;
+
+    static bool isMaterialColorOnlyEnabled;
 
     static unsigned int windowWidth, windowHeight;
 

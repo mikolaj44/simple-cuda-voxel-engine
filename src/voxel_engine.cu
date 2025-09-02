@@ -13,9 +13,10 @@
 #include <cuda_gl_interop.h>
 #include <device_launch_parameters.h>
 
-bool VoxelEngine::wasInitialized = false;
+bool VoxelEngine::isInitialized = false;
 bool VoxelEngine::isTextureRenderingEnabled = true;
 bool VoxelEngine::isCalculatingInsertLODsEnabled = true;
+bool VoxelEngine::isMaterialColorOnlyEnabled = false;
 
 unsigned int VoxelEngine::windowWidth;
 unsigned int VoxelEngine::windowHeight;
@@ -151,8 +152,11 @@ void VoxelEngine::inputLoop(void (*func)()) {
         }
 
         if constexpr (displayFrame) {
-            cuda_renderer::render(octree, cameraPos, cameraAngle, windowWidth, windowHeight, isTextureRenderingEnabled, 4096, 512);
+            cuda_renderer::render(octree, cameraPos, cameraAngle, windowWidth, windowHeight, isTextureRenderingEnabled, isMaterialColorOnlyEnabled, 4096, 512);
             SDL_GL_SwapWindow(window);
+
+            frameNumber++;
+            frameNumber %= UINT64_MAX;
         }
 
         if(func != nullptr) {
@@ -163,14 +167,39 @@ void VoxelEngine::inputLoop(void (*func)()) {
 
 
 cudaError_t VoxelEngine::init(unsigned int windowWidth_, unsigned int windowHeight_, unsigned int initialMaxOctreeDepth) {
-    if(wasInitialized) {
+    size_t freeBytes, totalBytes;
+
+	cudaError_t error = cudaMemGetInfo(&freeBytes, &totalBytes);
+
+    if(error != cudaSuccess) {
+        return error;
+    }
+
+	printf("\n%zu bytes free out of %zu\n", freeBytes, totalBytes);
+
+    if(isInitialized) {
         throw "The engine has already been initialized.";
     }
 
     VoxelEngine::windowWidth = windowWidth_;
     VoxelEngine::windowHeight = windowHeight_;
 
-    cudaError_t error = cudaMallocManaged(&octree, sizeof(Octree));
+    const int threadsPerBlock = 600;
+    const int blocksPerGrid = (windowWidth_ * windowHeight_ + threadsPerBlock - 1) / threadsPerBlock;
+
+    error = block_variant_manager::init();
+
+    if(error != cudaSuccess) {
+        return error;
+    }
+
+    error = cuda_renderer::init(windowWidth_, windowHeight_);
+
+    if(error != cudaSuccess) {
+        return error;
+    }
+
+    error = cudaMallocManaged(&octree, sizeof(Octree));
 
     if(error != cudaSuccess) {
         return error;
@@ -182,38 +211,53 @@ cudaError_t VoxelEngine::init(unsigned int windowWidth_, unsigned int windowHeig
         return error;
     }
 
-    const int threadsPerBlock = 600;
-    const int blocksPerGrid = (windowWidth_ * windowHeight_ + threadsPerBlock - 1) / threadsPerBlock;
-
-    block_variant_manager::init();
-
-    cuda_renderer::init(windowWidth_, windowHeight_);
-
-    wasInitialized = true;
+    isInitialized = true;
 
     return error;
 }
 
 cudaError_t VoxelEngine::cleanup() {
-    octree->cleanup();
-    cudaError_t error = cudaFree(octree);
+    cudaError_t error = octree->cleanup();
+
+    if(error != cudaSuccess) {
+        return error;
+    }
+
+    error = cudaFree(octree);
+
+    if(error != cudaSuccess) {
+        return error;
+    }
+
+    error = cuda_renderer::cleanup();
+
+    if(error != cudaSuccess) {
+        return error;
+    }
+
+    error = block_variant_manager::cleanup();
 
     if(error != cudaSuccess) {
         return error;
     }
 
     size_t freeBytes, totalBytes;
-    cudaMemGetInfo(&freeBytes, &totalBytes);
+
+    error = cudaMemGetInfo(&freeBytes, &totalBytes);
+
+    if(error != cudaSuccess) {
+        return error;
+    }
 
     printf("\n%zu bytes free out of %zu\n\n", freeBytes, totalBytes);
 
-    cuda_renderer::cleanup();
+    isInitialized = false;
 
-    block_variant_manager::cleanup();
+    return error;
+}
 
-    wasInitialized = false;
-
-    return cudaSuccess;
+bool VoxelEngine::getIsInitialized() {
+    return isInitialized;
 }
 
 cudaError_t VoxelEngine::setMaxOctreeDepth(int depth) {
@@ -270,6 +314,14 @@ bool VoxelEngine::getCalculatingInsertLODsEnabled() {
 
 int VoxelEngine::getMaxOctreeLevelByGPU() {
     return Octree::getMaxOctreeLevelByGPU();
+}
+
+void VoxelEngine::setMaterialColorOnlyEnabled(bool isEnabled) {
+    isMaterialColorOnlyEnabled = isEnabled;
+}
+
+bool VoxelEngine::getMaterialColorOnlyEnabled() {
+    return isMaterialColorOnlyEnabled;
 }
 
 

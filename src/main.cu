@@ -34,7 +34,7 @@
 // }
 
 int main() {
-    VoxelEngine::init(1920, 1080, VoxelEngine::getMaxOctreeLevelByGPU());
+    std::cout << VoxelEngine::init(1920, 1080, VoxelEngine::getMaxOctreeLevelByGPU()) << std:: endl;
 
     VoxelEngine::setOctreeMinPos(Vector3<>(-512, -512, -512));
 
@@ -92,7 +92,7 @@ int main() {
         //     return 4;
 
         //if(x < 100)
-            return int(sqrtf(x*x + y*y + z*z)) % 127 + 1;
+            return int(sqrtf(x*x + y*y + z*z)) % 4 + 1;
         return 0;
 
         // return int(sqrtf(absv(x) * absv(x) * absv(x) + absv(x) + absv(y) + absv(z))) % 127 + 1; 
@@ -104,9 +104,15 @@ int main() {
 
     VoxelEngine::insertVoxels(blockPosFrameToIdFunction);
 
+    // auto idFrameToMaterialFunction = [] __device__ (uint8_t id, uint64_t frameNumber) {
+    //     return Material(Vector3<>(255,255,255), 1, 0, 20);
+    // };
+
     // printf("done inserting\n");
 
     // VoxelEngine::setCameraPos(Vector3<>(0, 0, -100));
 
-    VoxelEngine::inputLoop();    
+    VoxelEngine::inputLoop();
+
+    std::cout << VoxelEngine::cleanup() << std::endl;
 }

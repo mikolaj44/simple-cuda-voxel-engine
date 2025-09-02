@@ -13,27 +13,39 @@ namespace block_variant_manager {
 
     BlockTexture** blockTextures;
 
-    template<typename IdFrameToMaterialFunction>
-    __global__ void setBlocksDataKernel(IdFrameToMaterialFunction func, uint64_t frameNumber, BlockTexture** blockTextures) {
+    __global__ void initializeBlocksVariantsKernel(BlockTexture** blockTextures) {
         int index = threadIdx.x + blockIdx.x * blockDim.x;
 
         if(index < 127) {
-            new (blockVariants[index]) BlockVariant(func(index + 1, frameNumber), blockTextures[index]);
+            new (blockVariants[index]) BlockVariant(Material(Vector3<>(255,255,255), 1, 0, 20), blockTextures[index]);
+        }
+    }
+
+    template<typename IdFrameToMaterialFunction>
+    __global__ void setBlocksVariantMaterialsKernel(IdFrameToMaterialFunction func, uint64_t frameNumber, BlockTexture** blockTextures) {
+        int index = threadIdx.x + blockIdx.x * blockDim.x;
+
+        if(index < 127) {
+            blockVariants[index]->material = func(index + 1, frameNumber);
         }
     }
 
     template<typename IdFrameToMaterialFunction>
     void setMaterials(IdFrameToMaterialFunction func, uint64_t frameNumber) {
-        setBlocksDataKernel<<<127,1>>>(func, frameNumber, blockTextures);
+        setBlocksVariantMaterialsKernel<<<127,1>>>(func, frameNumber, blockTextures);
     }
 
-    void init() {
-        cudaMallocManaged(&blockTextures, size_t(127 * sizeof(BlockTexture*)));
+    cudaError_t init() {
+        cudaError_t error = cudaMallocManaged(&blockTextures, size_t(127 * sizeof(BlockTexture*)));
+
+        if(error != cudaSuccess) {
+            return error;
+        }
     
         std::filesystem::path textureDirPath = std::filesystem::current_path().parent_path() += "/res/textures/";
     
         if(!std::filesystem::exists(textureDirPath)) {
-            return;
+            return error;
         }
     
         int textureIndex = 0;
@@ -48,12 +60,22 @@ namespace block_variant_manager {
                 continue;
             }
     
-            cudaMallocManaged(&blockTextures[textureIndex], sizeof(BlockTexture));
+            error = cudaMallocManaged(&blockTextures[textureIndex], sizeof(BlockTexture));
+
+            if(error != cudaSuccess) {
+                return error;
+            }
     
             std::string paths[6] = {currentPath.string() + "/top.png", currentPath.string() + "/bottom.png", currentPath.string() + "/left.png", currentPath.string() + "/right.png", currentPath.string() + "/front.png", currentPath.string() + "/back.png"};
             
             try {
-                new (blockTextures[textureIndex]) BlockTexture(4, paths);
+                new (blockTextures[textureIndex]) BlockTexture();
+
+                error = blockTextures[textureIndex]->create(4, paths);
+
+                if(error != cudaSuccess) {
+                    return error;
+                }    
             }
             catch (std::string exceptionMessage) {
                 std::cerr << exceptionMessage << std::endl;
@@ -64,29 +86,55 @@ namespace block_variant_manager {
         }
 
         for(int i = 0; i < 127; i++) {
-            cudaMalloc(&blockVariantsHost[i], sizeof(BlockVariant));
+            error = cudaMalloc(&blockVariantsHost[i], sizeof(BlockVariant));
+
+            if(error != cudaSuccess) {
+                return error;
+            }
         }
 
-        cudaMalloc(&blockVariantsDevice, sizeof(BlockVariant*) * 127);
+        error = cudaMalloc(&blockVariantsDevice, sizeof(BlockVariant*) * 127);
 
-        cudaMemcpy(blockVariantsDevice, blockVariantsHost, sizeof(BlockVariant*) * 127, cudaMemcpyHostToDevice);
+        if(error != cudaSuccess) {
+            return error;
+        }
 
-        cudaMemcpyToSymbol(blockVariants, &blockVariantsDevice, sizeof(BlockVariant**));
+        error = cudaMemcpy(blockVariantsDevice, blockVariantsHost, sizeof(BlockVariant*) * 127, cudaMemcpyHostToDevice);
 
-        cudaFree(blockVariantsDevice);
+        if(error != cudaSuccess) {
+            return error;
+        }
 
-        auto idFrameToMaterialFunction = [] __device__ (uint8_t id, uint64_t frameNumber) {
-            return Material(Vector3<>(255,255,255), 1, 0, 20);
-        };
+        error = cudaMemcpyToSymbol(blockVariants, &blockVariantsDevice, sizeof(BlockVariant**));
 
-        setMaterials(idFrameToMaterialFunction, 0);
-    
-        cudaDeviceSynchronize();
+        if(error != cudaSuccess) {
+            return error;
+        }
+
+        error = cudaFree(blockVariantsDevice);
+
+        if(error != cudaSuccess) {
+            return error;
+        }
+
+        initializeBlocksVariantsKernel<<<127, 1>>>(blockTextures);
+
+        error = cudaDeviceSynchronize();
+
+        return error;
     }
 
-    void cleanup() {
+    cudaError_t cleanup() {
+        cudaError_t error = cudaSuccess;
+
         for(int i = 0; i < 127; i++) {
-            cudaFree(blockVariantsHost[i]);
+            error = cudaFree(blockVariantsHost[i]);
+
+            if(error != cudaSuccess) {
+                return error;
+            }    
         }
+
+        return error;
     }
 }

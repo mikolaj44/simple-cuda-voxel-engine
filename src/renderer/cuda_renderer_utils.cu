@@ -14,7 +14,7 @@ SDL_Texture* textTexture;
 
 namespace cuda_renderer_utils {
     namespace {
-        void createCUDATexture(int windowWidth, int windowHeight) {
+        cudaError_t createCUDATexture(int windowWidth, int windowHeight) {
             glGenTextures(1, &textureID);
             glBindTexture(GL_TEXTURE_2D, textureID);
             glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
@@ -23,11 +23,11 @@ namespace cuda_renderer_utils {
             glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
             glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, windowWidth, windowHeight, 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
             
-            cudaGraphicsGLRegisterImage(&cudaResource, textureID, GL_TEXTURE_2D, cudaGraphicsRegisterFlagsWriteDiscard);
+            return cudaGraphicsGLRegisterImage(&cudaResource, textureID, GL_TEXTURE_2D, cudaGraphicsRegisterFlagsWriteDiscard);
         }
     }
 
-    void initSDL(int windowWidth, int windowHeight) {
+    cudaError_t initSDL(int windowWidth, int windowHeight) {
         SDL_Init(SDL_INIT_VIDEO);
 
         window = SDL_CreateWindow("voxel engine", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, windowWidth, windowHeight, SDL_WINDOW_OPENGL);
@@ -39,11 +39,16 @@ namespace cuda_renderer_utils {
     
         SDL_SetRelativeMouseMode(SDL_TRUE);
 
-        createCUDATexture(windowWidth, windowHeight);
+        return createCUDATexture(windowWidth, windowHeight);
     }
 
-    void cleanupSDL() {
-        cudaGraphicsUnregisterResource(cudaResource);
+    cudaError_t cleanupSDL() {
+        cudaError_t error = cudaGraphicsUnregisterResource(cudaResource);
+
+        if(error != cudaSuccess) {
+            return error;
+        }
+
         glDeleteTextures(1, &textureID);
     
         SDL_FreeSurface(textSurface);
@@ -53,5 +58,7 @@ namespace cuda_renderer_utils {
         SDL_DestroyRenderer(renderer);
         SDL_DestroyWindow(window);
         SDL_Quit();
+
+        return error;
     }
 }

@@ -14,7 +14,7 @@ extern SDL_Surface* textSurface;
 extern SDL_Texture* textTexture;
 
 namespace cuda_renderer_utils {
-    void initSDL(int windowWidth, int windowHeight);
+    cudaError_t initSDL(int windowWidth, int windowHeight);
 
-    void cleanupSDL();
+    cudaError_t cleanupSDL();
 }

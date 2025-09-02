@@ -42,7 +42,9 @@ bool getPngImageResolution(std::string imagePath, int& imageWidth, int& imageHei
 	return false;
 }
 
-__host__ BlockTexture::BlockTexture(int channelsInImg_, std::string* paths) {
+__host__ cudaError_t BlockTexture::create(int channelsInImg_, std::string* paths) {
+	cudaError_t error = cudaSuccess;
+
 	channelsInImg = channelsInImg_;
 
 	unsigned char* hostImages[6] = {nullptr, nullptr, nullptr, nullptr, nullptr, nullptr};
@@ -58,12 +60,22 @@ __host__ BlockTexture::BlockTexture(int channelsInImg_, std::string* paths) {
 
 		size_t imgSize = size_t(widths[i] * heights[i] * channels);
 
-		cudaMallocManaged(&images[i], imgSize);
+		error = cudaMallocManaged(&images[i], imgSize);
 
-		cudaMemcpy(images[i], hostImages[i], imgSize, cudaMemcpyHostToDevice);
+		if(error != cudaSuccess) {
+			return error;
+		}
+
+		error = cudaMemcpy(images[i], hostImages[i], imgSize, cudaMemcpyHostToDevice);
+
+		if(error != cudaSuccess) {
+			return error;
+		}
 
 		stbi_image_free(hostImages[i]);
 	}
+
+	return error;
 }
 
 __host__ __device__ int BlockTexture::getChannels() const {

@@ -31,8 +31,13 @@ __host__  cudaError_t Octree::allocateByMaxLevel(unsigned int newMaxLevel) {
 
 	// TODO: copy from the old node array
 
-	cudaFree(nodes);
-	cudaError_t error = cudaMalloc(&nodes, allocatedMemoryInBytes);
+	cudaError_t error = cudaFree(nodes);
+
+	if(error != cudaSuccess) {
+		return error;
+	}
+
+	error = cudaMalloc(&nodes, allocatedMemoryInBytes);
 
 	if(error != cudaSuccess) {
 		return error;
@@ -45,17 +50,26 @@ __host__  cudaError_t Octree::allocateByMaxLevel(unsigned int newMaxLevel) {
 	}
 
 	size_t freeBytes, totalBytes;
-	cudaMemGetInfo(&freeBytes, &totalBytes);
+
+	error = cudaMemGetInfo(&freeBytes, &totalBytes);
+
+	if(error != cudaSuccess) {
+		return error;
+	}
 
 	printf("\n%zu bytes free out of %zu\n", freeBytes, totalBytes);
 
 	printf("allocating %zu bytes (%d levels)\n", allocatedMemoryInBytes, maxLevel);
 
-	cudaMemGetInfo(&freeBytes, &totalBytes);
+	error = cudaMemGetInfo(&freeBytes, &totalBytes);
+
+	if(error != cudaSuccess) {
+		return error;
+	}
 
 	printf("%zu bytes free out of %zu\n", freeBytes, totalBytes);
 
-	return cudaSuccess;
+	return error;
 }
 
 __host__ cudaError_t Octree::create(int xMin_, int yMin_, int zMin_, unsigned int maxLevel_) {

@@ -21,7 +21,7 @@ public:
 	__host__ cudaError_t clear();
 
 	template<typename XYZFrametoIdFunction>
-    void insertBlockByXYZFrameFunction(XYZFrametoIdFunction blockPosToIdFunction, uint64_t frameNumber, bool isCalculatingInsertLODsEnabled, unsigned int gridSize, unsigned int blockSize) {
+    cudaError_t insertBlockByXYZFrameFunction(XYZFrametoIdFunction blockPosToIdFunction, uint64_t frameNumber, bool isCalculatingInsertLODsEnabled, unsigned int gridSize, unsigned int blockSize) {
         insertBlockByXYZFrameFunctionKernel<<<gridSize, blockSize>>>(this, blockPosToIdFunction, frameNumber);
 
 		if(isCalculatingInsertLODsEnabled) {
@@ -39,7 +39,7 @@ public:
 			}
 		}
 
-		cudaDeviceSynchronize();
+		return cudaDeviceSynchronize();
 
 		// printf("synchronized\n");
     }

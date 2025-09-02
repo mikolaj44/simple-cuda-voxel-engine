@@ -11,7 +11,6 @@
 #include <cuda_runtime.h>
 #include <device_launch_parameters.h>
 
-constexpr int blocksAmount = 4;
 constexpr float epsilon = 0.002;
 
 namespace cuda_renderer {
@@ -49,18 +48,18 @@ namespace cuda_renderer {
             return lighting.clamp(255).div(255.0).mul(startColor);
         }
         
-        __device__ void setPixelByHitInfo(uchar4* pixels, int windowWidth, int windowHeight, Triple<Vector3<int>, Vector3<float>, uint8_t> intersectionData, Vector3<> cameraPos, int sX, int sY, bool isTextureRenderingEnabled) {            
+        __device__ void setPixelByHitInfo(uchar4* pixels, int windowWidth, int windowHeight, Triple<Vector3<int>, Vector3<float>, uint8_t> intersectionData, Vector3<> cameraPos, int sX, int sY, bool isTextureRenderingEnabled, bool isMaterialColorOnlyEnabled) {            
             using namespace block_variant_manager;
 
             uint8_t blockId = intersectionData.third;
             
-            if (blockId == 0 || (isTextureRenderingEnabled && blockId > blocksAmount)) {
+            if (blockId == 0) {
                 return;
             }
     
             int imgWidth, imgHeight, imgChannels;
     
-            if(isTextureRenderingEnabled){
+            if(isTextureRenderingEnabled && !isMaterialColorOnlyEnabled) {
                 blockId -= 1;
                 // TODO: temporary TOP index
                 imgWidth = blockVariants[blockId]->texture->getWidth(ImagePosition::TOP);
@@ -83,7 +82,7 @@ namespace cuda_renderer {
 
             // check which side of the block we are on    
             if (equals(y, (float)blockY, epsilon)) { // top
-                if(isTextureRenderingEnabled){
+                if(isTextureRenderingEnabled && !isMaterialColorOnlyEnabled){
                     imgX = (int)(absv(x - (int)x) * imgWidth);
                     imgY = (int)(absv(z - (int)z) * imgHeight);
     
@@ -95,7 +94,7 @@ namespace cuda_renderer {
                 normal = Vector3<>(0, -1, 0);
             }
             else if (equals(y, (float)blockY + 1.0, epsilon)) { // bottom
-                if(isTextureRenderingEnabled){
+                if(isTextureRenderingEnabled && !isMaterialColorOnlyEnabled){
                     imgX = (int)(absv(x - (int)x) * imgWidth);
                     imgY = (int)(absv(z - (int)z) * imgHeight);
     
@@ -107,7 +106,7 @@ namespace cuda_renderer {
                 normal = Vector3<>(0, 1, 0);
             }
             else if (equals(x, (float)blockX, epsilon)) { // left
-                if(isTextureRenderingEnabled){
+                if(isTextureRenderingEnabled && !isMaterialColorOnlyEnabled){
                     imgX = (int)(absv(z - (int)z) * imgWidth);
                     imgY = (int)(absv(y - (int)y) * imgHeight);
     
@@ -119,7 +118,7 @@ namespace cuda_renderer {
                 normal = Vector3<>(-1, 0, 0);
             }
             else if (equals(x, (float)blockX + 1.0, epsilon)) { // right
-                if(isTextureRenderingEnabled){
+                if(isTextureRenderingEnabled && !isMaterialColorOnlyEnabled){
                     imgX = (int)(absv(z - (int)z) * imgWidth);
                     imgY = (int)(absv(y - (int)y) * imgHeight);
     
@@ -131,7 +130,7 @@ namespace cuda_renderer {
                 normal = Vector3<>(1, 0, 0);
             }
             else if (equals(z, (float)blockZ, epsilon)) { // front
-                if(isTextureRenderingEnabled){
+                if(isTextureRenderingEnabled && !isMaterialColorOnlyEnabled){
                     imgX = (int)(absv(x - (int)x) * imgWidth);
                     imgY = (int)(absv(y - (int)y) * imgHeight);
     
@@ -143,7 +142,7 @@ namespace cuda_renderer {
                 normal = Vector3<>(0, 0, -1);
             }
             else if (equals(z, (float)blockZ + 1.0, epsilon)) { // back
-                if(isTextureRenderingEnabled){
+                if(isTextureRenderingEnabled && !isMaterialColorOnlyEnabled){
                     imgX = (int)(absv(x - (int)x) * imgWidth);
                     imgY = (int)(absv(y - (int)y) * imgHeight);
     
@@ -159,8 +158,11 @@ namespace cuda_renderer {
             }
 
             Vector3<> color = Vector3<>(r, g, b);
-            
-            if(!isTextureRenderingEnabled) {
+
+            if(isMaterialColorOnlyEnabled) {
+                color = blockVariants[blockId]->material.color;
+            }
+            else if(!isTextureRenderingEnabled) {
                 color = hueToRGB(float(blockId) * 2.8125 / 360.0);
             }
     
@@ -169,7 +171,7 @@ namespace cuda_renderer {
             setPixel(pixels, windowWidth, windowHeight, sX, sY, (int)color.x, (int)color.y, (int)color.z, 255);
         }
 
-        __global__ void renderKernel(uchar4* pixels, Octree* octree, Vector3<> cameraPos, Vector3<> cameraAngle2d, int windowWidth, int windowHeight, bool isTextureRenderingEnabled) {            
+        __global__ void renderKernel(uchar4* pixels, Octree* octree, Vector3<> cameraPos, Vector3<> cameraAngle2d, int windowWidth, int windowHeight, bool isTextureRenderingEnabled, bool isMaterialColorOnlyEnabled) {            
             unsigned int index = threadIdx.x + blockDim.x * blockIdx.x;
 
             if (index >= windowWidth * windowHeight)
@@ -191,22 +193,23 @@ namespace cuda_renderer {
                 setPixel(pixels, windowWidth, windowHeight, sX, sY, 0, 0, 255, 255);
             }
             else {
-                // setPixel(pixels, sX, sY, intersectionData.third, intersectionData.third, intersectionData.third, 255);
+                // setPixel(pixels, windowWidth, windowHeight, sX, sY, intersectionData.third, intersectionData.third, intersectionData.third, 255);
 
-                setPixelByHitInfo(pixels, windowWidth, windowHeight, intersectionData, cameraPos, sX, sY, isTextureRenderingEnabled);
+                setPixelByHitInfo(pixels, windowWidth, windowHeight, intersectionData, cameraPos, sX, sY, isTextureRenderingEnabled, isMaterialColorOnlyEnabled);
             }
         }
     }
 
-    void init(int windowWidth, int windowHeight) {
-        cuda_renderer_utils::initSDL(windowWidth, windowHeight);
+    cudaError_t init(int windowWidth, int windowHeight) {
+        return cuda_renderer_utils::initSDL(windowWidth, windowHeight);
     }
 
-    void cleanup() {
-        cuda_renderer_utils::cleanupSDL();
+    cudaError_t cleanup() {
+        return cuda_renderer_utils::cleanupSDL();
     }
 
-    void render(Octree* octree, Vector3<> cameraPos, Vector3<> cameraAngle2d, int windowWidth, int windowHeight, bool isTextureRenderingEnabled, unsigned int gridSize, unsigned int blockSize) {
+    // I'm not error checking for performance reasons
+    void render(Octree* octree, Vector3<> cameraPos, Vector3<> cameraAngle2d, int windowWidth, int windowHeight, bool isTextureRenderingEnabled, bool isMaterialColorOnlyEnabled, unsigned int gridSize, unsigned int blockSize) {
         using namespace cuda_renderer_utils;
 
         cudaArray* cudaArrayPtr;
@@ -223,7 +226,7 @@ namespace cuda_renderer {
         // cudaEventCreate(&stop);
         // cudaEventRecord(start);
         
-        renderKernel<<<gridSize,blockSize>>>(devPtr, octree, cameraPos, cameraAngle2d, windowWidth, windowHeight, isTextureRenderingEnabled);
+        renderKernel<<<gridSize,blockSize>>>(devPtr, octree, cameraPos, cameraAngle2d, windowWidth, windowHeight, isTextureRenderingEnabled, isMaterialColorOnlyEnabled);
     
         // cudaEventRecord(stop);
         // cudaEventSynchronize(stop);

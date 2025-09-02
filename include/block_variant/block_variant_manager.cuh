@@ -6,9 +6,9 @@
 namespace block_variant_manager {
     extern __device__ BlockVariant** blockVariants;
 
-    void init();
+    cudaError_t init();
 
-    void cleanup();
+    cudaError_t cleanup();
 
     template<typename IdFrameToMaterialFunction>
     void setMaterials(IdFrameToMaterialFunction func, uint64_t frameNumber);
