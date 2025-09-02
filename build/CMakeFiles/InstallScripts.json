@@ -1,7 +1,0 @@
-{
-	"InstallScripts" : 
-	[
-		"/home/mikolaj/Desktop/cuda-voxel-engine orig/build/cmake_install.cmake"
-	],
-	"Parallel" : false
-}

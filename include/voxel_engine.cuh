@@ -4,8 +4,6 @@
 
 #include <cuda_runtime.h>
 
-#include "chunk_generation.cuh"
-
 class VoxelEngine {
 public:
     static cudaError_t init(unsigned int windowWidth, unsigned int windowHeight, unsigned int initialMaxOctreeDepth = 1);
@@ -36,14 +34,14 @@ public:
 
     static bool getCalculatingInsertLODsEnabled();
 
+    static int getMaxOctreeLevelByGPU();
+
     template<typename XYZFrameToIdFunction>
     static void insertVoxels(XYZFrameToIdFunction func) {
         uint64_t totalVoxels = octree->getMaxSize();
         totalVoxels = totalVoxels * totalVoxels * totalVoxels;
 
-        unsigned int blockSize = 512;
-
-        octree->insertBlockByXYZFrameFunction(func, frameNumber, isCalculatingInsertLODsEnabled, (totalVoxels + blockSize - 1) / blockSize,  blockSize);
+        octree->insertBlockByXYZFrameFunction(func, frameNumber, isCalculatingInsertLODsEnabled, (totalVoxels + insertionBlockSize - 1) / insertionBlockSize,  insertionBlockSize);
         
         frameNumber++;
         frameNumber %= UINT64_MAX;
@@ -65,6 +63,8 @@ private:
     static bool isCalculatingInsertLODsEnabled;
 
     static unsigned int windowWidth, windowHeight;
+
+    static const unsigned int insertionBlockSize = 512;
 
     static Octree* octree;
 

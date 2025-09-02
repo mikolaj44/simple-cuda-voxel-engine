@@ -2,7 +2,7 @@
 
 #include "globals.cuh"
 #include "cuda_math.cuh"
-#include "blocks_data.cuh"
+#include "block_variant/block_variant_manager.cuh"
 #include "point_light.cuh"
 
 namespace octree_utils {

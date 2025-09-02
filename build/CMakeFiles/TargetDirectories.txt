@@ -1,3 +1,0 @@
-/home/mikolaj/Desktop/cuda-voxel-engine orig/build/CMakeFiles/cuda-voxel-engine.dir
-/home/mikolaj/Desktop/cuda-voxel-engine orig/build/CMakeFiles/edit_cache.dir
-/home/mikolaj/Desktop/cuda-voxel-engine orig/build/CMakeFiles/rebuild_cache.dir

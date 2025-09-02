@@ -22,6 +22,8 @@ __global__ void generateChunksKernel(Octree* octree, Vector3<> pos, XYZtoIdFunct
 	// 	return;
 	// }
 
+    int CHUNK_W = 16;
+
     x += pos.x - CHUNK_W * RENDER_DISTANCE_CHUNKS;
     y += pos.y - CHUNK_W * RENDER_DISTANCE_CHUNKS;
     z += pos.z - CHUNK_W * RENDER_DISTANCE_CHUNKS;

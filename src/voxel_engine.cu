@@ -1,14 +1,10 @@
 #include "voxel_engine.cuh"
-#include "block_texture.cuh"
-#include "blocks_data.cuh"
+#include "block_variant/block_texture.cuh"
+#include "block_variant/block_variant_manager.cuh"
 
 #include "renderer/cuda_renderer.cuh"
 #include "renderer/cuda_renderer_utils.cuh"
-#include "chunk_generation.cuh"
 #include "octree/octree.cuh"
-
-#define DB_PERLIN_IMPL
-#include "db_perlin.hpp"
 
 #include <iostream>
 #include <filesystem>
@@ -32,8 +28,8 @@ dim3 VoxelEngine::maxGridSize(32768,32768,32768);
 dim3 VoxelEngine::blockSize(9,9,9);
 
 void VoxelEngine::handleCameraMovement(int mouseX, int mouseY, int& prevMouseX, int& prevMouseY) {
-    mouseX -= SCREEN_WIDTH / 2;
-    mouseY -= SCREEN_HEIGHT / 2;
+    mouseX -= windowWidth / 2;
+    mouseY -= windowHeight / 2;
 
     cameraAngle.y -= (prevMouseX - mouseX) * MOUSE_SENSITIVITY;
     cameraAngle.x += (prevMouseY - mouseY) * MOUSE_SENSITIVITY;
@@ -49,49 +45,6 @@ void VoxelEngine::handleCameraMovement(int mouseX, int mouseY, int& prevMouseX, 
 
     prevMouseX = mouseX;
     prevMouseY = mouseY;
-}
-
-void VoxelEngine::initBlockTextures() {
-    BlockTexture** blockTextures = nullptr;
-
-    cudaMallocManaged(&blockTextures, size_t(127 * sizeof(BlockTexture*)));
-
-    std::filesystem::path textureDirPath = std::filesystem::current_path().parent_path() += "/res/textures/";
-
-    if(!std::filesystem::exists(textureDirPath)) {
-        return;
-    }
-
-    int textureIndex = 0;
-
-    while(textureIndex <= 127) {
-        std::filesystem::path currentPath = textureDirPath;
-
-        currentPath += std::to_string(textureIndex + 1);
-
-        if(!std::filesystem::exists(currentPath)) {
-            textureIndex++;
-            continue;
-        }
-
-        cudaMallocManaged(&blockTextures[textureIndex], sizeof(BlockTexture));
-
-        std::string paths[6] = {currentPath.string() + "/top.png", currentPath.string() + "/bottom.png", currentPath.string() + "/left.png", currentPath.string() + "/right.png", currentPath.string() + "/front.png", currentPath.string() + "/back.png"};
-        
-        try {
-            new (blockTextures[textureIndex]) BlockTexture(4, paths);
-        }
-        catch (std::string exceptionMessage) {
-            std::cerr << exceptionMessage << std::endl;
-            abort();
-        }
-    
-        textureIndex++;
-    }
-
-    createBlocksData<<<1,1>>>(blockTextures);
-
-    cudaDeviceSynchronize();
 }
 
 cudaError_t VoxelEngine::clearVoxels(){
@@ -232,7 +185,7 @@ cudaError_t VoxelEngine::init(unsigned int windowWidth_, unsigned int windowHeig
     const int threadsPerBlock = 600;
     const int blocksPerGrid = (windowWidth_ * windowHeight_ + threadsPerBlock - 1) / threadsPerBlock;
 
-    initBlockTextures();
+    block_variant_manager::init();
 
     cuda_renderer::init(windowWidth_, windowHeight_);
 
@@ -255,6 +208,8 @@ cudaError_t VoxelEngine::cleanup() {
     printf("\n%zu bytes free out of %zu\n\n", freeBytes, totalBytes);
 
     cuda_renderer::cleanup();
+
+    block_variant_manager::cleanup();
 
     wasInitialized = false;
 
@@ -311,6 +266,10 @@ void VoxelEngine::setCalculatingInsertLODsEnabled(bool isEnabled) {
 
 bool VoxelEngine::getCalculatingInsertLODsEnabled() {
     return isCalculatingInsertLODsEnabled;
+}
+
+int VoxelEngine::getMaxOctreeLevelByGPU() {
+    return Octree::getMaxOctreeLevelByGPU();
 }
 
 

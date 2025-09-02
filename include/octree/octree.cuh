@@ -55,6 +55,8 @@ public:
 	__device__ __host__ unsigned int getMaxLevel() const;
 
 	__device__ __host__ unsigned int getMaxSize() const;
+
+	__host__ static int getMaxOctreeLevelByGPU();
 private:
 	struct alignas(uint8_t) Node {
 		// most significant bit is 1 if the node is not solid - solid (0) means either leaf or all children with id of one type

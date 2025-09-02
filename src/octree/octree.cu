@@ -9,7 +9,7 @@
 #include "octree/octree.cuh"
 #include "octree/octree_utils.cuh"
 #include "globals.cuh"
-#include "blocks_data.cuh"
+#include "block_variant/block_variant_manager.cuh"
 #include "cuda_math.cuh"
 #include "renderer/cuda_renderer.cuh"
 
@@ -234,8 +234,7 @@ __device__ void Octree::traverseNewNode(bool& foundSolid, Triple<Vector3<int>, V
 	using namespace octree_utils::revelles;
 	using namespace octree_utils;
 	
-	// TODO: calculate CUDA_STACK_SIZE when maxSize is calculated
-	if(stack.topIndex >= CUDA_STACK_SIZE - 1) {
+	if(stack.topIndex >= maxLevel + 1) {
 		return;
 	}
 
@@ -364,4 +363,18 @@ __device__ __host__ unsigned int Octree::getMaxLevel() const {
 
 __device__ __host__ unsigned int Octree::getMaxSize() const {
 	return maxSize;
+}
+
+__host__ int Octree::getMaxOctreeLevelByGPU() {
+	size_t freeBytes, totalBytes;
+
+	cudaMemGetInfo(&freeBytes, &totalBytes);
+
+	int maxLevel = 1;
+
+	while(getAllocatedMemoryInBytes(maxLevel) < freeBytes) {
+		maxLevel++;
+	}
+
+	return maxLevel - 1;
 }

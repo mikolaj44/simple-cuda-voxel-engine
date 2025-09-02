@@ -1,9 +1,10 @@
 #define STB_IMAGE_IMPLEMENTATION
 
-#include "block_texture.cuh"
+#include "block_variant/block_texture.cuh"
 #include "stb_image.h"
 
-#include <iostream>
+#include <cuda_runtime.h>
+#include <device_launch_parameters.h>
 
 std::string imagePositionName[6] = {"top", "bottom", "left", "right", "front", "back"};
 

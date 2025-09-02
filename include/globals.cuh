@@ -10,36 +10,15 @@
 
 # define ERROR_PRINT() cudaDeviceSynchronize(); cudaError_t error = cudaGetLastError(); printf("CUDA error: %s\n", cudaGetErrorString(error));
 
-//#include "D:\threadpool\include\BS_thread_pool.hpp"
-
-// files
-extern std::string pathStr;
-
-// screen size
-constexpr int SCREEN_WIDTH = 1920;
-constexpr int SCREEN_HEIGHT = 1080;
+constexpr int CUDA_STACK_SIZE = 11;
 
 // viewing parameters
 constexpr float FOCAL_LENGTH = 10000; //350 //1200 //4000
 constexpr float SCALE_V = 1;
-extern float halfVerFOV, halfHorFOV;
+
 constexpr float MOUSE_SENSITIVITY = 0.004;
 
-// rendering parameters
-constexpr int RENDER_DISTANCE_CHUNKS = 32; // (in chunks)
-
-// octree memory parameters
-constexpr size_t PREALLOCATE_MB_AMOUNT = 5000;
-constexpr int CUDA_STACK_SIZE = 40;
-
-// general numeric parameters
-constexpr float EPSILON = 0.00001;
-
-// chunk parameters (block amount)
-constexpr int CHUNK_W = 16;
-
 // world generation parameters
-
 constexpr float smoothing = 50;
 constexpr float amplify = 50;
 
@@ -58,13 +37,6 @@ extern bool showFps;
 extern bool doOldRendering;
 extern bool generateNewChunks;
 extern bool showBorder;
-
-extern int shift;
-extern int shiftX;
-extern int shiftY;
-extern int shiftZ;
-
-std::string getPathStr();
 
 extern Vector3<> cameraPos;
 extern Vector3<> cameraAngle;

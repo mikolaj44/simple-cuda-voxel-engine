@@ -5,9 +5,8 @@
 
 #include "renderer/cuda_renderer.cuh"
 #include "renderer/cuda_renderer_utils.cuh"
-#include "chunk_generation.cuh"
 #include "globals.cuh"
-#include "blocks_data.cuh"
+#include "block_variant/block_variant_manager.cuh"
 
 #include <cuda_runtime.h>
 #include <device_launch_parameters.h>
@@ -17,8 +16,8 @@ constexpr float epsilon = 0.002;
 
 namespace cuda_renderer {
     namespace {
-        __device__ void setPixel(uchar4* pixels, int sX, int sY, int r, int g, int b, int a) {
-            pixels[(SCREEN_HEIGHT - 1 - sY) * SCREEN_WIDTH + sX] = make_uchar4(r, g, b, a);
+        __device__ void setPixel(uchar4* pixels, int windowWidth, int windowHeight, int sX, int sY, int r, int g, int b, int a) {
+            pixels[(windowHeight - 1 - sY) * windowWidth + sX] = make_uchar4(r, g, b, a);
         }
 
         // https://stackoverflow.com/questions/61277046/convert-just-a-hue-into-rgb
@@ -50,7 +49,9 @@ namespace cuda_renderer {
             return lighting.clamp(255).div(255.0).mul(startColor);
         }
         
-        __device__ void setPixelByHitInfo(uchar4* pixels, Triple<Vector3<int>, Vector3<float>, uint8_t> intersectionData, Vector3<> cameraPos, int sX, int sY, bool isTextureRenderingEnabled) {            
+        __device__ void setPixelByHitInfo(uchar4* pixels, int windowWidth, int windowHeight, Triple<Vector3<int>, Vector3<float>, uint8_t> intersectionData, Vector3<> cameraPos, int sX, int sY, bool isTextureRenderingEnabled) {            
+            using namespace block_variant_manager;
+
             uint8_t blockId = intersectionData.third;
             
             if (blockId == 0 || (isTextureRenderingEnabled && blockId > blocksAmount)) {
@@ -165,20 +166,20 @@ namespace cuda_renderer {
     
             // color = getPhongIllumination(color, Vector3<>(x, y, z), cameraPos, normal, blockVariants[blockId]->material, PointLight(Vector3<>(0, 700, -1000), Vector3<>(255,255,255)));
     
-            setPixel(pixels, sX, sY, (int)color.x, (int)color.y, (int)color.z, 255);
+            setPixel(pixels, windowWidth, windowHeight, sX, sY, (int)color.x, (int)color.y, (int)color.z, 255);
         }
 
-        __global__ void renderKernel(uchar4* pixels, Octree* octree, Vector3<> cameraPos, Vector3<> cameraAngle2d, int screenWidth, int screenHeight, bool isTextureRenderingEnabled) {            
+        __global__ void renderKernel(uchar4* pixels, Octree* octree, Vector3<> cameraPos, Vector3<> cameraAngle2d, int windowWidth, int windowHeight, bool isTextureRenderingEnabled) {            
             unsigned int index = threadIdx.x + blockDim.x * blockIdx.x;
 
-            if (index >= screenWidth * screenHeight)
+            if (index >= windowWidth * windowHeight)
                 return;
 
-            int sX = index % screenWidth;
-            int sY = index / screenWidth;
+            int sX = index % windowWidth;
+            int sY = index / windowWidth;
 
-            float alpha = (atanf(-(sX - SCREEN_WIDTH  / 2) / FOCAL_LENGTH) - cameraAngle2d.y + M_PI / 2); // horizontal angle
-            float polar = (atanf(-(sY - SCREEN_HEIGHT / 2) / FOCAL_LENGTH) + cameraAngle2d.x + M_PI / 2); // vertical angle
+            float alpha = (atanf(-(sX - windowWidth  / 2) / FOCAL_LENGTH) - cameraAngle2d.y + M_PI / 2); // horizontal angle
+            float polar = (atanf(-(sY - windowHeight / 2) / FOCAL_LENGTH) + cameraAngle2d.x + M_PI / 2); // vertical angle
 
             float dX = sin(polar) * cos(alpha);
             float dZ = sin(polar) * sin(alpha);
@@ -187,12 +188,12 @@ namespace cuda_renderer {
             Triple<Vector3<int>, Vector3<>, uint8_t> intersectionData = octree->getRayIntersectionData(pixels, cameraPos, Vector3<>(dX, dY, dZ), sX, sY, 1);
 
             if(intersectionData.third == 0) {
-                setPixel(pixels, sX, sY, 0, 0, 255, 255);
+                setPixel(pixels, windowWidth, windowHeight, sX, sY, 0, 0, 255, 255);
             }
             else {
                 // setPixel(pixels, sX, sY, intersectionData.third, intersectionData.third, intersectionData.third, 255);
 
-                setPixelByHitInfo(pixels, intersectionData, cameraPos, sX, sY, isTextureRenderingEnabled);
+                setPixelByHitInfo(pixels, windowWidth, windowHeight, intersectionData, cameraPos, sX, sY, isTextureRenderingEnabled);
             }
         }
     }
@@ -232,7 +233,7 @@ namespace cuda_renderer {
         // cudaDeviceSynchronize();
     
         // Copy memory from CUDA device to OpenGL texture
-        cudaMemcpy2DToArray(cudaArrayPtr, 0, 0, devPtr, pitch, SCREEN_WIDTH * sizeof(uchar4), SCREEN_HEIGHT, cudaMemcpyDeviceToDevice);
+        cudaMemcpy2DToArray(cudaArrayPtr, 0, 0, devPtr, pitch, windowWidth * sizeof(uchar4), windowHeight, cudaMemcpyDeviceToDevice);
         cudaFree(devPtr);
     
         cudaGraphicsUnmapResources(1, &cudaResource, 0);
