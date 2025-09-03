@@ -1,6 +1,6 @@
 #pragma once
 
-#include "block_variant.cuh"
+#include "block_variant/block_variant.cuh"
 #include <stdint.h>
 
 namespace block_variant_manager {

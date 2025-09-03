@@ -8,7 +8,6 @@
 
 #include "octree/octree.cuh"
 #include "octree/octree_utils.cuh"
-#include "globals.cuh"
 #include "block_variant/block_variant_manager.cuh"
 #include "cuda_math.cuh"
 #include "renderer/cuda_renderer.cuh"

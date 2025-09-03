@@ -1,8 +1,11 @@
 #pragma once
 
-#include "globals.cuh"
+#include <stdint.h>
+#include "vector3.cuh"
 
 namespace octree_utils {
+    constexpr unsigned int CUDA_STACK_SIZE = 11;
+
     class Stack {
     public:
         struct Frame {

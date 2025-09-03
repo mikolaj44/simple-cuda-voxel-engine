@@ -7,7 +7,7 @@
 
 class VoxelEngine {
 public:
-    static cudaError_t init(unsigned int windowWidth, unsigned int windowHeight, unsigned int initialMaxOctreeDepth = 1);
+    static cudaError_t init(unsigned int windowWidth, unsigned int windowHeight, unsigned int initialMaxOctreeDepth = 1, unsigned int initialNumLights = 1);
     
     static cudaError_t cleanup();
 
@@ -43,6 +43,32 @@ public:
 
     static int getMaxOctreeLevelByGPU();
 
+    static unsigned int getNumLights();
+
+    static cudaError_t setNumLights(unsigned int numLights);
+
+    static unsigned int getWindowWidth();
+
+    static unsigned int getWindowHeight();
+
+    static uint64_t getFrameNumber();
+
+    static float getCameraSpeed();
+
+    static void setCameraSpeed(float speed);
+
+    static float getCameraTurnSpeed();
+
+    static void setCameraTurnSpeed(float speed);
+
+    static float getMouseSensitivity();
+
+    static void setMouseSensitivity(float sensitivity);
+
+    static bool getMouseControlEnabled();
+
+    static void setMouseControlEnabled(bool isEnabled);
+
     template<typename XYZFrameToIdFunction>
     static cudaError_t insertVoxels(XYZFrameToIdFunction func) {
         uint64_t totalVoxels = octree->getMaxSize();
@@ -58,12 +84,6 @@ public:
 
     template <bool displayFrame = true>
     static void inputLoop(void (*func)() = nullptr);
-
-    static int getWindowWidth();
-
-    static int getWindowHeight();
-
-    static uint64_t getFrameNumber();
 private:
     static bool isInitialized;
 
@@ -73,9 +93,13 @@ private:
 
     static bool isMaterialColorOnlyEnabled;
 
+    static bool isMouseControlEnabled;
+
     static unsigned int windowWidth, windowHeight;
 
     static const unsigned int insertionBlockSize = 512;
+
+    static unsigned int numLights;
 
     static Octree* octree;
 
@@ -84,7 +108,16 @@ private:
     static dim3 maxGridSize;
     static dim3 blockSize;
 
+    static Vector3<> cameraPos;
+    static Vector3<> cameraAngle;
+
+    static float cameraSpeed;
+    static float cameraTurnSpeed;
+    static float mouseSensitivity;
+
     static void initBlockTextures();
 
     static void handleCameraMovement(int mouseX, int mouseY, int& prevMouseX, int& prevMouseY);
+
+    static cudaError_t initLights();
 };

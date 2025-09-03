@@ -117,7 +117,7 @@ namespace block_variant_manager {
             return error;
         }
 
-        initializeBlocksVariantsKernel<<<127, 1>>>(blockTextures);
+        initializeBlocksVariantsKernel<<<1, 127>>>(blockTextures);
 
         error = cudaDeviceSynchronize();
 

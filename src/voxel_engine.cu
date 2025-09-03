@@ -1,6 +1,7 @@
 #include "voxel_engine.cuh"
 #include "block_variant/block_texture.cuh"
 #include "block_variant/block_variant_manager.cuh"
+#include "light/point_light_manager.cuh"
 
 #include "renderer/cuda_renderer.cuh"
 #include "renderer/cuda_renderer_utils.cuh"
@@ -17,6 +18,7 @@ bool VoxelEngine::isInitialized = false;
 bool VoxelEngine::isTextureRenderingEnabled = true;
 bool VoxelEngine::isCalculatingInsertLODsEnabled = true;
 bool VoxelEngine::isMaterialColorOnlyEnabled = false;
+bool VoxelEngine::isMouseControlEnabled = true;
 
 unsigned int VoxelEngine::windowWidth;
 unsigned int VoxelEngine::windowHeight;
@@ -28,12 +30,21 @@ uint64_t VoxelEngine::frameNumber = 0;
 dim3 VoxelEngine::maxGridSize(32768,32768,32768);
 dim3 VoxelEngine::blockSize(9,9,9);
 
+unsigned int VoxelEngine::numLights;
+
+Vector3<> VoxelEngine::cameraPos = Vector3<>(0, 0, 0);
+Vector3<> VoxelEngine::cameraAngle = Vector3<>(0, 0, 0);
+
+float VoxelEngine::cameraSpeed = 1;
+float VoxelEngine::cameraTurnSpeed = 0.1;
+float VoxelEngine::mouseSensitivity = 0.004;
+
 void VoxelEngine::handleCameraMovement(int mouseX, int mouseY, int& prevMouseX, int& prevMouseY) {
     mouseX -= windowWidth / 2;
     mouseY -= windowHeight / 2;
 
-    cameraAngle.y -= (prevMouseX - mouseX) * MOUSE_SENSITIVITY;
-    cameraAngle.x += (prevMouseY - mouseY) * MOUSE_SENSITIVITY;
+    cameraAngle.y -= (prevMouseX - mouseX) * mouseSensitivity;
+    cameraAngle.x += (prevMouseY - mouseY) * mouseSensitivity;
 
     if (cameraAngle.x < -M_PI / 2.0) {
         cameraAngle.x = -M_PI / 2.0;
@@ -66,7 +77,7 @@ void VoxelEngine::inputLoop(void (*func)()) {
                 int x, y, z;
 
                 case SDL_MOUSEMOTION:
-                    if (mouseControls) {
+                    if (isMouseControlEnabled) {
                         handleCameraMovement(event_.motion.x, event_.motion.y, prevMouseX, prevMouseY);
                     }
                     break;
@@ -84,49 +95,47 @@ void VoxelEngine::inputLoop(void (*func)()) {
                     return;
 
                 case SDL_KEYDOWN:
-
                     switch (event_.key.keysym.sym) {
-
                         case SDLK_z:
-                            PLAYER_SPEED /= 2;
+                            cameraSpeed /= 2;
                             break;
                         case SDLK_x:
-                            PLAYER_SPEED *= 2;
+                            cameraSpeed *= 2;
                             break;
                         case SDLK_c:
-                            // octree->isTextureRenderingEnabled = !octree->isTextureRenderingEnabled;
+                            isTextureRenderingEnabled = !isTextureRenderingEnabled;
                             break; 
 
                         case SDLK_UP:
-                            cameraPos.x += sin(cameraAngle.y) * PLAYER_SPEED;
-                            cameraPos.z += cos(cameraAngle.y) * PLAYER_SPEED;
+                            cameraPos.x += sin(cameraAngle.y) * cameraSpeed;
+                            cameraPos.z += cos(cameraAngle.y) * cameraSpeed;
                             break;
                         case SDLK_DOWN:
-                            cameraPos.x -= sin(cameraAngle.y) * PLAYER_SPEED;
-                            cameraPos.z -= cos(cameraAngle.y) * PLAYER_SPEED;
+                            cameraPos.x -= sin(cameraAngle.y) * cameraSpeed;
+                            cameraPos.z -= cos(cameraAngle.y) * cameraSpeed;
                             break;
 
                         case SDLK_LEFT:
-                            cameraPos.x -= sin(cameraAngle.y + M_PI/2) * PLAYER_SPEED;
-                            cameraPos.z -= cos(cameraAngle.y + M_PI/2) * PLAYER_SPEED;
+                            cameraPos.x -= sin(cameraAngle.y + M_PI/2) * cameraSpeed;
+                            cameraPos.z -= cos(cameraAngle.y + M_PI/2) * cameraSpeed;
                             break;
                         case SDLK_RIGHT:
-                            cameraPos.x += sin(cameraAngle.y + M_PI/2) * PLAYER_SPEED;
-                            cameraPos.z += cos(cameraAngle.y + M_PI/2) * PLAYER_SPEED;
+                            cameraPos.x += sin(cameraAngle.y + M_PI/2) * cameraSpeed;
+                            cameraPos.z += cos(cameraAngle.y + M_PI/2) * cameraSpeed;
                             break;
 
                         case SDLK_s:
-                            cameraPos.y += PLAYER_SPEED;
+                            cameraPos.y += cameraSpeed;
                             break;
                         case SDLK_w:
-                            cameraPos.y -= PLAYER_SPEED;
+                            cameraPos.y -= cameraSpeed;
                             break;
 
                         case SDLK_q:
-                            cameraAngle.y -= PLAYER_TURN_Y_SPEED;
+                            cameraAngle.y -= cameraTurnSpeed;
                             break;
                         case SDLK_e:
-                            cameraAngle.y += PLAYER_TURN_Y_SPEED;
+                            cameraAngle.y += cameraTurnSpeed;
                             break;
 
                         case SDLK_r:
@@ -139,10 +148,6 @@ void VoxelEngine::inputLoop(void (*func)()) {
                             cameraAngle.x -= 0.1;
                             if (cameraAngle.x < 0)
                                 cameraAngle.x = 2 * M_PI;
-                            break;
-
-                        case SDLK_t:
-                            doOldRendering = !doOldRendering;
                             break;
                             
                         default:
@@ -165,8 +170,7 @@ void VoxelEngine::inputLoop(void (*func)()) {
     }
 }
 
-
-cudaError_t VoxelEngine::init(unsigned int windowWidth_, unsigned int windowHeight_, unsigned int initialMaxOctreeDepth) {
+cudaError_t VoxelEngine::init(unsigned int windowWidth_, unsigned int windowHeight_, unsigned int initialMaxOctreeDepth, unsigned int initialNumLights) {
     size_t freeBytes, totalBytes;
 
 	cudaError_t error = cudaMemGetInfo(&freeBytes, &totalBytes);
@@ -188,6 +192,12 @@ cudaError_t VoxelEngine::init(unsigned int windowWidth_, unsigned int windowHeig
     const int blocksPerGrid = (windowWidth_ * windowHeight_ + threadsPerBlock - 1) / threadsPerBlock;
 
     error = block_variant_manager::init();
+
+    if(error != cudaSuccess) {
+        return error;
+    }
+
+    error = point_light_manager::init(initialNumLights);
 
     if(error != cudaSuccess) {
         return error;
@@ -268,11 +278,11 @@ void VoxelEngine::setOctreeMinPos(Vector3<> pos) {
     octree->setMinPos(pos);
 }
 
-int VoxelEngine::getWindowWidth() {
+unsigned int VoxelEngine::getWindowWidth() {
     return windowWidth;
 }
 
-int VoxelEngine::getWindowHeight() {
+unsigned int VoxelEngine::getWindowHeight() {
     return windowHeight;
 }
 
@@ -322,6 +332,60 @@ void VoxelEngine::setMaterialColorOnlyEnabled(bool isEnabled) {
 
 bool VoxelEngine::getMaterialColorOnlyEnabled() {
     return isMaterialColorOnlyEnabled;
+}
+
+unsigned int VoxelEngine::getNumLights() {
+    return numLights;
+}
+
+float VoxelEngine::getCameraSpeed() {
+    return cameraSpeed;
+}
+
+void VoxelEngine::setCameraSpeed(float speed) {
+    cameraSpeed = speed;
+}
+
+float VoxelEngine::getCameraTurnSpeed() {
+    return cameraTurnSpeed;
+}
+
+void VoxelEngine::setCameraTurnSpeed(float speed) {
+    cameraTurnSpeed = speed;
+}
+
+float VoxelEngine::getMouseSensitivity() {
+    return mouseSensitivity;
+}
+
+void VoxelEngine::setMouseSensitivity(float sensitivity) {
+    mouseSensitivity = sensitivity;
+}
+
+bool VoxelEngine::getMouseControlEnabled() {
+    return isMouseControlEnabled;
+}
+
+void VoxelEngine::setMouseControlEnabled(bool isEnabled) {
+    isMouseControlEnabled = isEnabled;
+}
+
+cudaError_t VoxelEngine::setNumLights(unsigned int numLights_) {
+    cudaError_t error = point_light_manager::cleanup();
+
+    if(error != cudaSuccess) {
+        return error;
+    }
+
+    error = point_light_manager::init(numLights_);
+
+    if(error != cudaSuccess) {
+        return error;
+    }
+
+    numLights = numLights_;
+
+    return error;
 }
 
 

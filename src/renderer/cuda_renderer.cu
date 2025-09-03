@@ -5,11 +5,14 @@
 
 #include "renderer/cuda_renderer.cuh"
 #include "renderer/cuda_renderer_utils.cuh"
-#include "globals.cuh"
 #include "block_variant/block_variant_manager.cuh"
+#include "light/point_light.cuh"
 
 #include <cuda_runtime.h>
 #include <device_launch_parameters.h>
+
+constexpr float FOCAL_LENGTH = 10000; //350 //1200 //4000
+constexpr float SCALE_V = 1;
 
 constexpr float epsilon = 0.002;
 

@@ -1,9 +1,7 @@
 #include "octree/octree_utils.cuh"
 
-#include "globals.cuh"
 #include "cuda_math.cuh"
 #include "block_variant/block_variant_manager.cuh"
-#include "point_light.cuh"
 
 namespace octree_utils {
     __device__ unsigned int nodeLevel(uint32_t mortonCode, unsigned int octreeLevel){
