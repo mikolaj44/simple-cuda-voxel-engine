@@ -42,7 +42,7 @@ bool getPngImageResolution(std::string imagePath, int& imageWidth, int& imageHei
 	return false;
 }
 
-__host__ cudaError_t BlockTexture::create(int channelsInImg_, std::string* paths) {
+__host__ cudaError_t BlockTexture::init(int channelsInImg_, std::string* paths) {
 	cudaError_t error = cudaSuccess;
 
 	channelsInImg = channelsInImg_;
@@ -53,10 +53,10 @@ __host__ cudaError_t BlockTexture::create(int channelsInImg_, std::string* paths
 		bool imageLoaded = getPngImageResolution(paths[i], widths[i], heights[i]);
 
 		if(!imageLoaded) {
-			throw "Could not load the " + imagePositionName[i] + "side image. Make sure that \"" + imagePositionName[i] + ".png\" is present. Also verify that all images have " + std::to_string(channelsInImg_) + " channels.";
+			throw "Could not load the " + imagePositionName[i] + " side image. Make sure that \"" + imagePositionName[i] + ".png\" is present. Also verify that all images have " + std::to_string(channelsInImg_) + " channels.";
 		}
 
-		hostImages[i] = stbi_load(paths[0].c_str(), &widths[i], &heights[i], &channelsInImg, channels);
+		hostImages[i] = stbi_load(paths[i].c_str(), &widths[i], &heights[i], &channelsInImg, channels);
 
 		size_t imgSize = size_t(widths[i] * heights[i] * channels);
 
@@ -73,6 +73,20 @@ __host__ cudaError_t BlockTexture::create(int channelsInImg_, std::string* paths
 		}
 
 		stbi_image_free(hostImages[i]);
+	}
+
+	return error;
+}
+
+__host__ cudaError_t BlockTexture::cleanup() {
+	cudaError_t error = cudaSuccess;
+
+	for(int i = 0; i < 6; i++) {
+		error = cudaFree(&images[i]);
+
+		if(error != cudaSuccess) {
+			return error;
+		}
 	}
 
 	return error;

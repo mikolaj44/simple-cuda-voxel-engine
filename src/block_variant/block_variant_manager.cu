@@ -5,38 +5,20 @@
 #include <filesystem>
 #include <iostream>
 
+#include <cuda_runtime.h>
+#include <device_launch_parameters.h>
+
 namespace block_variant_manager {
-    __device__ BlockVariant** blockVariants = nullptr;
+    __managed__ BlockVariant** blockVariants = nullptr;
 
-    BlockVariant* blockVariantsHost[127];
-    BlockVariant* blockVariantsDevice = nullptr;
+    unsigned int numVariants;
 
-    BlockTexture** blockTextures;
+    BlockTexture** blockTextures = nullptr;
 
-    __global__ void initializeBlocksVariantsKernel(BlockTexture** blockTextures) {
-        int index = threadIdx.x + blockIdx.x * blockDim.x;
+    cudaError_t init(unsigned int numVariants_) {
+        numVariants = numVariants_;
 
-        if(index < 127) {
-            new (blockVariants[index]) BlockVariant(Material(Vector3<>(255,255,255), 1, 0, 20), blockTextures[index]);
-        }
-    }
-
-    template<typename IdFrameToMaterialFunction>
-    __global__ void setBlocksVariantMaterialsKernel(IdFrameToMaterialFunction func, uint64_t frameNumber, BlockTexture** blockTextures) {
-        int index = threadIdx.x + blockIdx.x * blockDim.x;
-
-        if(index < 127) {
-            blockVariants[index]->material = func(index + 1, frameNumber);
-        }
-    }
-
-    template<typename IdFrameToMaterialFunction>
-    void setMaterials(IdFrameToMaterialFunction func, uint64_t frameNumber) {
-        setBlocksVariantMaterialsKernel<<<127,1>>>(func, frameNumber, blockTextures);
-    }
-
-    cudaError_t init() {
-        cudaError_t error = cudaMallocManaged(&blockTextures, size_t(127 * sizeof(BlockTexture*)));
+        cudaError_t error = cudaMallocManaged(&blockTextures, size_t(sizeof(BlockTexture*) * numVariants));
 
         if(error != cudaSuccess) {
             return error;
@@ -50,7 +32,7 @@ namespace block_variant_manager {
     
         int textureIndex = 0;
     
-        while(textureIndex < 127) {
+        while(textureIndex < numVariants) {
             std::filesystem::path currentPath = textureDirPath;
     
             currentPath += std::to_string(textureIndex + 1);
@@ -71,7 +53,7 @@ namespace block_variant_manager {
             try {
                 new (blockTextures[textureIndex]) BlockTexture();
 
-                error = blockTextures[textureIndex]->create(4, paths);
+                error = blockTextures[textureIndex]->init(4, paths);
 
                 if(error != cudaSuccess) {
                     return error;
@@ -85,41 +67,21 @@ namespace block_variant_manager {
             textureIndex++;
         }
 
-        for(int i = 0; i < 127; i++) {
-            error = cudaMalloc(&blockVariantsHost[i], sizeof(BlockVariant));
+        error = cudaMallocManaged(&blockVariants, sizeof(BlockVariant*) * numVariants);
+
+        if(error != cudaSuccess) {
+            return error;
+        }
+
+        for(int i = 0; i < numVariants; i++) {
+            error = cudaMallocManaged(&blockVariants[i], sizeof(BlockVariant));
 
             if(error != cudaSuccess) {
                 return error;
             }
+
+            new (blockVariants[i]) BlockVariant(Material(Vector3<>(255, 0, 255), 1, 0, 20), blockTextures[i]);
         }
-
-        error = cudaMalloc(&blockVariantsDevice, sizeof(BlockVariant*) * 127);
-
-        if(error != cudaSuccess) {
-            return error;
-        }
-
-        error = cudaMemcpy(blockVariantsDevice, blockVariantsHost, sizeof(BlockVariant*) * 127, cudaMemcpyHostToDevice);
-
-        if(error != cudaSuccess) {
-            return error;
-        }
-
-        error = cudaMemcpyToSymbol(blockVariants, &blockVariantsDevice, sizeof(BlockVariant**));
-
-        if(error != cudaSuccess) {
-            return error;
-        }
-
-        error = cudaFree(blockVariantsDevice);
-
-        if(error != cudaSuccess) {
-            return error;
-        }
-
-        initializeBlocksVariantsKernel<<<1, 127>>>(blockTextures);
-
-        error = cudaDeviceSynchronize();
 
         return error;
     }
@@ -127,8 +89,8 @@ namespace block_variant_manager {
     cudaError_t cleanup() {
         cudaError_t error = cudaSuccess;
 
-        for(int i = 0; i < 127; i++) {
-            error = cudaFree(blockVariantsHost[i]);
+        for(int i = 0; i < numVariants; i++) {
+            error = blockVariants[i]->texture->cleanup();;
 
             if(error != cudaSuccess) {
                 return error;

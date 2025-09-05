@@ -12,9 +12,9 @@
 
 class Octree {
 public:
-	__host__ cudaError_t create(int xMin, int yMin, int zMin, unsigned int maxLevel);
+	__host__ cudaError_t init(int xMin, int yMin, int zMin, unsigned int maxLevel);
 
-	__host__ cudaError_t create(unsigned int maxLevel);
+	__host__ cudaError_t init(unsigned int maxLevel);
 
 	__host__ cudaError_t cleanup();
 
@@ -44,7 +44,7 @@ public:
 		// printf("synchronized\n");
     }
 
-	__device__ Triple<Vector3<int>, Vector3<float>, uint8_t> getRayIntersectionData(uchar4* pixels, Vector3<> rayOrigin, Vector3<> rayDirection, int sX, int sY, int minNodeSize);
+	__device__ Triple<Vector3<int>, Vector3<float>, uint8_t> getRayIntersectionData(Vector3<> rayOrigin, Vector3<> rayDirection, int sX, int sY, int minNodeSize);
 
 	__device__ __host__ void setMinPos(Vector3<> minPos);
 
@@ -76,7 +76,7 @@ private:
 		}
 	};
 
-	Node* nodes;
+	Node* nodes = nullptr;
 
 	int xMin, yMin, zMin;
 
@@ -104,9 +104,9 @@ private:
 
 
 
-	__device__ void traverseNewNode(bool& foundSolid, Triple<Vector3<int>, Vector3<float>, uint8_t>& intersectionData, octree_utils::Stack& stack, uchar4* pixels, Vector3<> origRayOrigin, Vector3<> origRayDirection, float tx0, float ty0, float tz0, float tx1, float ty1, float tz1, unsigned int nodeIdx, int minNodeSize, int sX, int sY);
+	__device__ void traverseNewNode(bool& foundSolid, Triple<Vector3<int>, Vector3<float>, uint8_t>& intersectionData, octree_utils::Stack& stack, Vector3<> origRayOrigin, Vector3<> origRayDirection, float tx0, float ty0, float tz0, float tx1, float ty1, float tz1, unsigned int nodeIdx, int minNodeSize, int sX, int sY);
 
-	__device__ void traverseChildNodes(bool& foundSolid, Triple<Vector3<int>, Vector3<float>, uint8_t>& intersectionData, octree_utils::Stack& stack, octree_utils::Stack::Frame& data, uchar4* pixels, Vector3<> origRayOrigin, Vector3<> origRayDirection, unsigned char a, int minNodeSize, int sX, int sY);
+	__device__ void traverseChildNodes(bool& foundSolid, Triple<Vector3<int>, Vector3<float>, uint8_t>& intersectionData, octree_utils::Stack& stack, octree_utils::Stack::Frame& data, Vector3<> origRayOrigin, Vector3<> origRayDirection, unsigned char a, int minNodeSize, int sX, int sY);
 
 	template<typename XYZFrametoIdFunction>
 	friend __global__ void insertBlockByXYZFrameFunctionKernel(Octree* octree, XYZFrametoIdFunction blockPosToIdFunction, uint64_t frameNumber);
@@ -147,9 +147,9 @@ __global__ void insertFixLODKernel(Octree* octree, XYZFrametoIdFunction blockPos
 
 	unsigned int index = threadIdx.x + blockIdx.x * blockDim.x;
 
-    int x = index % size;
-    int y = (index / size) % size;
-    int z = index / (size * size);
+    int x = (index % size)		    * (1 << level);
+    int y = ((index / size) % size) * (1 << level);
+    int z = (index / (size * size)) * (1 << level);
 
     if(x >= size || y >= size || z >= size) {
         return;

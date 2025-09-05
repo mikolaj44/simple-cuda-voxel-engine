@@ -15,7 +15,9 @@ class BlockTexture {
 public:
 	__host__ BlockTexture() {};
 
-	__host__ cudaError_t create(int channelsInImg, std::string* paths);
+	__host__ cudaError_t init(int channelsInImg, std::string* paths);
+
+	__host__ cudaError_t cleanup();
 
 	__host__ __device__ int getChannels() const;
 

@@ -4,6 +4,7 @@
 
 #include <cuda_runtime.h>
 #include <device_launch_parameters.h>
+#include <stdio.h>
 
 namespace point_light_manager {
     PointLight** pointLightsHost = nullptr;
@@ -24,11 +25,11 @@ namespace point_light_manager {
         }
     }
 
-    __global__ void createLightsKernel(PointLight** pointLights, int numLights) {
+    __global__ void initLightsKernel(PointLight** pointLightsDevice, int numLights) {
         int index = threadIdx.x + blockIdx.x * blockDim.x;
     
         if(index < numLights) {
-            new (pointLights[index]) PointLight(Vector3<float>(0, 0, 0), Vector3<float>(255, 255, 255));
+            new (pointLightsDevice[index]) PointLight(Vector3<float>(0, 0, 0), Vector3<float>(255, 255, 255));
         }
     }
 
@@ -61,7 +62,7 @@ namespace point_light_manager {
             return error;
         }
 
-        createLightsKernel<<<1, numLights>>>(pointLightsDevice, numLights);
+        initLightsKernel<<<1, numLights>>>(pointLightsDevice, numLights);
 
         error = cudaDeviceSynchronize();
 

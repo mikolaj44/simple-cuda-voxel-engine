@@ -11,7 +11,4 @@ namespace point_light_manager {
     cudaError_t init(unsigned int numLights);
 
     cudaError_t cleanup();
-
-    template<typename IndexFrameToPointLightFunction>
-    void setPointLights(IndexFrameToPointLightFunction func, uint64_t frameNumber);
 }

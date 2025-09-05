@@ -12,31 +12,46 @@
 #include "cuda_math.cuh"
 #include "renderer/cuda_renderer.cuh"
 
+#include "light/point_light_manager.cuh"
+
 #include <cuda_runtime.h>
 #include <device_launch_parameters.h>
 
 constexpr float epsilon = 0.00001;
+constexpr float blockHitEpsilon = 0.00001;
 
 namespace {
 	size_t getAllocatedMemoryInBytes(unsigned int maxLevel) {
 		return size_t(2) << (3 * maxLevel + 1);
 	}
+
+	__global__ void testKernel() {
+		printf("color: %f\n", point_light_manager::pointLights[0]->color.x);
+	}
 }
 
 __host__  cudaError_t Octree::allocateByMaxLevel(unsigned int newMaxLevel) {
+	// printf("octree\n");
+	// testKernel<<<1,1>>>();
+
 	allocatedMemoryInBytes = getAllocatedMemoryInBytes(newMaxLevel);
 	maxLevel = newMaxLevel;
 	maxSize = 1 << maxLevel;
 
-	// TODO: copy from the old node array
+	cudaError_t error = cudaSuccess;
 
-	cudaError_t error = cudaFree(nodes);
+	// TODO: copy from the old node array
+	error = cudaFree(nodes);
 
 	if(error != cudaSuccess) {
 		return error;
 	}
 
+	// testKernel<<<1,1>>>();
+
 	error = cudaMalloc(&nodes, allocatedMemoryInBytes);
+
+	// testKernel<<<1,1>>>();
 
 	if(error != cudaSuccess) {
 		return error;
@@ -71,15 +86,15 @@ __host__  cudaError_t Octree::allocateByMaxLevel(unsigned int newMaxLevel) {
 	return error;
 }
 
-__host__ cudaError_t Octree::create(int xMin_, int yMin_, int zMin_, unsigned int maxLevel_) {
+__host__ cudaError_t Octree::init(int xMin_, int yMin_, int zMin_, unsigned int maxLevel_) {
 	xMin = xMin_;
 	yMin = yMin_;
 	zMin = zMin_;
 	return allocateByMaxLevel(maxLevel_);
 }
 
-__host__ cudaError_t Octree::create(unsigned int maxLevel) {
-	return create(0, 0, 0, maxLevel);
+__host__ cudaError_t Octree::init(unsigned int maxLevel) {
+	return init(0, 0, 0, maxLevel);
 }
 
 __host__ cudaError_t Octree::cleanup() {
@@ -95,8 +110,6 @@ __device__ Vector3<int> Octree::morton3Ddecode(uint32_t mortonCode) {
 
 	int index = 0;
 	uint32_t code = mortonCode;
-
-	// 0000101001
 
 	while(code >>= 1) {
 		index++;
@@ -243,7 +256,7 @@ __device__ void Octree::insertFixLOD(uint32_t mortonCode, uint8_t blockId) {
 	nodes[mortonCode].id = blockId;
 }
 
-__device__ void Octree::traverseNewNode(bool& foundSolid, Triple<Vector3<int>, Vector3<>, uint8_t>& intersectionData, octree_utils::Stack& stack, uchar4* pixels, Vector3<> origRayOrigin, Vector3<> origRayDirection, float tx0, float ty0, float tz0, float tx1, float ty1, float tz1, unsigned int nodeIdx, int minNodeSize, int sX, int sY) {
+__device__ void Octree::traverseNewNode(bool& foundSolid, Triple<Vector3<int>, Vector3<>, uint8_t>& intersectionData, octree_utils::Stack& stack, Vector3<> origRayOrigin, Vector3<> origRayDirection, float tx0, float ty0, float tz0, float tx1, float ty1, float tz1, unsigned int nodeIdx, int minNodeSize, int sX, int sY) {
 	using namespace octree_utils::revelles;
 	using namespace octree_utils;
 	
@@ -253,8 +266,12 @@ __device__ void Octree::traverseNewNode(bool& foundSolid, Triple<Vector3<int>, V
 
 	if (!nodes[nodeIdx].isMixed() && nodes[nodeIdx].blockId() != 0) { // nodeLevel(nodeIdx, maxLevel) == 0 && nodes[nodeIdx].blockId() != 0
 		intersectionData.first = morton3Ddecode(nodeIdx);
-		intersectionData.second = getBlockHitPos(intersectionData.first, origRayOrigin, origRayDirection);
+		intersectionData.second = getBlockHitPos(intersectionData.first, origRayOrigin, origRayDirection, blockHitEpsilon);
 		intersectionData.third = nodes[nodeIdx].blockId();
+
+		// if(intersectionData.first != Vector3<int>(-512, -512, -512)) {
+		// 	printf("%d %d %d -> %f %f %f | morton: %d | id: %d\n", intersectionData.first.x, intersectionData.first.y, intersectionData.first.z, intersectionData.second.x, intersectionData.second.y, intersectionData.second.z, nodeIdx, intersectionData.third);
+		// }
 		
 		foundSolid = true;
 		return;
@@ -278,40 +295,40 @@ __device__ void Octree::traverseNewNode(bool& foundSolid, Triple<Vector3<int>, V
 	});
 }
 
-__device__ void Octree::traverseChildNodes(bool& foundSolid, Triple<Vector3<int>, Vector3<>, uint8_t>& intersectionData, octree_utils::Stack& stack, octree_utils::Stack::Frame& data, uchar4* pixels, Vector3<> origRayOrigin, Vector3<> origRayDirection, unsigned char a, int minNodeSize, int sX, int sY) {
+__device__ void Octree::traverseChildNodes(bool& foundSolid, Triple<Vector3<int>, Vector3<>, uint8_t>& intersectionData, octree_utils::Stack& stack, octree_utils::Stack::Frame& data, Vector3<> origRayOrigin, Vector3<> origRayDirection, unsigned char a, int minNodeSize, int sX, int sY) {
 	using namespace octree_utils::revelles;
 	
 	switch (data.nodeIndex) {
 		case 0:
 			data.nodeIndex = newNode(data.txm, 4, data.tym, 2, data.tzm, 1, epsilon);
-			return traverseNewNode(foundSolid, intersectionData, stack, pixels, origRayOrigin, origRayDirection, data.tx0, data.ty0, data.tz0, data.txm, data.tym, data.tzm, childMortonRevelles(data.mortonCode,     a), minNodeSize, sX, sY);
+			return traverseNewNode(foundSolid, intersectionData, stack, origRayOrigin, origRayDirection, data.tx0, data.ty0, data.tz0, data.txm, data.tym, data.tzm, childMortonRevelles(data.mortonCode,     a), minNodeSize, sX, sY);
 		case 1:
 			data.nodeIndex = newNode(data.txm, 5, data.tym, 3, data.tz1, 8, epsilon);
-			return traverseNewNode(foundSolid, intersectionData, stack, pixels, origRayOrigin, origRayDirection, data.tx0, data.ty0, data.tzm, data.txm, data.tym, data.tz1, childMortonRevelles(data.mortonCode, 1 ^ a), minNodeSize, sX, sY);
+			return traverseNewNode(foundSolid, intersectionData, stack, origRayOrigin, origRayDirection, data.tx0, data.ty0, data.tzm, data.txm, data.tym, data.tz1, childMortonRevelles(data.mortonCode, 1 ^ a), minNodeSize, sX, sY);
 		case 2:
 			data.nodeIndex = newNode(data.txm, 6, data.ty1, 8, data.tzm, 3, epsilon);
-			return traverseNewNode(foundSolid, intersectionData, stack, pixels, origRayOrigin, origRayDirection, data.tx0, data.tym, data.tz0, data.txm, data.ty1, data.tzm, childMortonRevelles(data.mortonCode, 2 ^ a), minNodeSize, sX, sY);
+			return traverseNewNode(foundSolid, intersectionData, stack, origRayOrigin, origRayDirection, data.tx0, data.tym, data.tz0, data.txm, data.ty1, data.tzm, childMortonRevelles(data.mortonCode, 2 ^ a), minNodeSize, sX, sY);
 		case 3:
 			data.nodeIndex = newNode(data.txm, 7, data.ty1, 8, data.tz1, 8, epsilon);
-			return traverseNewNode(foundSolid, intersectionData, stack, pixels, origRayOrigin, origRayDirection, data.tx0, data.tym, data.tzm, data.txm, data.ty1, data.tz1, childMortonRevelles(data.mortonCode, 3 ^ a), minNodeSize, sX, sY);
+			return traverseNewNode(foundSolid, intersectionData, stack, origRayOrigin, origRayDirection, data.tx0, data.tym, data.tzm, data.txm, data.ty1, data.tz1, childMortonRevelles(data.mortonCode, 3 ^ a), minNodeSize, sX, sY);
 		case 4:
 			data.nodeIndex = newNode(data.tx1, 8, data.tym, 6, data.tzm, 5, epsilon);
-			return traverseNewNode(foundSolid, intersectionData, stack, pixels, origRayOrigin, origRayDirection, data.txm, data.ty0, data.tz0, data.tx1, data.tym, data.tzm, childMortonRevelles(data.mortonCode, 4 ^ a), minNodeSize, sX, sY);
+			return traverseNewNode(foundSolid, intersectionData, stack, origRayOrigin, origRayDirection, data.txm, data.ty0, data.tz0, data.tx1, data.tym, data.tzm, childMortonRevelles(data.mortonCode, 4 ^ a), minNodeSize, sX, sY);
 		case 5:
 			data.nodeIndex = newNode(data.tx1, 8, data.tym, 7, data.tz1, 8, epsilon);
-			return traverseNewNode(foundSolid, intersectionData, stack, pixels, origRayOrigin, origRayDirection, data.txm, data.ty0, data.tzm, data.tx1, data.tym, data.tz1, childMortonRevelles(data.mortonCode, 5 ^ a), minNodeSize, sX, sY);
+			return traverseNewNode(foundSolid, intersectionData, stack, origRayOrigin, origRayDirection, data.txm, data.ty0, data.tzm, data.tx1, data.tym, data.tz1, childMortonRevelles(data.mortonCode, 5 ^ a), minNodeSize, sX, sY);
 		case 6:
 			data.nodeIndex = newNode(data.tx1, 8, data.ty1, 8, data.tzm, 7, epsilon);
-			return traverseNewNode(foundSolid, intersectionData, stack, pixels, origRayOrigin, origRayDirection, data.txm, data.tym, data.tz0, data.tx1, data.ty1, data.tzm, childMortonRevelles(data.mortonCode, 6 ^ a), minNodeSize, sX, sY);
+			return traverseNewNode(foundSolid, intersectionData, stack, origRayOrigin, origRayDirection, data.txm, data.tym, data.tz0, data.tx1, data.ty1, data.tzm, childMortonRevelles(data.mortonCode, 6 ^ a), minNodeSize, sX, sY);
 		case 7:
 			data.nodeIndex = 8;
-			return traverseNewNode(foundSolid, intersectionData, stack, pixels, origRayOrigin, origRayDirection, data.txm, data.tym, data.tzm, data.tx1, data.ty1, data.tz1, childMortonRevelles(data.mortonCode, 7 ^ a), minNodeSize, sX, sY);
+			return traverseNewNode(foundSolid, intersectionData, stack, origRayOrigin, origRayDirection, data.txm, data.tym, data.tzm, data.tx1, data.ty1, data.tz1, childMortonRevelles(data.mortonCode, 7 ^ a), minNodeSize, sX, sY);
 		case 8:
 			stack.pop();
 	}
 }
 
-__device__ Triple<Vector3<int>, Vector3<>, uint8_t> Octree::getRayIntersectionData(uchar4* pixels, Vector3<> rayOrigin, Vector3<> rayDirection, int sX, int sY, int minNodeSize) {
+__device__ Triple<Vector3<int>, Vector3<>, uint8_t> Octree::getRayIntersectionData(Vector3<> rayOrigin, Vector3<> rayDirection, int sX, int sY, int minNodeSize) {
 	unsigned char a = 0;
 
 	Vector3<> origRayOrigin = rayOrigin;
@@ -346,10 +363,10 @@ __device__ Triple<Vector3<int>, Vector3<>, uint8_t> Octree::getRayIntersectionDa
 		octree_utils::Stack stack;
 		bool foundSolid = false;
 
-		traverseNewNode(foundSolid, intersectionData, stack, pixels, origRayOrigin, origRayDirection, tx0, ty0, tz0, tx1, ty1, tz1, 1, minNodeSize, sX, sY);
+		traverseNewNode(foundSolid, intersectionData, stack, origRayOrigin, origRayDirection, tx0, ty0, tz0, tx1, ty1, tz1, 1, minNodeSize, sX, sY);
 
 		while (!stack.isEmpty() && !foundSolid) {
-			traverseChildNodes(foundSolid, intersectionData, stack, stack.top(), pixels, origRayOrigin, origRayDirection, a, minNodeSize, sX, sY);
+			traverseChildNodes(foundSolid, intersectionData, stack, stack.top(), origRayOrigin, origRayDirection, a, minNodeSize, sX, sY);
 		}
 	}
 

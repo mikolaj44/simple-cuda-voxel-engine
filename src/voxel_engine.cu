@@ -16,9 +16,10 @@
 
 bool VoxelEngine::isInitialized = false;
 bool VoxelEngine::isTextureRenderingEnabled = true;
-bool VoxelEngine::isCalculatingInsertLODsEnabled = true;
+bool VoxelEngine::isCalculatingInsertLODsEnabled = false;
 bool VoxelEngine::isMaterialColorOnlyEnabled = false;
-bool VoxelEngine::isMouseControlEnabled = true;
+bool VoxelEngine::isMouseControlEnabled = false;
+bool VoxelEngine::isKeyboardControlEnabled = true;
 
 unsigned int VoxelEngine::windowWidth;
 unsigned int VoxelEngine::windowHeight;
@@ -37,9 +38,12 @@ Vector3<> VoxelEngine::cameraAngle = Vector3<>(0, 0, 0);
 
 float VoxelEngine::cameraSpeed = 1;
 float VoxelEngine::cameraTurnSpeed = 0.1;
-float VoxelEngine::mouseSensitivity = 0.004;
+float VoxelEngine::mouseSensitivity = 0.0002;
 
-void VoxelEngine::handleCameraMovement(int mouseX, int mouseY, int& prevMouseX, int& prevMouseY) {
+int VoxelEngine::prevMouseX;
+int VoxelEngine::prevMouseY;
+
+void VoxelEngine::handleCameraMovement(int mouseX, int mouseY) {
     mouseX -= windowWidth / 2;
     mouseY -= windowHeight / 2;
 
@@ -53,8 +57,6 @@ void VoxelEngine::handleCameraMovement(int mouseX, int mouseY, int& prevMouseX, 
         cameraAngle.x = M_PI / 2.0;
     }
 
-    //cout << cameraAngle.x << endl;
-
     prevMouseX = mouseX;
     prevMouseY = mouseY;
 }
@@ -63,11 +65,13 @@ cudaError_t VoxelEngine::clearVoxels(){
     return octree->clear();
 }
 
+__global__ void testKernel() {
+    printf("color: %f\n", point_light_manager::pointLights[0]->color.x);
+}
+
 template <bool displayFrame>
 void VoxelEngine::inputLoop(void (*func)()) {
     bool quit = false;
-
-    int prevMouseX = 0, prevMouseY = 0;
 
     while (!quit) {
         SDL_Event event_;
@@ -78,7 +82,7 @@ void VoxelEngine::inputLoop(void (*func)()) {
 
                 case SDL_MOUSEMOTION:
                     if (isMouseControlEnabled) {
-                        handleCameraMovement(event_.motion.x, event_.motion.y, prevMouseX, prevMouseY);
+                        handleCameraMovement(event_.motion.x, event_.motion.y);
                     }
                     break;
 
@@ -95,6 +99,9 @@ void VoxelEngine::inputLoop(void (*func)()) {
                     return;
 
                 case SDL_KEYDOWN:
+                    if(!isKeyboardControlEnabled) {
+                        break;
+                    }
                     switch (event_.key.keysym.sym) {
                         case SDLK_z:
                             cameraSpeed /= 2;
@@ -191,7 +198,19 @@ cudaError_t VoxelEngine::init(unsigned int windowWidth_, unsigned int windowHeig
     const int threadsPerBlock = 600;
     const int blocksPerGrid = (windowWidth_ * windowHeight_ + threadsPerBlock - 1) / threadsPerBlock;
 
-    error = block_variant_manager::init();
+    error = cudaMallocManaged(&octree, sizeof(Octree));
+
+    if(error != cudaSuccess) {
+        return error;
+    }
+
+    error = octree->init(initialMaxOctreeDepth);
+
+    if(error != cudaSuccess) {
+        return error;
+    }
+
+    error = block_variant_manager::init(127);
 
     if(error != cudaSuccess) {
         return error;
@@ -203,19 +222,9 @@ cudaError_t VoxelEngine::init(unsigned int windowWidth_, unsigned int windowHeig
         return error;
     }
 
+    // testKernel<<<1,1>>>();
+
     error = cuda_renderer::init(windowWidth_, windowHeight_);
-
-    if(error != cudaSuccess) {
-        return error;
-    }
-
-    error = cudaMallocManaged(&octree, sizeof(Octree));
-
-    if(error != cudaSuccess) {
-        return error;
-    }
-
-    error = octree->create(initialMaxOctreeDepth);
 
     if(error != cudaSuccess) {
         return error;
@@ -223,11 +232,15 @@ cudaError_t VoxelEngine::init(unsigned int windowWidth_, unsigned int windowHeig
 
     isInitialized = true;
 
+    // testKernel<<<1,1>>>();
+
     return error;
 }
 
 cudaError_t VoxelEngine::cleanup() {
-    cudaError_t error = octree->cleanup();
+    cudaError_t error = cudaSuccess;
+    
+    error = octree->cleanup();
 
     if(error != cudaSuccess) {
         return error;
@@ -360,6 +373,14 @@ float VoxelEngine::getMouseSensitivity() {
 
 void VoxelEngine::setMouseSensitivity(float sensitivity) {
     mouseSensitivity = sensitivity;
+}
+
+bool VoxelEngine::getKeyboardControlEnabled() {
+    return isKeyboardControlEnabled;
+}
+
+void VoxelEngine::setKeyboardControlEnabled(bool isEnabled) {
+    isKeyboardControlEnabled = isEnabled;
 }
 
 bool VoxelEngine::getMouseControlEnabled() {

@@ -65,6 +65,10 @@ public:
 
     static void setMouseSensitivity(float sensitivity);
 
+    static bool getKeyboardControlEnabled();
+
+    static void setKeyboardControlEnabled(bool isEnabled);
+
     static bool getMouseControlEnabled();
 
     static void setMouseControlEnabled(bool isEnabled);
@@ -72,6 +76,7 @@ public:
     template<typename XYZFrameToIdFunction>
     static cudaError_t insertVoxels(XYZFrameToIdFunction func) {
         uint64_t totalVoxels = octree->getMaxSize();
+
         totalVoxels = totalVoxels * totalVoxels * totalVoxels;
 
         return octree->insertBlockByXYZFrameFunction(func, frameNumber, isCalculatingInsertLODsEnabled, (totalVoxels + insertionBlockSize - 1) / insertionBlockSize,  insertionBlockSize);
@@ -79,7 +84,7 @@ public:
 
     template<typename IdFrameToMaterialFunction>
     static void setMaterials(IdFrameToMaterialFunction func) {
-        block_variant_manager::setMaterials(func, frameNumber);
+        block_variant_manager::setBlocksVariantMaterialsKernel<<<1, block_variant_manager::numVariants>>>(func, frameNumber, block_variant_manager::numVariants);
     }
 
     template <bool displayFrame = true>
@@ -93,6 +98,8 @@ private:
 
     static bool isMaterialColorOnlyEnabled;
 
+    static bool isKeyboardControlEnabled;
+
     static bool isMouseControlEnabled;
 
     static unsigned int windowWidth, windowHeight;
@@ -100,6 +107,9 @@ private:
     static const unsigned int insertionBlockSize = 512;
 
     static unsigned int numLights;
+
+    static int prevMouseX;
+    static int prevMouseY;
 
     static Octree* octree;
 
@@ -117,7 +127,7 @@ private:
 
     static void initBlockTextures();
 
-    static void handleCameraMovement(int mouseX, int mouseY, int& prevMouseX, int& prevMouseY);
+    static void handleCameraMovement(int mouseX, int mouseY);
 
     static cudaError_t initLights();
 };

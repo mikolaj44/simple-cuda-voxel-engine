@@ -35,11 +35,7 @@ namespace octree_utils {
         }
     };
 
-    __device__ unsigned int nodeLevel(uint32_t mortonCode, unsigned int octreeLevel);
-
-    __device__ unsigned int nodeSize(uint32_t mortonCode, unsigned int octreeLevel);
-
-    __device__ Vector3<> getBlockHitPos(Vector3<int> blockPos, Vector3<> rayOrigin, Vector3<> rayDirection);
+    __device__ Vector3<> getBlockHitPos(Vector3<int> blockPos, Vector3<> rayOrigin, Vector3<> rayDirection, float epsilon);
 
     namespace revelles {
         __device__ unsigned char firstNode(float tx0, float ty0, float tz0, float txm, float tym, float tzm, float epsilon);

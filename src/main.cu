@@ -34,12 +34,17 @@
 // }
 
 int main() {
-    std::cout << VoxelEngine::init(1920, 1080, VoxelEngine::getMaxOctreeLevelByGPU()) << std:: endl;
+    std::cout << VoxelEngine::init(1920, 1080, 10) << std::endl;
 
     VoxelEngine::setOctreeMinPos(Vector3<>(-512, -512, -512));
 
     auto blockPosFrameToIdFunction = [] __device__ (int x, int y, int z, uint64_t frameNumber) {
-        int maxIterations = 2;
+        //if(x == 204 && y == 253 && z == 01)
+        //if(x == y)
+        return (absv(x) + absv(y) + absv(z)) % 127 + 1;
+        //return 0;
+        
+        int maxIterations = 7;
 
         float newX = float(x) / 450.0;
         float newY = float(y) / 450.0;
@@ -92,25 +97,31 @@ int main() {
         //     return 4;
 
         //if(x < 100)
-            return int(sqrtf(x*x + y*y + z*z)) % 4 + 1;
+            return int(sqrtf(x*x + y*y + z*z)) % 127 + 1;
         return 0;
 
         // return int(sqrtf(absv(x) * absv(x) * absv(x) + absv(x) + absv(y) + absv(z))) % 127 + 1; 
     };
 
-    VoxelEngine::setTextureRenderingEnabled(true);
+    auto blockIdFrameToIdFunction = [] __device__ (uint8_t blockId, uint64_t frameNumber) {
+        return Material(Vector3<>(blockId * blockId, blockId, blockId + blockId));
+    };
+
+    VoxelEngine::setCameraPos(Vector3<>(0, 0, -10000));
+
+    VoxelEngine::setTextureRenderingEnabled(false);
 
     VoxelEngine::setCalculatingInsertLODsEnabled(false);
 
+    VoxelEngine::setMaterialColorOnlyEnabled(true);
+
+    VoxelEngine::setMouseControlEnabled(false);
+
     VoxelEngine::insertVoxels(blockPosFrameToIdFunction);
 
-    // auto idFrameToMaterialFunction = [] __device__ (uint8_t id, uint64_t frameNumber) {
-    //     return Material(Vector3<>(255,255,255), 1, 0, 20);
-    // };
+    VoxelEngine::setMaterials(blockIdFrameToIdFunction);
 
     // printf("done inserting\n");
-
-    // VoxelEngine::setCameraPos(Vector3<>(0, 0, -100));
 
     VoxelEngine::inputLoop();
 

@@ -6,7 +6,7 @@
 #include "renderer/cuda_renderer.cuh"
 #include "renderer/cuda_renderer_utils.cuh"
 #include "block_variant/block_variant_manager.cuh"
-#include "light/point_light.cuh"
+#include "light/point_light_manager.cuh"
 
 #include <cuda_runtime.h>
 #include <device_launch_parameters.h>
@@ -14,7 +14,7 @@
 constexpr float FOCAL_LENGTH = 10000; //350 //1200 //4000
 constexpr float SCALE_V = 1;
 
-constexpr float epsilon = 0.002;
+constexpr float epsilon = 0.01;
 
 namespace cuda_renderer {
     namespace {
@@ -35,8 +35,10 @@ namespace cuda_renderer {
             return Vector3<>(r, g, b);
         }
 
-        __device__ Vector3<> getPhongIllumination(Vector3<> startColor, Vector3<> pos, Vector3<> cameraPos, Vector3<> normal, Material material, PointLight light){        
-            Vector3<> ln = Vector3<>(light.pos.x - pos.x, light.pos.y - pos.y, light.pos.z - pos.z).norm();
+        __device__ Vector3<> getPhongIllumination(Vector3<> startColor, Vector3<> pos, Vector3<> cameraPos, Vector3<> normal, Material material) {    
+            using namespace point_light_manager;
+
+            Vector3<> ln = Vector3<>(pointLights[0]->pos.x - pos.x, pointLights[0]->pos.y - pos.y, pointLights[0]->pos.z - pos.z).norm();
         
             if (normal.dot(ln) < 0) {
                 return Vector3<>(0, 0, 0);
@@ -46,7 +48,7 @@ namespace cuda_renderer {
 
             Vector3<> dh = normal.mul(2 * ln.dot(normal)).sub(ln).norm();
 
-            Vector3<> lighting = light.color.mul(material.diffuse * normal.dot(ln));
+            Vector3<> lighting = pointLights[0]->color.mul(material.diffuse * normal.dot(ln));
             
             return lighting.clamp(255).div(255.0).mul(startColor);
         }
@@ -61,12 +63,10 @@ namespace cuda_renderer {
             }
     
             int imgWidth, imgHeight, imgChannels;
+
+            blockId -= 1;
     
             if(isTextureRenderingEnabled && !isMaterialColorOnlyEnabled) {
-                blockId -= 1;
-                // TODO: temporary TOP index
-                imgWidth = blockVariants[blockId]->texture->getWidth(ImagePosition::TOP);
-                imgHeight = blockVariants[blockId]->texture->getHeight(ImagePosition::TOP);
                 imgChannels = blockVariants[blockId]->texture->getChannels();
             }
     
@@ -83,9 +83,14 @@ namespace cuda_renderer {
             int r, g, b;
             Vector3<> normal;
 
+            // printf("%d %d %d -> %f %f %f\n", blockX, blockY, blockZ, x, y, z);
+
             // check which side of the block we are on    
             if (equals(y, (float)blockY, epsilon)) { // top
                 if(isTextureRenderingEnabled && !isMaterialColorOnlyEnabled){
+                    imgWidth = blockVariants[blockId]->texture->getWidth(ImagePosition::TOP);
+                    imgHeight = blockVariants[blockId]->texture->getHeight(ImagePosition::TOP);
+
                     imgX = (int)(absv(x - (int)x) * imgWidth);
                     imgY = (int)(absv(z - (int)z) * imgHeight);
     
@@ -97,7 +102,10 @@ namespace cuda_renderer {
                 normal = Vector3<>(0, -1, 0);
             }
             else if (equals(y, (float)blockY + 1.0, epsilon)) { // bottom
-                if(isTextureRenderingEnabled && !isMaterialColorOnlyEnabled){
+                if(isTextureRenderingEnabled && !isMaterialColorOnlyEnabled) {
+                    imgWidth = blockVariants[blockId]->texture->getWidth(ImagePosition::BOTTOM);
+                    imgHeight = blockVariants[blockId]->texture->getHeight(ImagePosition::BOTTOM);
+
                     imgX = (int)(absv(x - (int)x) * imgWidth);
                     imgY = (int)(absv(z - (int)z) * imgHeight);
     
@@ -110,6 +118,9 @@ namespace cuda_renderer {
             }
             else if (equals(x, (float)blockX, epsilon)) { // left
                 if(isTextureRenderingEnabled && !isMaterialColorOnlyEnabled){
+                    imgWidth = blockVariants[blockId]->texture->getWidth(ImagePosition::LEFT);
+                    imgHeight = blockVariants[blockId]->texture->getHeight(ImagePosition::LEFT);
+
                     imgX = (int)(absv(z - (int)z) * imgWidth);
                     imgY = (int)(absv(y - (int)y) * imgHeight);
     
@@ -122,6 +133,9 @@ namespace cuda_renderer {
             }
             else if (equals(x, (float)blockX + 1.0, epsilon)) { // right
                 if(isTextureRenderingEnabled && !isMaterialColorOnlyEnabled){
+                    imgWidth = blockVariants[blockId]->texture->getWidth(ImagePosition::RIGHT);
+                    imgHeight = blockVariants[blockId]->texture->getHeight(ImagePosition::RIGHT);
+
                     imgX = (int)(absv(z - (int)z) * imgWidth);
                     imgY = (int)(absv(y - (int)y) * imgHeight);
     
@@ -134,6 +148,9 @@ namespace cuda_renderer {
             }
             else if (equals(z, (float)blockZ, epsilon)) { // front
                 if(isTextureRenderingEnabled && !isMaterialColorOnlyEnabled){
+                    imgWidth = blockVariants[blockId]->texture->getWidth(ImagePosition::FRONT);
+                    imgHeight = blockVariants[blockId]->texture->getHeight(ImagePosition::FRONT);
+
                     imgX = (int)(absv(x - (int)x) * imgWidth);
                     imgY = (int)(absv(y - (int)y) * imgHeight);
     
@@ -146,6 +163,9 @@ namespace cuda_renderer {
             }
             else if (equals(z, (float)blockZ + 1.0, epsilon)) { // back
                 if(isTextureRenderingEnabled && !isMaterialColorOnlyEnabled){
+                    imgWidth = blockVariants[blockId]->texture->getWidth(ImagePosition::BACK);
+                    imgHeight = blockVariants[blockId]->texture->getHeight(ImagePosition::BACK);
+
                     imgX = (int)(absv(x - (int)x) * imgWidth);
                     imgY = (int)(absv(y - (int)y) * imgHeight);
     
@@ -157,6 +177,8 @@ namespace cuda_renderer {
                 normal = Vector3<>(0, 0, 1);
             }
             else {
+                // printf("black\n");
+                // printf("%d %d %d -> %f %f %f\n", blockX, blockY, blockZ, x, y, z);
                 return;
             }
 
@@ -169,16 +191,17 @@ namespace cuda_renderer {
                 color = hueToRGB(float(blockId) * 2.8125 / 360.0);
             }
     
-            // color = getPhongIllumination(color, Vector3<>(x, y, z), cameraPos, normal, blockVariants[blockId]->material, PointLight(Vector3<>(0, 700, -1000), Vector3<>(255,255,255)));
-    
+            // color = getPhongIllumination(color, Vector3<>(x, y, z), cameraPos, normal, blockVariants[blockId]->material);
+
             setPixel(pixels, windowWidth, windowHeight, sX, sY, (int)color.x, (int)color.y, (int)color.z, 255);
         }
 
-        __global__ void renderKernel(uchar4* pixels, Octree* octree, Vector3<> cameraPos, Vector3<> cameraAngle2d, int windowWidth, int windowHeight, bool isTextureRenderingEnabled, bool isMaterialColorOnlyEnabled) {            
+        __global__ void renderKernel(uchar4* pixels, Octree* octree, Vector3<> cameraPos, Vector3<> cameraAngle2d, int windowWidth, int windowHeight, bool isTextureRenderingEnabled, bool isMaterialColorOnlyEnabled) {                        
             unsigned int index = threadIdx.x + blockDim.x * blockIdx.x;
 
-            if (index >= windowWidth * windowHeight)
+            if (index >= windowWidth * windowHeight) {
                 return;
+            }
 
             int sX = index % windowWidth;
             int sY = index / windowWidth;
@@ -190,7 +213,7 @@ namespace cuda_renderer {
             float dZ = sin(polar) * sin(alpha);
             float dY = cos(polar);
 
-            Triple<Vector3<int>, Vector3<>, uint8_t> intersectionData = octree->getRayIntersectionData(pixels, cameraPos, Vector3<>(dX, dY, dZ), sX, sY, 1);
+            Triple<Vector3<int>, Vector3<>, uint8_t> intersectionData = octree->getRayIntersectionData(cameraPos, Vector3<>(dX, dY, dZ), sX, sY, 1);
 
             if(intersectionData.third == 0) {
                 setPixel(pixels, windowWidth, windowHeight, sX, sY, 0, 0, 255, 255);
@@ -202,6 +225,7 @@ namespace cuda_renderer {
             }
         }
     }
+
 
     cudaError_t init(int windowWidth, int windowHeight) {
         return cuda_renderer_utils::initSDL(windowWidth, windowHeight);

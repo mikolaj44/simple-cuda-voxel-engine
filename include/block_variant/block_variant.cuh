@@ -8,5 +8,5 @@ public:
     Material material;
     BlockTexture* texture;
 
-    __device__ BlockVariant(Material material_, BlockTexture* texture_) : material(material_), texture(texture_) {};
+    BlockVariant(Material material_, BlockTexture* texture_) : material(material_), texture(texture_) {};
 };
