@@ -41,7 +41,7 @@ int main() {
     auto blockPosFrameToIdFunction = [] __device__ (int x, int y, int z, uint64_t frameNumber) {
         //if(x == 204 && y == 253 && z == 01)
         //if(x == y)
-        return (absv(x) + absv(y) + absv(z)) % 127 + 1;
+         return (absv(x) + absv(y) + absv(z)) % 127 + 1;
         //return 0;
         
         int maxIterations = 7;
@@ -97,25 +97,29 @@ int main() {
         //     return 4;
 
         //if(x < 100)
-            return int(sqrtf(x*x + y*y + z*z)) % 127 + 1;
+            return int(sqrtf(x*x + y*y + z*z)) % 4 + 1;
         return 0;
 
         // return int(sqrtf(absv(x) * absv(x) * absv(x) + absv(x) + absv(y) + absv(z))) % 127 + 1; 
     };
 
     auto blockIdFrameToIdFunction = [] __device__ (uint8_t blockId, uint64_t frameNumber) {
-        return Material(Vector3<>(blockId * blockId, blockId, blockId + blockId));
+        return Material(Vector3<>(255, 0, 0), 1.0, 0.0, 20.0);
+
+        // return Material(Vector3<>(blockId * blockId, blockId, blockId + blockId), 1.0, 0.0, 20.0);
     };
 
     VoxelEngine::setCameraPos(Vector3<>(0, 0, -10000));
 
-    VoxelEngine::setTextureRenderingEnabled(false);
+    VoxelEngine::setTextureRenderingEnabled(true);
 
     VoxelEngine::setCalculatingInsertLODsEnabled(false);
 
-    VoxelEngine::setMaterialColorOnlyEnabled(true);
+    VoxelEngine::setMaterialColorOnlyEnabled(false);
 
     VoxelEngine::setMouseControlEnabled(false);
+
+    VoxelEngine::setPhongIlluminationEnabled(false);
 
     VoxelEngine::insertVoxels(blockPosFrameToIdFunction);
 

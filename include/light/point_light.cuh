@@ -9,7 +9,7 @@ public:
     Vector3<> pos;
     Vector3<> color;
 
-    __device__ PointLight() {};
+    PointLight() {};
 
-    __device__ PointLight(Vector3<> pos_, Vector3<> color_) : pos(pos_), color(color_) {};
+    PointLight(Vector3<> pos_, Vector3<> color_) : pos(pos_), color(color_) {};
 };

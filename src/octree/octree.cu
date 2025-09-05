@@ -26,7 +26,7 @@ namespace {
 	}
 
 	__global__ void testKernel() {
-		printf("color: %f\n", point_light_manager::pointLights[0]->color.x);
+		printf("color: %f\n", ((*point_light_manager::pointLights)[0])->color.x);
 	}
 }
 

@@ -82,7 +82,7 @@ __host__ cudaError_t BlockTexture::cleanup() {
 	cudaError_t error = cudaSuccess;
 
 	for(int i = 0; i < 6; i++) {
-		error = cudaFree(&images[i]);
+		error = cudaFree(images[i]);
 
 		if(error != cudaSuccess) {
 			return error;

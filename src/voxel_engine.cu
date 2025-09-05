@@ -20,6 +20,7 @@ bool VoxelEngine::isCalculatingInsertLODsEnabled = false;
 bool VoxelEngine::isMaterialColorOnlyEnabled = false;
 bool VoxelEngine::isMouseControlEnabled = false;
 bool VoxelEngine::isKeyboardControlEnabled = true;
+bool VoxelEngine::isPhongIlluminationEnabled = true;
 
 unsigned int VoxelEngine::windowWidth;
 unsigned int VoxelEngine::windowHeight;
@@ -42,6 +43,8 @@ float VoxelEngine::mouseSensitivity = 0.0002;
 
 int VoxelEngine::prevMouseX;
 int VoxelEngine::prevMouseY;
+
+unsigned int VoxelEngine::renderBlocksPerGrid;
 
 void VoxelEngine::handleCameraMovement(int mouseX, int mouseY) {
     mouseX -= windowWidth / 2;
@@ -66,7 +69,8 @@ cudaError_t VoxelEngine::clearVoxels(){
 }
 
 __global__ void testKernel() {
-    printf("color: %f\n", point_light_manager::pointLights[0]->color.x);
+    printf("color: %f\n", ((*point_light_manager::pointLights)[0])->color.x);
+    printf("size: %d\n", point_light_manager::pointLights->size());
 }
 
 template <bool displayFrame>
@@ -109,9 +113,16 @@ void VoxelEngine::inputLoop(void (*func)()) {
                         case SDLK_x:
                             cameraSpeed *= 2;
                             break;
+
                         case SDLK_c:
                             isTextureRenderingEnabled = !isTextureRenderingEnabled;
-                            break; 
+                            break;
+                        case SDLK_v:
+                            isPhongIlluminationEnabled = !isPhongIlluminationEnabled;
+                            break;
+                        case SDLK_b:
+                            isMaterialColorOnlyEnabled = !isMaterialColorOnlyEnabled;
+                            break;
 
                         case SDLK_UP:
                             cameraPos.x += sin(cameraAngle.y) * cameraSpeed;
@@ -163,8 +174,10 @@ void VoxelEngine::inputLoop(void (*func)()) {
             }
         }
 
+        // testKernel<<<1,1>>>();
+
         if constexpr (displayFrame) {
-            cuda_renderer::render(octree, cameraPos, cameraAngle, windowWidth, windowHeight, isTextureRenderingEnabled, isMaterialColorOnlyEnabled, 4096, 512);
+            cuda_renderer::render(octree, cameraPos, cameraAngle, windowWidth, windowHeight, isTextureRenderingEnabled, isMaterialColorOnlyEnabled, isPhongIlluminationEnabled, renderBlocksPerGrid, renderThreadsPerBlock);
             SDL_GL_SwapWindow(window);
 
             frameNumber++;
@@ -195,8 +208,7 @@ cudaError_t VoxelEngine::init(unsigned int windowWidth_, unsigned int windowHeig
     VoxelEngine::windowWidth = windowWidth_;
     VoxelEngine::windowHeight = windowHeight_;
 
-    const int threadsPerBlock = 600;
-    const int blocksPerGrid = (windowWidth_ * windowHeight_ + threadsPerBlock - 1) / threadsPerBlock;
+    renderBlocksPerGrid = (windowWidth_ * windowHeight_ + renderThreadsPerBlock - 1) / renderThreadsPerBlock;
 
     error = cudaMallocManaged(&octree, sizeof(Octree));
 
@@ -222,8 +234,6 @@ cudaError_t VoxelEngine::init(unsigned int windowWidth_, unsigned int windowHeig
         return error;
     }
 
-    // testKernel<<<1,1>>>();
-
     error = cuda_renderer::init(windowWidth_, windowHeight_);
 
     if(error != cudaSuccess) {
@@ -231,8 +241,6 @@ cudaError_t VoxelEngine::init(unsigned int windowWidth_, unsigned int windowHeig
     }
 
     isInitialized = true;
-
-    // testKernel<<<1,1>>>();
 
     return error;
 }
@@ -259,6 +267,12 @@ cudaError_t VoxelEngine::cleanup() {
     }
 
     error = block_variant_manager::cleanup();
+
+    if(error != cudaSuccess) {
+        return error;
+    }
+
+    error = point_light_manager::cleanup();
 
     if(error != cudaSuccess) {
         return error;
@@ -389,6 +403,14 @@ bool VoxelEngine::getMouseControlEnabled() {
 
 void VoxelEngine::setMouseControlEnabled(bool isEnabled) {
     isMouseControlEnabled = isEnabled;
+}
+
+bool VoxelEngine::getPhongIlluminationEnabled() {
+    return isPhongIlluminationEnabled;
+}
+
+void VoxelEngine::setPhongIlluminationEnabled(bool isEnabled) {
+    isPhongIlluminationEnabled = isEnabled;
 }
 
 cudaError_t VoxelEngine::setNumLights(unsigned int numLights_) {

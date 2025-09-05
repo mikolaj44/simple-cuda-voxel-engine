@@ -35,10 +35,10 @@ namespace cuda_renderer {
             return Vector3<>(r, g, b);
         }
 
-        __device__ Vector3<> getPhongIllumination(Vector3<> startColor, Vector3<> pos, Vector3<> cameraPos, Vector3<> normal, Material material) {    
+        __device__ Vector3<> getPhongIllumination(Vector3<> startColor, Vector3<> pos, Vector3<> cameraPos, Vector3<> normal, Material material) {   
             using namespace point_light_manager;
 
-            Vector3<> ln = Vector3<>(pointLights[0]->pos.x - pos.x, pointLights[0]->pos.y - pos.y, pointLights[0]->pos.z - pos.z).norm();
+            Vector3<> ln = Vector3<>(((*pointLights)[0])->pos.x - pos.x, ((*pointLights)[0])->pos.y - pos.y, ((*pointLights)[0])->pos.z - pos.z).norm();
         
             if (normal.dot(ln) < 0) {
                 return Vector3<>(0, 0, 0);
@@ -48,17 +48,21 @@ namespace cuda_renderer {
 
             Vector3<> dh = normal.mul(2 * ln.dot(normal)).sub(ln).norm();
 
-            Vector3<> lighting = pointLights[0]->color.mul(material.diffuse * normal.dot(ln));
+            Vector3<> lighting = ((*pointLights)[0])->color;
+            
+            lighting = lighting.mul(material.diffuse * normal.dot(ln) + material.specular * powf(h.dot(dh), material.specularExponent));
             
             return lighting.clamp(255).div(255.0).mul(startColor);
         }
         
-        __device__ void setPixelByHitInfo(uchar4* pixels, int windowWidth, int windowHeight, Triple<Vector3<int>, Vector3<float>, uint8_t> intersectionData, Vector3<> cameraPos, int sX, int sY, bool isTextureRenderingEnabled, bool isMaterialColorOnlyEnabled) {            
+        __device__ void setPixelByHitInfo(uchar4* pixels, int windowWidth, int windowHeight, Triple<Vector3<int>, Vector3<float>, uint8_t> intersectionData, Vector3<> cameraPos, int sX, int sY, bool isTextureRenderingEnabled, bool isMaterialColorOnlyEnabled, bool isPhongIlluminationEnabled) {            
             using namespace block_variant_manager;
 
             uint8_t blockId = intersectionData.third;
+
+            // printf("%d\n", blockVariants->size());
             
-            if (blockId == 0) {
+            if (blockId == 0 || blockId > blockVariants->size()) {
                 return;
             }
     
@@ -67,7 +71,7 @@ namespace cuda_renderer {
             blockId -= 1;
     
             if(isTextureRenderingEnabled && !isMaterialColorOnlyEnabled) {
-                imgChannels = blockVariants[blockId]->texture->getChannels();
+                imgChannels = ((*blockVariants)[blockId])->texture->getChannels();
             }
     
             int blockX = intersectionData.first.x;
@@ -88,90 +92,90 @@ namespace cuda_renderer {
             // check which side of the block we are on    
             if (equals(y, (float)blockY, epsilon)) { // top
                 if(isTextureRenderingEnabled && !isMaterialColorOnlyEnabled){
-                    imgWidth = blockVariants[blockId]->texture->getWidth(ImagePosition::TOP);
-                    imgHeight = blockVariants[blockId]->texture->getHeight(ImagePosition::TOP);
+                    imgWidth  = ((*blockVariants)[blockId])->texture->getWidth(ImagePosition::TOP);
+                    imgHeight = ((*blockVariants)[blockId])->texture->getHeight(ImagePosition::TOP);
 
                     imgX = (int)(absv(x - (int)x) * imgWidth);
                     imgY = (int)(absv(z - (int)z) * imgHeight);
     
-                    r = blockVariants[blockId]->texture->getImage(ImagePosition::TOP)[(imgY * imgWidth + imgX) * imgChannels];
-                    g = blockVariants[blockId]->texture->getImage(ImagePosition::TOP)[(imgY * imgWidth + imgX) * imgChannels + 1];
-                    b = blockVariants[blockId]->texture->getImage(ImagePosition::TOP)[(imgY * imgWidth + imgX) * imgChannels + 2];
+                    r = ((*blockVariants)[blockId])->texture->getImage(ImagePosition::TOP)[(imgY * imgWidth + imgX) * imgChannels];
+                    g = ((*blockVariants)[blockId])->texture->getImage(ImagePosition::TOP)[(imgY * imgWidth + imgX) * imgChannels + 1];
+                    b = ((*blockVariants)[blockId])->texture->getImage(ImagePosition::TOP)[(imgY * imgWidth + imgX) * imgChannels + 2];
                 }
     
                 normal = Vector3<>(0, -1, 0);
             }
             else if (equals(y, (float)blockY + 1.0, epsilon)) { // bottom
                 if(isTextureRenderingEnabled && !isMaterialColorOnlyEnabled) {
-                    imgWidth = blockVariants[blockId]->texture->getWidth(ImagePosition::BOTTOM);
-                    imgHeight = blockVariants[blockId]->texture->getHeight(ImagePosition::BOTTOM);
+                    imgWidth  = ((*blockVariants)[blockId])->texture->getWidth(ImagePosition::BOTTOM);
+                    imgHeight = ((*blockVariants)[blockId])->texture->getHeight(ImagePosition::BOTTOM);
 
                     imgX = (int)(absv(x - (int)x) * imgWidth);
                     imgY = (int)(absv(z - (int)z) * imgHeight);
     
-                    r = blockVariants[blockId]->texture->getImage(ImagePosition::BOTTOM)[(imgY * imgWidth + imgX) * imgChannels];
-                    g = blockVariants[blockId]->texture->getImage(ImagePosition::BOTTOM)[(imgY * imgWidth + imgX) * imgChannels + 1];
-                    b = blockVariants[blockId]->texture->getImage(ImagePosition::BOTTOM)[(imgY * imgWidth + imgX) * imgChannels + 2];
+                    r = ((*blockVariants)[blockId])->texture->getImage(ImagePosition::BOTTOM)[(imgY * imgWidth + imgX) * imgChannels];
+                    g = ((*blockVariants)[blockId])->texture->getImage(ImagePosition::BOTTOM)[(imgY * imgWidth + imgX) * imgChannels + 1];
+                    b = ((*blockVariants)[blockId])->texture->getImage(ImagePosition::BOTTOM)[(imgY * imgWidth + imgX) * imgChannels + 2];
                 }
     
                 normal = Vector3<>(0, 1, 0);
             }
             else if (equals(x, (float)blockX, epsilon)) { // left
                 if(isTextureRenderingEnabled && !isMaterialColorOnlyEnabled){
-                    imgWidth = blockVariants[blockId]->texture->getWidth(ImagePosition::LEFT);
-                    imgHeight = blockVariants[blockId]->texture->getHeight(ImagePosition::LEFT);
+                    imgWidth  = ((*blockVariants)[blockId])->texture->getWidth(ImagePosition::LEFT);
+                    imgHeight = ((*blockVariants)[blockId])->texture->getHeight(ImagePosition::LEFT);
 
                     imgX = (int)(absv(z - (int)z) * imgWidth);
                     imgY = (int)(absv(y - (int)y) * imgHeight);
     
-                    r = blockVariants[blockId]->texture->getImage(ImagePosition::LEFT)[(imgY * imgWidth + imgX) * imgChannels];
-                    g = blockVariants[blockId]->texture->getImage(ImagePosition::LEFT)[(imgY * imgWidth + imgX) * imgChannels + 1];
-                    b = blockVariants[blockId]->texture->getImage(ImagePosition::LEFT)[(imgY * imgWidth + imgX) * imgChannels + 2];
+                    r = ((*blockVariants)[blockId])->texture->getImage(ImagePosition::LEFT)[(imgY * imgWidth + imgX) * imgChannels];
+                    g = ((*blockVariants)[blockId])->texture->getImage(ImagePosition::LEFT)[(imgY * imgWidth + imgX) * imgChannels + 1];
+                    b = ((*blockVariants)[blockId])->texture->getImage(ImagePosition::LEFT)[(imgY * imgWidth + imgX) * imgChannels + 2];
                 }
     
                 normal = Vector3<>(-1, 0, 0);
             }
             else if (equals(x, (float)blockX + 1.0, epsilon)) { // right
                 if(isTextureRenderingEnabled && !isMaterialColorOnlyEnabled){
-                    imgWidth = blockVariants[blockId]->texture->getWidth(ImagePosition::RIGHT);
-                    imgHeight = blockVariants[blockId]->texture->getHeight(ImagePosition::RIGHT);
+                    imgWidth  = ((*blockVariants)[blockId])->texture->getWidth(ImagePosition::RIGHT);
+                    imgHeight = ((*blockVariants)[blockId])->texture->getHeight(ImagePosition::RIGHT);
 
                     imgX = (int)(absv(z - (int)z) * imgWidth);
                     imgY = (int)(absv(y - (int)y) * imgHeight);
     
-                    r = blockVariants[blockId]->texture->getImage(ImagePosition::RIGHT)[(imgY * imgWidth + imgX) * imgChannels];
-                    g = blockVariants[blockId]->texture->getImage(ImagePosition::RIGHT)[(imgY * imgWidth + imgX) * imgChannels + 1];
-                    b = blockVariants[blockId]->texture->getImage(ImagePosition::RIGHT)[(imgY * imgWidth + imgX) * imgChannels + 2];
+                    r = ((*blockVariants)[blockId])->texture->getImage(ImagePosition::RIGHT)[(imgY * imgWidth + imgX) * imgChannels];
+                    g = ((*blockVariants)[blockId])->texture->getImage(ImagePosition::RIGHT)[(imgY * imgWidth + imgX) * imgChannels + 1];
+                    b = ((*blockVariants)[blockId])->texture->getImage(ImagePosition::RIGHT)[(imgY * imgWidth + imgX) * imgChannels + 2];
                 }
     
                 normal = Vector3<>(1, 0, 0);
             }
             else if (equals(z, (float)blockZ, epsilon)) { // front
                 if(isTextureRenderingEnabled && !isMaterialColorOnlyEnabled){
-                    imgWidth = blockVariants[blockId]->texture->getWidth(ImagePosition::FRONT);
-                    imgHeight = blockVariants[blockId]->texture->getHeight(ImagePosition::FRONT);
+                    imgWidth  = ((*blockVariants)[blockId])->texture->getWidth(ImagePosition::FRONT);
+                    imgHeight = ((*blockVariants)[blockId])->texture->getHeight(ImagePosition::FRONT);
 
                     imgX = (int)(absv(x - (int)x) * imgWidth);
                     imgY = (int)(absv(y - (int)y) * imgHeight);
     
-                    r = blockVariants[blockId]->texture->getImage(ImagePosition::FRONT)[(imgY * imgWidth + imgX) * imgChannels];
-                    g = blockVariants[blockId]->texture->getImage(ImagePosition::FRONT)[(imgY * imgWidth + imgX) * imgChannels + 1];
-                    b = blockVariants[blockId]->texture->getImage(ImagePosition::FRONT)[(imgY * imgWidth + imgX) * imgChannels + 2];
+                    r = ((*blockVariants)[blockId])->texture->getImage(ImagePosition::FRONT)[(imgY * imgWidth + imgX) * imgChannels];
+                    g = ((*blockVariants)[blockId])->texture->getImage(ImagePosition::FRONT)[(imgY * imgWidth + imgX) * imgChannels + 1];
+                    b = ((*blockVariants)[blockId])->texture->getImage(ImagePosition::FRONT)[(imgY * imgWidth + imgX) * imgChannels + 2];
                 }
     
                 normal = Vector3<>(0, 0, -1);
             }
             else if (equals(z, (float)blockZ + 1.0, epsilon)) { // back
                 if(isTextureRenderingEnabled && !isMaterialColorOnlyEnabled){
-                    imgWidth = blockVariants[blockId]->texture->getWidth(ImagePosition::BACK);
-                    imgHeight = blockVariants[blockId]->texture->getHeight(ImagePosition::BACK);
+                    imgWidth  = ((*blockVariants)[blockId])->texture->getWidth(ImagePosition::BACK);
+                    imgHeight = ((*blockVariants)[blockId])->texture->getHeight(ImagePosition::BACK);
 
                     imgX = (int)(absv(x - (int)x) * imgWidth);
                     imgY = (int)(absv(y - (int)y) * imgHeight);
     
-                    r = blockVariants[blockId]->texture->getImage(ImagePosition::BACK)[(imgY * imgWidth + imgX) * imgChannels];
-                    g = blockVariants[blockId]->texture->getImage(ImagePosition::BACK)[(imgY * imgWidth + imgX) * imgChannels + 1];
-                    b = blockVariants[blockId]->texture->getImage(ImagePosition::BACK)[(imgY * imgWidth + imgX) * imgChannels + 2];
+                    r = ((*blockVariants)[blockId])->texture->getImage(ImagePosition::BACK)[(imgY * imgWidth + imgX) * imgChannels];
+                    g = ((*blockVariants)[blockId])->texture->getImage(ImagePosition::BACK)[(imgY * imgWidth + imgX) * imgChannels + 1];
+                    b = ((*blockVariants)[blockId])->texture->getImage(ImagePosition::BACK)[(imgY * imgWidth + imgX) * imgChannels + 2];
                 }
     
                 normal = Vector3<>(0, 0, 1);
@@ -185,18 +189,20 @@ namespace cuda_renderer {
             Vector3<> color = Vector3<>(r, g, b);
 
             if(isMaterialColorOnlyEnabled) {
-                color = blockVariants[blockId]->material.color;
+                color = ((*blockVariants)[blockId])->material.color;
             }
             else if(!isTextureRenderingEnabled) {
                 color = hueToRGB(float(blockId) * 2.8125 / 360.0);
             }
     
-            // color = getPhongIllumination(color, Vector3<>(x, y, z), cameraPos, normal, blockVariants[blockId]->material);
+            if(isPhongIlluminationEnabled) {
+                color = getPhongIllumination(color, Vector3<>(x, y, z), cameraPos, normal, ((*blockVariants)[blockId])->material);
+            }
 
             setPixel(pixels, windowWidth, windowHeight, sX, sY, (int)color.x, (int)color.y, (int)color.z, 255);
         }
 
-        __global__ void renderKernel(uchar4* pixels, Octree* octree, Vector3<> cameraPos, Vector3<> cameraAngle2d, int windowWidth, int windowHeight, bool isTextureRenderingEnabled, bool isMaterialColorOnlyEnabled) {                        
+        __global__ void renderKernel(uchar4* pixels, Octree* octree, Vector3<> cameraPos, Vector3<> cameraAngle2d, int windowWidth, int windowHeight, bool isTextureRenderingEnabled, bool isMaterialColorOnlyEnabled, bool isPhongIlluminationEnabled) {                        
             unsigned int index = threadIdx.x + blockDim.x * blockIdx.x;
 
             if (index >= windowWidth * windowHeight) {
@@ -221,7 +227,7 @@ namespace cuda_renderer {
             else {
                 // setPixel(pixels, windowWidth, windowHeight, sX, sY, intersectionData.third, intersectionData.third, intersectionData.third, 255);
 
-                setPixelByHitInfo(pixels, windowWidth, windowHeight, intersectionData, cameraPos, sX, sY, isTextureRenderingEnabled, isMaterialColorOnlyEnabled);
+                setPixelByHitInfo(pixels, windowWidth, windowHeight, intersectionData, cameraPos, sX, sY, isTextureRenderingEnabled, isMaterialColorOnlyEnabled, isPhongIlluminationEnabled);
             }
         }
     }
@@ -236,7 +242,7 @@ namespace cuda_renderer {
     }
 
     // I'm not error checking for performance reasons
-    void render(Octree* octree, Vector3<> cameraPos, Vector3<> cameraAngle2d, int windowWidth, int windowHeight, bool isTextureRenderingEnabled, bool isMaterialColorOnlyEnabled, unsigned int gridSize, unsigned int blockSize) {
+    void render(Octree* octree, Vector3<> cameraPos, Vector3<> cameraAngle2d, int windowWidth, int windowHeight, bool isTextureRenderingEnabled, bool isMaterialColorOnlyEnabled, bool isPhongIlluminationEnabled, unsigned int gridSize, unsigned int blockSize) {
         using namespace cuda_renderer_utils;
 
         cudaArray* cudaArrayPtr;
@@ -253,7 +259,7 @@ namespace cuda_renderer {
         // cudaEventCreate(&stop);
         // cudaEventRecord(start);
         
-        renderKernel<<<gridSize,blockSize>>>(devPtr, octree, cameraPos, cameraAngle2d, windowWidth, windowHeight, isTextureRenderingEnabled, isMaterialColorOnlyEnabled);
+        renderKernel<<<gridSize,blockSize>>>(devPtr, octree, cameraPos, cameraAngle2d, windowWidth, windowHeight, isTextureRenderingEnabled, isMaterialColorOnlyEnabled, isPhongIlluminationEnabled);
     
         // cudaEventRecord(stop);
         // cudaEventSynchronize(stop);

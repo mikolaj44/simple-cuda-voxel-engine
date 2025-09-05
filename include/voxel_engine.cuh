@@ -73,6 +73,13 @@ public:
 
     static void setMouseControlEnabled(bool isEnabled);
 
+    static bool getPhongIlluminationEnabled();
+
+    static void setPhongIlluminationEnabled(bool isEnabled);
+
+    // TODO: implement this and change the PointLight array to be allocated in unified memory
+    // static void setPointLight(int index, PointLight pointLight);
+
     template<typename XYZFrameToIdFunction>
     static cudaError_t insertVoxels(XYZFrameToIdFunction func) {
         uint64_t totalVoxels = octree->getMaxSize();
@@ -84,7 +91,8 @@ public:
 
     template<typename IdFrameToMaterialFunction>
     static void setMaterials(IdFrameToMaterialFunction func) {
-        block_variant_manager::setBlocksVariantMaterialsKernel<<<1, block_variant_manager::numVariants>>>(func, frameNumber, block_variant_manager::numVariants);
+        int numVariants = block_variant_manager::blockVariants->size();
+        block_variant_manager::setBlocksVariantMaterialsKernel<<<1, numVariants>>>(func, frameNumber);
     }
 
     template <bool displayFrame = true>
@@ -102,9 +110,14 @@ private:
 
     static bool isMouseControlEnabled;
 
+    static bool isPhongIlluminationEnabled;
+
     static unsigned int windowWidth, windowHeight;
 
     static const unsigned int insertionBlockSize = 512;
+
+    static const unsigned int renderThreadsPerBlock = 600;
+    static unsigned int renderBlocksPerGrid;
 
     static unsigned int numLights;
 

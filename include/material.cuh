@@ -1,7 +1,6 @@
 #pragma once
 
 #include "vector3.cuh"
-#include <cuda_runtime.h>
 
 class Material {
 public:

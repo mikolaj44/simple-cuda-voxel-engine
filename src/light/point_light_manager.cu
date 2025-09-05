@@ -7,96 +7,62 @@
 #include <stdio.h>
 
 namespace point_light_manager {
-    PointLight** pointLightsHost = nullptr;
-
-    __device__ PointLight** pointLights = nullptr;
-
-    unsigned int numLights;
-
-    template<typename IndexFrameToPointLightFunction>
-    __global__ void setPointLightsKernel(IndexFrameToPointLightFunction func, uint64_t frameNumber) {
-        int index = threadIdx.x + blockIdx.x * blockDim.x;
-    
-        if(index < numLights) {
-            PointLight pointLight = func(index, frameNumber);
-
-            pointLights[index]->color = pointLight.color;
-            pointLights[index]->pos = pointLight.pos;
-        }
-    }
-
-    __global__ void initLightsKernel(PointLight** pointLightsDevice, int numLights) {
-        int index = threadIdx.x + blockIdx.x * blockDim.x;
-    
-        if(index < numLights) {
-            new (pointLightsDevice[index]) PointLight(Vector3<float>(0, 0, 0), Vector3<float>(255, 255, 255));
-        }
-    }
+    __managed__ ManagedList<PointLight*>* pointLights;
 
     cudaError_t init(unsigned int numLights_) {
-        numLights = numLights_;
+        cudaError_t error = cudaMallocManaged(&pointLights, sizeof(ManagedList<PointLight*>));
 
-        cudaError_t error = cudaSuccess;
+        if(error != cudaSuccess) {
+            return error;
+        }
 
-        pointLightsHost = new PointLight*[numLights];
+        new (pointLights) ManagedList<PointLight*>(); 
 
-        PointLight** pointLightsDevice = nullptr;
+        error = pointLights->init(numLights_);
 
-        for(int i = 0; i < numLights; i++) {
-            error = cudaMallocManaged(&pointLightsHost[i], sizeof(PointLight));
+        if(error != cudaSuccess) {
+            cudaFree(pointLights);
+            return error;
+        }
+
+        for(int i = 0; i < numLights_; i++) {
+            PointLight* pointLight;
+
+            error = cudaMallocManaged(&pointLight, sizeof(PointLight));
+
+            if(error != cudaSuccess) {
+                return error;
+            }
+
+            new (pointLight) PointLight(Vector3<float>(0, -20000, -30000), Vector3<float>(255, 255, 255));
+
+            error = pointLights->add(pointLight);
 
             if(error != cudaSuccess) {
                 return error;
             }
         }
 
-        error = cudaMallocManaged(&pointLightsDevice, sizeof(PointLight*) * numLights);
-
-        if(error != cudaSuccess) {
-            return error;
-        }
-
-        error = cudaMemcpy(pointLightsDevice, pointLightsHost, sizeof(PointLight*) * numLights, cudaMemcpyHostToDevice);
-
-        if(error != cudaSuccess) {
-            return error;
-        }
-
-        initLightsKernel<<<1, numLights>>>(pointLightsDevice, numLights);
-
-        error = cudaDeviceSynchronize();
-
-        if(error != cudaSuccess) {
-            return error;
-        }
-
-        error = cudaMemcpyToSymbol(pointLights, &pointLightsDevice, sizeof(PointLight**));
-
-        if(error != cudaSuccess) {
-            return error;
-        }
-
-        return cudaFree(pointLightsDevice);
+        return error;
     }
 
     cudaError_t cleanup() {
         cudaError_t error = cudaSuccess;
 
-        for(int i = 0; i < numLights; i++) {
-            error = cudaFree(pointLightsHost[i]);
+        for(int i = 0; i < pointLights->size(); i++) {
+            error = cudaFree((*pointLights)[i]);
     
             if(error != cudaSuccess) {
                 return error;
             }    
         }
-    
-        delete[] pointLightsHost;
 
-        return error;
-    }
+        error = pointLights->cleanup();
 
-    template<typename IndexFrameToPointLightFunction>
-    void setPointLights(IndexFrameToPointLightFunction func, uint64_t frameNumber) {
-        setPointLightsKernel<<<1, numLights>>>(func, frameNumber);
+        if(error != cudaSuccess) {
+            return error;
+        }
+
+        return cudaFree(pointLights);
     }
 }
