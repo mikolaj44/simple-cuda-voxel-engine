@@ -35,41 +35,50 @@ namespace cuda_renderer {
             return Vector3<>(r, g, b);
         }
 
-        __device__ Vector3<> getPhongIllumination(Vector3<> startColor, Vector3<> pos, Vector3<> cameraPos, Vector3<> normal, Material material) {   
-            using namespace point_light_manager;
+        __device__ Vector3<> getPhongIllumination(Vector3<> startColor, Vector3<> pos, Vector3<> cameraPos, Vector3<> normal, Material material, ManagedList<PointLight*>* pointLights, PointLight* ambientLight) {   
+            Vector3<> resultColor = Vector3<>::mul(Vector3<>::div(ambientLight->color, 255.0), ambientLight->intensity);
 
-            Vector3<> ln = Vector3<>(((*pointLights)[0])->pos.x - pos.x, ((*pointLights)[0])->pos.y - pos.y, ((*pointLights)[0])->pos.z - pos.z).norm();
-        
-            if (normal.dot(ln) < 0) {
-                return Vector3<>(0, 0, 0);
-            }
-                
+            startColor = startColor.div(255.0);
+
             Vector3<> h = Vector3<>(cameraPos.x - pos.x, cameraPos.y - pos.y, cameraPos.z - pos.z).norm();
 
-            Vector3<> dh = normal.mul(2 * ln.dot(normal)).sub(ln).norm();
+            for(int i = 0; i < pointLights->size(); i++) {
+                Vector3<> ln = Vector3<>(((*pointLights)[i])->pos.x - pos.x, ((*pointLights)[i])->pos.y - pos.y, ((*pointLights)[i])->pos.z - pos.z).norm();
+            
+                if (normal.dot(ln) < 0) {
+                    continue;
+                }  
 
-            Vector3<> lighting = ((*pointLights)[0])->color;
-            
-            lighting = lighting.mul(material.diffuse * normal.dot(ln) + material.specular * powf(h.dot(dh), material.specularExponent));
-            
-            return lighting.clamp(255).div(255.0).mul(startColor);
+                Vector3<> dh = Vector3<>::norm(Vector3<>::sub(Vector3<>::mul(normal, 2 * Vector3<>::dot(ln, normal)), ln));
+                
+                Vector3<> lightColor = Vector3<>::div(((*pointLights)[i])->color, 255.0);
+
+                float intensity = ((*pointLights)[i])->intensity;
+
+                resultColor = resultColor.add(
+                    Vector3<>::add(
+                        Vector3<>::mul(
+                            Vector3<>::mul(startColor, lightColor), 
+                            material.diffuse * Vector3<>::dot(ln, normal) * intensity
+                        ), 
+                        Vector3<>::mul(
+                            lightColor, 
+                            material.specular * powf(Vector3<>::dot(h, dh), material.specularExponent) * intensity
+                        )
+                    )
+                );
+            }
+
+            return resultColor.mul(255.0);
         }
         
         __device__ void setPixelByHitInfo(uchar4* pixels, int windowWidth, int windowHeight, Triple<Vector3<int>, Vector3<float>, uint8_t> intersectionData, Vector3<> cameraPos, int sX, int sY, bool isTextureRenderingEnabled, bool isMaterialColorOnlyEnabled, bool isPhongIlluminationEnabled) {            
             using namespace block_variant_manager;
 
-            uint8_t blockId = intersectionData.third;
-
-            // printf("%d\n", blockVariants->size());
-            
-            if (blockId == 0 || blockId > blockVariants->size()) {
-                return;
-            }
+            uint8_t blockId = (intersectionData.third - 1) % blockVariants->size();
     
             int imgWidth, imgHeight, imgChannels;
-
-            blockId -= 1;
-    
+                
             if(isTextureRenderingEnabled && !isMaterialColorOnlyEnabled) {
                 imgChannels = ((*blockVariants)[blockId])->texture->getChannels();
             }
@@ -95,8 +104,8 @@ namespace cuda_renderer {
                     imgWidth  = ((*blockVariants)[blockId])->texture->getWidth(ImagePosition::TOP);
                     imgHeight = ((*blockVariants)[blockId])->texture->getHeight(ImagePosition::TOP);
 
-                    imgX = (int)(absv(x - (int)x) * imgWidth);
-                    imgY = (int)(absv(z - (int)z) * imgHeight);
+                    imgX = (int)(absv(x - floorf(x)) * imgWidth);
+                    imgY = (int)(absv(z - floorf(z)) * imgHeight);
     
                     r = ((*blockVariants)[blockId])->texture->getImage(ImagePosition::TOP)[(imgY * imgWidth + imgX) * imgChannels];
                     g = ((*blockVariants)[blockId])->texture->getImage(ImagePosition::TOP)[(imgY * imgWidth + imgX) * imgChannels + 1];
@@ -110,8 +119,8 @@ namespace cuda_renderer {
                     imgWidth  = ((*blockVariants)[blockId])->texture->getWidth(ImagePosition::BOTTOM);
                     imgHeight = ((*blockVariants)[blockId])->texture->getHeight(ImagePosition::BOTTOM);
 
-                    imgX = (int)(absv(x - (int)x) * imgWidth);
-                    imgY = (int)(absv(z - (int)z) * imgHeight);
+                    imgX = (int)(absv(x - floorf(x)) * imgWidth);
+                    imgY = (int)(absv(z - floorf(z)) * imgHeight);
     
                     r = ((*blockVariants)[blockId])->texture->getImage(ImagePosition::BOTTOM)[(imgY * imgWidth + imgX) * imgChannels];
                     g = ((*blockVariants)[blockId])->texture->getImage(ImagePosition::BOTTOM)[(imgY * imgWidth + imgX) * imgChannels + 1];
@@ -125,8 +134,8 @@ namespace cuda_renderer {
                     imgWidth  = ((*blockVariants)[blockId])->texture->getWidth(ImagePosition::LEFT);
                     imgHeight = ((*blockVariants)[blockId])->texture->getHeight(ImagePosition::LEFT);
 
-                    imgX = (int)(absv(z - (int)z) * imgWidth);
-                    imgY = (int)(absv(y - (int)y) * imgHeight);
+                    imgX = (int)(absv(z - floorf(z)) * imgWidth);
+                    imgY = (int)(absv(y - floorf(y)) * imgHeight);
     
                     r = ((*blockVariants)[blockId])->texture->getImage(ImagePosition::LEFT)[(imgY * imgWidth + imgX) * imgChannels];
                     g = ((*blockVariants)[blockId])->texture->getImage(ImagePosition::LEFT)[(imgY * imgWidth + imgX) * imgChannels + 1];
@@ -140,8 +149,8 @@ namespace cuda_renderer {
                     imgWidth  = ((*blockVariants)[blockId])->texture->getWidth(ImagePosition::RIGHT);
                     imgHeight = ((*blockVariants)[blockId])->texture->getHeight(ImagePosition::RIGHT);
 
-                    imgX = (int)(absv(z - (int)z) * imgWidth);
-                    imgY = (int)(absv(y - (int)y) * imgHeight);
+                    imgX = (int)(absv(z - floorf(z)) * imgWidth);
+                    imgY = (int)(absv(y - floorf(y)) * imgHeight);
     
                     r = ((*blockVariants)[blockId])->texture->getImage(ImagePosition::RIGHT)[(imgY * imgWidth + imgX) * imgChannels];
                     g = ((*blockVariants)[blockId])->texture->getImage(ImagePosition::RIGHT)[(imgY * imgWidth + imgX) * imgChannels + 1];
@@ -155,8 +164,8 @@ namespace cuda_renderer {
                     imgWidth  = ((*blockVariants)[blockId])->texture->getWidth(ImagePosition::FRONT);
                     imgHeight = ((*blockVariants)[blockId])->texture->getHeight(ImagePosition::FRONT);
 
-                    imgX = (int)(absv(x - (int)x) * imgWidth);
-                    imgY = (int)(absv(y - (int)y) * imgHeight);
+                    imgX = (int)(absv(x - floorf(x)) * imgWidth);
+                    imgY = (int)(absv(y - floorf(y)) * imgHeight);
     
                     r = ((*blockVariants)[blockId])->texture->getImage(ImagePosition::FRONT)[(imgY * imgWidth + imgX) * imgChannels];
                     g = ((*blockVariants)[blockId])->texture->getImage(ImagePosition::FRONT)[(imgY * imgWidth + imgX) * imgChannels + 1];
@@ -170,8 +179,8 @@ namespace cuda_renderer {
                     imgWidth  = ((*blockVariants)[blockId])->texture->getWidth(ImagePosition::BACK);
                     imgHeight = ((*blockVariants)[blockId])->texture->getHeight(ImagePosition::BACK);
 
-                    imgX = (int)(absv(x - (int)x) * imgWidth);
-                    imgY = (int)(absv(y - (int)y) * imgHeight);
+                    imgX = (int)(absv(x - floorf(x)) * imgWidth);
+                    imgY = (int)(absv(y - floorf(y)) * imgHeight);
     
                     r = ((*blockVariants)[blockId])->texture->getImage(ImagePosition::BACK)[(imgY * imgWidth + imgX) * imgChannels];
                     g = ((*blockVariants)[blockId])->texture->getImage(ImagePosition::BACK)[(imgY * imgWidth + imgX) * imgChannels + 1];
@@ -196,7 +205,7 @@ namespace cuda_renderer {
             }
     
             if(isPhongIlluminationEnabled) {
-                color = getPhongIllumination(color, Vector3<>(x, y, z), cameraPos, normal, ((*blockVariants)[blockId])->material);
+                color = getPhongIllumination(color, Vector3<>(x, y, z), cameraPos, normal, ((*blockVariants)[blockId])->material, point_light_manager::pointLights, point_light_manager::ambientLight);
             }
 
             setPixel(pixels, windowWidth, windowHeight, sX, sY, (int)color.x, (int)color.y, (int)color.z, 255);

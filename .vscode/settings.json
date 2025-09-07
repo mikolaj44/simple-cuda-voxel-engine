@@ -78,6 +78,9 @@
         "__config": "cpp",
         "stream_ref": "cpp",
         "annotated_ptr": "cpp",
-        "__string": "cpp"
+        "__string": "cpp",
+        "__availability": "cpp",
+        "version": "cpp",
+        "__preprocessor": "cpp"
     }
 }

@@ -3,6 +3,7 @@
 #include "octree/octree.cuh"
 
 #include <cuda_runtime.h>
+#include "light/point_light.cuh"
 #include "block_variant/block_variant_manager.cuh"
 
 class VoxelEngine {
@@ -12,6 +13,10 @@ public:
     static cudaError_t cleanup();
 
     static cudaError_t clearVoxels();
+
+    static cudaError_t setPointLights(std::vector<PointLight> pointLights);
+
+    static void test(cudaError_t error);
 
     static cudaError_t setMaxOctreeDepth(int depth);
 
@@ -42,8 +47,6 @@ public:
     static bool getMaterialColorOnlyEnabled();
 
     static int getMaxOctreeLevelByGPU();
-
-    static unsigned int getNumLights();
 
     static cudaError_t setNumLights(unsigned int numLights);
 
@@ -77,8 +80,13 @@ public:
 
     static void setPhongIlluminationEnabled(bool isEnabled);
 
-    // TODO: implement this and change the PointLight array to be allocated in unified memory
-    // static void setPointLight(int index, PointLight pointLight);
+    static void setAmbientLightColor(Vector3<> color);
+
+    static Vector3<> getAmbientLightColor();
+
+    static void setAmbientLightIntensity(float intensity);
+
+    static float getAmbientLightIntensity();
 
     template<typename XYZFrameToIdFunction>
     static cudaError_t insertVoxels(XYZFrameToIdFunction func) {
@@ -118,8 +126,6 @@ private:
 
     static const unsigned int renderThreadsPerBlock = 600;
     static unsigned int renderBlocksPerGrid;
-
-    static unsigned int numLights;
 
     static int prevMouseX;
     static int prevMouseY;

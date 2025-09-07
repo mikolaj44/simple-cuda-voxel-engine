@@ -34,17 +34,25 @@
 // }
 
 int main() {
-    std::cout << VoxelEngine::init(1920, 1080, 10) << std::endl;
+    try {
+        VoxelEngine::test(VoxelEngine::init(1920, 1080, 10));
+    }
+    catch (std::string exceptionMessage) {
+        std::cerr << exceptionMessage << std::endl;
+        abort();
+    }
 
     VoxelEngine::setOctreeMinPos(Vector3<>(-512, -512, -512));
 
     auto blockPosFrameToIdFunction = [] __device__ (int x, int y, int z, uint64_t frameNumber) {
         //if(x == 204 && y == 253 && z == 01)
         //if(x == y)
-         return (absv(x) + absv(y) + absv(z)) % 127 + 1;
-        //return 0;
+        // if(x*x + y*y + z*z <= 50000)
+             return (absv(x) + absv(y) + absv(z)) % 4 + 1;
+
+        // return 0;
         
-        int maxIterations = 7;
+        int maxIterations = 4;
 
         float newX = float(x) / 450.0;
         float newY = float(y) / 450.0;
@@ -82,7 +90,7 @@ int main() {
             wY += newY;
             wZ += newZ;
 
-            if(wX * wX + wY * wY + wZ * wZ > 4.0){
+            if(wX * wX + wY * wY + wZ * wZ > 0.6) { // 4.0
                 return 0;
             }
         }
@@ -97,7 +105,7 @@ int main() {
         //     return 4;
 
         //if(x < 100)
-            return int(sqrtf(x*x + y*y + z*z)) % 4 + 1;
+            return int(sqrtf(x*x + y*y + z*z)) % 127 + 1;
         return 0;
 
         // return int(sqrtf(absv(x) * absv(x) * absv(x) + absv(x) + absv(y) + absv(z))) % 127 + 1; 
@@ -106,7 +114,7 @@ int main() {
     auto blockIdFrameToIdFunction = [] __device__ (uint8_t blockId, uint64_t frameNumber) {
         return Material(Vector3<>(255, 0, 0), 1.0, 0.0, 20.0);
 
-        // return Material(Vector3<>(blockId * blockId, blockId, blockId + blockId), 1.0, 0.0, 20.0);
+        // return Material(Vector3<>(blockId * blockId, blockId * 3 * blockId, blockId * 5 + 100), 1.0, 0.0, 20.0);
     };
 
     VoxelEngine::setCameraPos(Vector3<>(0, 0, -10000));
@@ -119,15 +127,21 @@ int main() {
 
     VoxelEngine::setMouseControlEnabled(false);
 
-    VoxelEngine::setPhongIlluminationEnabled(false);
+    VoxelEngine::setPhongIlluminationEnabled(true);
+
+
 
     VoxelEngine::insertVoxels(blockPosFrameToIdFunction);
 
     VoxelEngine::setMaterials(blockIdFrameToIdFunction);
 
+    //VoxelEngine::setPointLights({PointLight(Vector3<>(0, 0, -300000), Vector3<>(255, 0, 0)), PointLight(Vector3<>(0, -300000, -300000), Vector3<>(0, 0, 255))});    
+
+    VoxelEngine::setAmbientLightIntensity(0.5);
+
     // printf("done inserting\n");
 
     VoxelEngine::inputLoop();
 
-    std::cout << VoxelEngine::cleanup() << std::endl;
+    VoxelEngine::test(VoxelEngine::cleanup());
 }

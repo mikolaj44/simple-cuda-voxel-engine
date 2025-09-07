@@ -46,20 +46,14 @@ namespace block_variant_manager {
             }
     
             std::string paths[6] = {currentPath.string() + "/top.png", currentPath.string() + "/bottom.png", currentPath.string() + "/left.png", currentPath.string() + "/right.png", currentPath.string() + "/front.png", currentPath.string() + "/back.png"};
-            
-            try {                
-                new (blockTextures[variantIndex]) BlockTexture();
+                          
+            new (blockTextures[variantIndex]) BlockTexture();
 
-                error = blockTextures[variantIndex]->init(4, paths);
+            error = blockTextures[variantIndex]->init(4, paths);
 
-                if(error != cudaSuccess) {
-                    return error;
-                }    
-            }
-            catch (std::string exceptionMessage) {
-                std::cerr << exceptionMessage << std::endl;
-                abort();
-            }
+            if(error != cudaSuccess) {
+                return error;
+            }    
         
             index++;
             variantIndex++;

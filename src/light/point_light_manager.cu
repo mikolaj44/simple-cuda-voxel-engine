@@ -9,12 +9,23 @@
 namespace point_light_manager {
     __managed__ ManagedList<PointLight*>* pointLights;
 
-    cudaError_t init(unsigned int numLights_) {
+    __managed__ PointLight* ambientLight;
+
+    cudaError_t init(unsigned int numLights_, const PointLight& ambientLight_) {
         cudaError_t error = cudaMallocManaged(&pointLights, sizeof(ManagedList<PointLight*>));
 
         if(error != cudaSuccess) {
             return error;
         }
+
+        error = cudaMallocManaged(&ambientLight, sizeof(PointLight));
+
+        if(error != cudaSuccess) {
+            return error;
+        }
+
+        ambientLight->color = ambientLight_.color;
+        ambientLight->intensity = ambientLight_.intensity;
 
         new (pointLights) ManagedList<PointLight*>(); 
 
@@ -34,7 +45,7 @@ namespace point_light_manager {
                 return error;
             }
 
-            new (pointLight) PointLight(Vector3<float>(0, -20000, -30000), Vector3<float>(255, 255, 255));
+            new (pointLight) PointLight();
 
             error = pointLights->add(pointLight);
 
@@ -63,6 +74,12 @@ namespace point_light_manager {
             return error;
         }
 
-        return cudaFree(pointLights);
+        error = cudaFree(pointLights);
+
+        if(error != cudaSuccess) {
+            return error;
+        }
+
+        return cudaFree(ambientLight);
     }
 }
