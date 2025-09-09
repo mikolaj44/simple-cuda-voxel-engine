@@ -14,15 +14,17 @@ public:
 
     static cudaError_t clearVoxels();
 
-    static cudaError_t setPointLights(std::vector<PointLight> pointLights);
+    static void displayFrame();
 
     static void test(cudaError_t error);
 
     static cudaError_t setMaxOctreeDepth(int depth);
 
-    static void setCameraPos(Vector3<> pos);
+    static cudaError_t setPointLights(const std::vector<PointLight>& pointLights);
 
-    static void displayFrame();
+    static cudaError_t setPointLights(PointLight* pointLights, unsigned int numLights);
+
+    static void setCameraPos(Vector3<> pos);
 
     static void setOctreeMinPos(Vector3<> pos);
 
@@ -46,9 +48,7 @@ public:
 
     static bool getMaterialColorOnlyEnabled();
 
-    static int getMaxOctreeLevelByGPU();
-
-    static cudaError_t setNumLights(unsigned int numLights);
+    static unsigned int getMaxOctreeLevelByGPU();
 
     static unsigned int getWindowWidth();
 
@@ -88,14 +88,18 @@ public:
 
     static float getAmbientLightIntensity();
 
+    static cudaError_t insertVoxels(uint8_t* hostBlockIdArray, unsigned int chunkWidth, Vector3<int> startOffset = Vector3<int>(0, 0, 0));
+
     template<typename XYZFrameToIdFunction>
     static cudaError_t insertVoxels(XYZFrameToIdFunction func) {
-        uint64_t totalVoxels = octree->getMaxSize();
+        size_t totalVoxels = octree->getMaxSize();
 
         totalVoxels = totalVoxels * totalVoxels * totalVoxels;
 
-        return octree->insertBlockByXYZFrameFunction(func, frameNumber, isCalculatingInsertLODsEnabled, (totalVoxels + insertionBlockSize - 1) / insertionBlockSize,  insertionBlockSize);
+        return octree->insertBlocksByXYZFrameFunction(func, frameNumber, isCalculatingInsertLODsEnabled, (totalVoxels + insertionBlockSize - 1) / insertionBlockSize, minv((size_t)insertionBlockSize, totalVoxels));
     }
+
+    static cudaError_t getVoxels(uint8_t** hostBlockIdArrayPtr, unsigned int chunkWidth, Vector3<int> startOffset = Vector3<int>(0, 0, 0));
 
     template<typename IdFrameToMaterialFunction>
     static void setMaterials(IdFrameToMaterialFunction func) {

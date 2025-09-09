@@ -24,15 +24,10 @@ namespace {
 	size_t getAllocatedMemoryInBytes(unsigned int maxLevel) {
 		return size_t(2) << (3 * maxLevel + 1);
 	}
-
-	__global__ void testKernel() {
-		printf("color: %f\n", ((*point_light_manager::pointLights)[0])->color.x);
-	}
 }
 
 __host__  cudaError_t Octree::allocateByMaxLevel(unsigned int newMaxLevel) {
-	// printf("octree\n");
-	// testKernel<<<1,1>>>();
+	newMaxLevel = minv(maxPossibleLevel, newMaxLevel);
 
 	allocatedMemoryInBytes = getAllocatedMemoryInBytes(newMaxLevel);
 	maxLevel = newMaxLevel;
@@ -179,7 +174,7 @@ __device__ uint32_t Octree::morton3Dencode(Vector3<int> pos) {
 }
 
 // First part of the insertion (top-down): inserting the correct leaf-voxel data
-__device__ void Octree::insert(BlockInfo<>& block) {
+__device__ void Octree::insert(const BlockInfo<>& block) {
 	int x = block.pos.x;
 	int y = block.pos.y;
 	int z = block.pos.z;
@@ -269,9 +264,9 @@ __device__ void Octree::traverseNewNode(bool& foundSolid, Triple<Vector3<int>, V
 		intersectionData.second = getBlockHitPos(intersectionData.first, origRayOrigin, origRayDirection, blockHitEpsilon);
 		intersectionData.third = nodes[nodeIdx].blockId();
 
-		// if(intersectionData.first != Vector3<int>(-512, -512, -512)) {
-		// 	printf("%d %d %d -> %f %f %f | morton: %d | id: %d\n", intersectionData.first.x, intersectionData.first.y, intersectionData.first.z, intersectionData.second.x, intersectionData.second.y, intersectionData.second.z, nodeIdx, intersectionData.third);
-		// }
+		if(nodeIdx <= 10000) { // intersectionData.first != Vector3<int>(-512, -512, -512)
+			printf("%d %d %d -> %f %f %f | morton: %d | id: %d\n", intersectionData.first.x, intersectionData.first.y, intersectionData.first.z, intersectionData.second.x, intersectionData.second.y, intersectionData.second.z, nodeIdx, intersectionData.third);
+		}
 		
 		foundSolid = true;
 		return;
@@ -395,16 +390,73 @@ __device__ __host__ unsigned int Octree::getMaxSize() const {
 	return maxSize;
 }
 
-__host__ int Octree::getMaxOctreeLevelByGPU() {
+__host__ unsigned int Octree::getMaxOctreeLevelByGPU() {
 	size_t freeBytes, totalBytes;
 
 	cudaMemGetInfo(&freeBytes, &totalBytes);
 
-	int maxLevel = 1;
+	unsigned int maxLevel = 1;
 
 	while(getAllocatedMemoryInBytes(maxLevel) < freeBytes) {
 		maxLevel++;
 	}
 
-	return maxLevel - 1;
+	return minv(maxPossibleLevel, maxLevel - 1);
 }
+
+cudaError_t Octree::insertBlocks(uint8_t* blockIdArray, Vector3<int> startOffset, bool isCalculatingInsertLODsEnabled, unsigned int chunkWidth, unsigned int gridSize, unsigned int blockSize) {
+	insertBlocksKernel<<<gridSize, blockSize>>>(this, blockIdArray, chunkWidth, startOffset);
+
+	// if(isCalculatingInsertLODsEnabled) {
+	// 	for(int level = 0; level <= maxLevel; level++) {
+	// 		// printf("grid size: %d, total: %d, side length: %d\n", gridSize, gridSize * blockSize, (int)cbrtf(float(gridSize) * float(blockSize)));
+
+	// 		insertBlocksByXYZFrameFunctionFixLODKernel<<<gridSize, blockSize>>>(this, blockPosToIdFunction, frameNumber, level);
+
+	// 		if(blockSize >= 8) {
+	// 			blockSize /= 8;
+	// 		}
+	// 		else if(gridSize >= 8) {
+	// 			gridSize /= 8;
+	// 		}
+	// 	}
+	// }
+
+	return cudaDeviceSynchronize();
+}
+
+__global__ void insertBlocksKernel(Octree* octree, uint8_t* blockIdArray, unsigned int chunkWidth, Vector3<int> startOffset) {            
+	size_t index = threadIdx.x + blockIdx.x * blockDim.x;
+
+    size_t x = index % chunkWidth 		  		 + startOffset.x;
+    size_t y = (index / chunkWidth) % chunkWidth + startOffset.y;
+    size_t z = index / (chunkWidth * chunkWidth) + startOffset.z;
+
+	uint8_t blockId = blockIdArray[index];
+
+    if(blockId == 0 || x >= chunkWidth || y >= chunkWidth || z >= chunkWidth) {
+        return;
+    }
+	
+    octree->insert(BlockInfo<>(Vector3<int>(x, y, z), blockId));
+}
+
+cudaError_t Octree::getBlocks(uint8_t* outBlockIdArray, Vector3<int> startOffset, unsigned int chunkWidth, unsigned int gridSize, unsigned int blockSize) {
+	getBlocksKernel<<<gridSize, blockSize>>>(this, outBlockIdArray, chunkWidth, startOffset);
+
+	return cudaDeviceSynchronize();
+}
+
+__global__ void getBlocksKernel(Octree* octree, uint8_t* outBlockIdArray, unsigned int chunkWidth, Vector3<int> startOffset) {
+	size_t index = threadIdx.x + blockIdx.x * blockDim.x;
+
+    size_t x = index % chunkWidth 		  		 + startOffset.x;
+    size_t y = (index / chunkWidth) % chunkWidth + startOffset.y;
+    size_t z = index / (chunkWidth * chunkWidth) + startOffset.z;
+
+	if(x >= chunkWidth || y >= chunkWidth || z >= chunkWidth) {
+        return;
+    }
+
+	outBlockIdArray[index] = octree->nodes[octree->morton3Dencode(Vector3<int>::add(Vector3<int>(x, y, z), octree->getMinPos()))].blockId();
+}         

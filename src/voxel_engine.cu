@@ -66,11 +66,6 @@ cudaError_t VoxelEngine::clearVoxels(){
     return octree->clear();
 }
 
-__global__ void testKernel() {
-    printf("color: %f\n", ((*point_light_manager::pointLights)[0])->color.x);
-    printf("size: %d\n", point_light_manager::pointLights->size());
-}
-
 template <bool displayFrame>
 void VoxelEngine::inputLoop(void (*func)()) {
     bool quit = false;
@@ -171,8 +166,6 @@ void VoxelEngine::inputLoop(void (*func)()) {
                     }
             }
         }
-
-        // testKernel<<<1,1>>>();
 
         if constexpr (displayFrame) {
             cuda_renderer::render(octree, cameraPos, cameraAngle, windowWidth, windowHeight, isTextureRenderingEnabled, isMaterialColorOnlyEnabled, isPhongIlluminationEnabled, renderBlocksPerGrid, renderThreadsPerBlock);
@@ -298,7 +291,7 @@ void VoxelEngine::test(cudaError_t error) {
     }
 }
 
-cudaError_t VoxelEngine::setPointLights(std::vector<PointLight> pointLights) {
+cudaError_t VoxelEngine::setPointLights(const std::vector<PointLight>& pointLights) {
     PointLight ambientLight = *point_light_manager::ambientLight;
 
     cudaError_t error = point_light_manager::cleanup();
@@ -320,6 +313,92 @@ cudaError_t VoxelEngine::setPointLights(std::vector<PointLight> pointLights) {
     }
 
     return error;
+}
+
+cudaError_t VoxelEngine::setPointLights(PointLight* pointLights, unsigned int numLights) {
+    PointLight ambientLight = *point_light_manager::ambientLight;
+
+    cudaError_t error = point_light_manager::cleanup();
+
+    if(error != cudaSuccess) {
+        return error;
+    }
+
+    error = point_light_manager::init(numLights, ambientLight);
+
+    if(error != cudaSuccess) {
+        return error;
+    }
+
+    for(int i = 0; i < numLights; i++) {
+        (*(point_light_manager::pointLights))[i]->color = pointLights[i].color;
+        (*(point_light_manager::pointLights))[i]->pos = pointLights[i].pos;
+        (*(point_light_manager::pointLights))[i]->intensity = pointLights[i].intensity;
+    }
+
+    return error;
+}
+
+cudaError_t VoxelEngine::insertVoxels(uint8_t* hostBlockIdArray, unsigned int chunkWidth, Vector3<int> startOffset) {
+    size_t totalVoxels = chunkWidth;
+
+    totalVoxels = totalVoxels * totalVoxels * totalVoxels;
+
+    uint8_t* deviceBlockIdArray;
+
+    cudaError_t error = cudaMalloc(&deviceBlockIdArray, totalVoxels * sizeof(uint8_t));
+
+    if(error != cudaSuccess) {
+        return error;
+    }
+
+    error = cudaMemcpy(deviceBlockIdArray, hostBlockIdArray, totalVoxels * sizeof(uint8_t), cudaMemcpyHostToDevice);
+
+    if(error != cudaSuccess) {
+        cudaFree(deviceBlockIdArray);
+        return error;
+    }
+
+    error = octree->insertBlocks(deviceBlockIdArray, startOffset, isCalculatingInsertLODsEnabled, chunkWidth, (totalVoxels + insertionBlockSize - 1) / insertionBlockSize, minv((size_t)insertionBlockSize, totalVoxels));
+
+    if(error != cudaSuccess) {
+        cudaFree(deviceBlockIdArray);
+        return error;
+    }
+
+    return cudaFree(deviceBlockIdArray);
+}
+
+cudaError_t VoxelEngine::getVoxels(uint8_t** hostBlockIdArrayPtr, unsigned int chunkWidth, Vector3<int> startOffset) {
+    size_t totalVoxels = chunkWidth;
+
+    totalVoxels = totalVoxels * totalVoxels * totalVoxels;
+
+    uint8_t* deviceBlockIdArray;
+
+    cudaError_t error = cudaMalloc(&deviceBlockIdArray, totalVoxels * sizeof(uint8_t));
+
+    if(error != cudaSuccess) {
+        return error;
+    }
+
+    error = octree->getBlocks(deviceBlockIdArray, startOffset, chunkWidth, (totalVoxels + insertionBlockSize - 1) / insertionBlockSize, minv((size_t)insertionBlockSize, totalVoxels));
+
+    if(error != cudaSuccess) {
+        cudaFree(deviceBlockIdArray);
+        return error;
+    }
+
+    *hostBlockIdArrayPtr = new uint8_t[totalVoxels];
+
+    error = cudaMemcpy(*hostBlockIdArrayPtr, deviceBlockIdArray, totalVoxels * sizeof(uint8_t), cudaMemcpyDeviceToHost);
+
+    if(error != cudaSuccess) {
+        cudaFree(deviceBlockIdArray);
+        return error;
+    }
+
+    return cudaFree(deviceBlockIdArray);
 }
 
 bool VoxelEngine::getIsInitialized() {
@@ -378,7 +457,7 @@ bool VoxelEngine::getCalculatingInsertLODsEnabled() {
     return isCalculatingInsertLODsEnabled;
 }
 
-int VoxelEngine::getMaxOctreeLevelByGPU() {
+unsigned int VoxelEngine::getMaxOctreeLevelByGPU() {
     return Octree::getMaxOctreeLevelByGPU();
 }
 
@@ -436,24 +515,6 @@ bool VoxelEngine::getPhongIlluminationEnabled() {
 
 void VoxelEngine::setPhongIlluminationEnabled(bool isEnabled) {
     isPhongIlluminationEnabled = isEnabled;
-}
-
-cudaError_t VoxelEngine::setNumLights(unsigned int numLights_) {
-    PointLight ambientLight = *point_light_manager::ambientLight;
-
-    cudaError_t error = point_light_manager::cleanup();
-
-    if(error != cudaSuccess) {
-        return error;
-    }
-
-    error = point_light_manager::init(numLights_, ambientLight);
-
-    if(error != cudaSuccess) {
-        return error;
-    }
-
-    return error;
 }
 
 void VoxelEngine::setAmbientLightColor(Vector3<> color) {

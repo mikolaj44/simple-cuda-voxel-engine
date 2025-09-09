@@ -34,13 +34,7 @@
 // }
 
 int main() {
-    try {
-        VoxelEngine::test(VoxelEngine::init(1920, 1080, 10));
-    }
-    catch (std::string exceptionMessage) {
-        std::cerr << exceptionMessage << std::endl;
-        abort();
-    }
+    VoxelEngine::test(VoxelEngine::init(1920, 1080, 10));
 
     VoxelEngine::setOctreeMinPos(Vector3<>(-512, -512, -512));
 
@@ -48,8 +42,9 @@ int main() {
         //if(x == 204 && y == 253 && z == 01)
         //if(x == y)
         // if(x*x + y*y + z*z <= 50000)
-             return (absv(x) + absv(y) + absv(z)) % 4 + 1;
+             //return (absv(x) + absv(y) + absv(z)) % 4 + 1;
 
+             return 1;
         // return 0;
         
         int maxIterations = 4;
@@ -121,7 +116,7 @@ int main() {
 
     VoxelEngine::setTextureRenderingEnabled(true);
 
-    VoxelEngine::setCalculatingInsertLODsEnabled(false);
+    VoxelEngine::setCalculatingInsertLODsEnabled(true);
 
     VoxelEngine::setMaterialColorOnlyEnabled(false);
 
@@ -131,15 +126,39 @@ int main() {
 
 
 
-    VoxelEngine::insertVoxels(blockPosFrameToIdFunction);
-
     VoxelEngine::setMaterials(blockIdFrameToIdFunction);
 
-    //VoxelEngine::setPointLights({PointLight(Vector3<>(0, 0, -300000), Vector3<>(255, 0, 0)), PointLight(Vector3<>(0, -300000, -300000), Vector3<>(0, 0, 255))});    
+    VoxelEngine::setPointLights({PointLight(Vector3<>(0, 0, -300000), Vector3<>(255, 0, 0)), PointLight(Vector3<>(0, -300000, -300000), Vector3<>(0, 0, 255))});    
 
     VoxelEngine::setAmbientLightIntensity(0.5);
 
-    // printf("done inserting\n");
+
+    size_t chunkWidth = 8;
+
+    uint8_t* blockIdArray = new uint8_t[chunkWidth * chunkWidth * chunkWidth];
+
+    for(int i = 0; i < chunkWidth * chunkWidth * chunkWidth; i++) {
+        blockIdArray[i] = 1;
+    }
+
+    //VoxelEngine::insertVoxels(blockPosFrameToIdFunction);
+
+    VoxelEngine::test(VoxelEngine::insertVoxels(blockIdArray, chunkWidth, Vector3<int>(0, 0, 0)));
+
+    delete blockIdArray;
+
+
+
+    uint8_t* outBlockIdArray;
+
+    VoxelEngine::test(VoxelEngine::getVoxels(&outBlockIdArray, chunkWidth, Vector3<int>(0, 0, 0)));
+
+    for(int i = 0; i < chunkWidth * chunkWidth * chunkWidth; i++) {
+        std::cout << (int)outBlockIdArray[i] << " ";
+    }
+
+    delete outBlockIdArray;
+
 
     VoxelEngine::inputLoop();
 
