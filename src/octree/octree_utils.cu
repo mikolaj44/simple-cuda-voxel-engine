@@ -4,7 +4,7 @@
 #include "block_variant/block_variant_manager.cuh"
 
 namespace octree_utils {
-    __device__ Vector3<> getBlockHitPos(Vector3<int> blockPos, Vector3<> rayOrigin, Vector3<> rayDirection, float epsilon) {
+    __device__ scve::Vector3<> getBlockHitPos(scve::Vector3<int> blockPos, scve::Vector3<> rayOrigin, scve::Vector3<> rayDirection, float epsilon) {
         // if (rayDirection.x == 0)
         //     rayDirection.x = blockPos.x;
 
@@ -24,7 +24,7 @@ namespace octree_utils {
     
         tmin = maxv(maxv(tmin, tymin), tzmin);
 
-        Vector3<> result = Vector3<>(rayOrigin.x + tmin * rayDirection.x, rayOrigin.y + tmin * rayDirection.y, rayOrigin.z + tmin * rayDirection.z);
+        scve::Vector3<> result = scve::Vector3<>(rayOrigin.x + tmin * rayDirection.x, rayOrigin.y + tmin * rayDirection.y, rayOrigin.z + tmin * rayDirection.z);
 
         // if(absv(result.x) - absv(blockPos.x) >= 0) {
         //     result.x = blockPos.x;

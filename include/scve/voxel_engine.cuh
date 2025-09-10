@@ -6,6 +6,8 @@
 #include "light/point_light.cuh"
 #include "block_variant/block_variant_manager.cuh"
 
+namespace scve {
+
 class VoxelEngine {
 public:
     static cudaError_t init(unsigned int windowWidth, unsigned int windowHeight, unsigned int initialMaxOctreeDepth = 1, unsigned int initialNumLights = 1);
@@ -154,3 +156,5 @@ private:
 
     static cudaError_t initLights();
 };
+
+}

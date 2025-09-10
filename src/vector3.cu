@@ -1,5 +1,7 @@
 #include "vector3.cuh"
 
+namespace scve {
+
 template <typename T>
 __device__ __host__ float Vector3<T>::len(){
     #ifdef __CUDA_ARCH__
@@ -117,3 +119,5 @@ __device__ __host__ Vector3<T>& Vector3<T>::div(const Vector3<T>& other){
 
 template class Vector3<int>;
 template class Vector3<float>;
+
+}

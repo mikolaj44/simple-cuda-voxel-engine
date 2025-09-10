@@ -5,7 +5,7 @@
 
 #include <stdint.h>
 
-namespace block_variant_manager {
+namespace scve::block_variant_manager {
     extern __managed__ ManagedList<BlockVariant*>* blockVariants;
 
     cudaError_t init(unsigned int maxNumVariants);

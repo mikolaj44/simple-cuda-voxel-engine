@@ -4,7 +4,7 @@
 #include "managed_list.cuh"
 #include <stdint.h>
 
-namespace point_light_manager {
+namespace scve::point_light_manager {
     extern __managed__ ManagedList<PointLight*>* pointLights;
 
     extern __managed__ PointLight* ambientLight;

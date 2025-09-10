@@ -2,50 +2,14 @@
 
 #include <iostream>
 
-// void func() {
-//     VoxelEngine::clearVoxels();
-
-//     Vector3<> cameraPos = VoxelEngine::getCameraPos();
-
-//     auto blockPosToIdFunction = [=] __device__ (int x, int y, int z, uint64_t frameCount) {
-//         // float val = cudaNoise::perlinNoise(make_float3(float(x) / 1000.0, 1, float(z) / 1000.0), 1, 0);
-
-//         // printf("%f\n", val);
-        
-//         // if(absv(val) >= 0.4 /*&& y <= val + 20.5 + 10*/){
-//         //     return 1;
-//         // }
-
-//         // if(val >= 0.05){
-//         //     return 2;
-//         // }
-
-//         if(y >= cameraPos.y + 5 && y <= cameraPos.y + 10)
-//             return (x+y+z) % 127 + 1;
-//         return 0;
-//     };
-
-//     VoxelEngine::insertVoxels(blockPosToIdFunction);
-
-//     Vector3<> pos = cameraPos.add(Vector3<>(-512,10,512));
-
-//     VoxelEngine::setOctreeMinPos(pos);
-// }
-
 int main() {
+    using namespace scve;
+    
     VoxelEngine::test(VoxelEngine::init(1920, 1080, 10));
 
     VoxelEngine::setOctreeMinPos(Vector3<>(-512, -512, -512));
 
-    auto blockPosFrameToIdFunction = [] __device__ (int x, int y, int z, uint64_t frameNumber) {
-        //if(x == 204 && y == 253 && z == 01)
-        //if(x == y)
-        // if(x*x + y*y + z*z <= 50000)
-             //return (absv(x) + absv(y) + absv(z)) % 4 + 1;
-
-             //return 1;
-        // return 0;
-        
+    auto blockPosFrameToIdFunction = [] __device__ (int x, int y, int z, uint64_t frameNumber) {        
         int maxIterations = 4;
 
         float newX = float(x) / 450.0;
@@ -84,31 +48,16 @@ int main() {
             wY += newY;
             wZ += newZ;
 
-            if(wX * wX + wY * wY + wZ * wZ > 0.6) { // 4.0
+            if(wX * wX + wY * wY + wZ * wZ > 0.6) {
                 return 0;
             }
         }
-
-        // if(x == 0 && y == 0 && z == 0)
-        //     return 1;
-        // if(x == 0 && y == 0 && z == 1)
-        //     return 2;
-        // if(x == 0 && y == 1 && z == 0)
-        //     return 3;
-        // if(x == 0 && y == 1 && z == 1)
-        //     return 4;
-
-        //if(x < 100)
-            return int(sqrtf(x*x + y*y + z*z)) % 127 + 1;
-        return 0;
-
-        // return int(sqrtf(absv(x) * absv(x) * absv(x) + absv(x) + absv(y) + absv(z))) % 127 + 1; 
+        
+        return int(sqrtf(x*x + y*y + z*z)) % 127 + 1;
     };
 
     auto blockIdFrameToIdFunction = [] __device__ (uint8_t blockId, uint64_t frameNumber) {
-        return Material(Vector3<>(255, 0, 0), 1.0, 0.0, 20.0);
-
-        // return Material(Vector3<>(blockId * blockId, blockId * 3 * blockId, blockId * 5 + 100), 1.0, 0.0, 20.0);
+        return Material(Vector3<>(blockId * blockId, blockId * 3 * blockId, blockId * 5 + 100), 1.0, 0.0, 20.0);
     };
 
     VoxelEngine::setCameraPos(Vector3<>(0, 0, -10000));

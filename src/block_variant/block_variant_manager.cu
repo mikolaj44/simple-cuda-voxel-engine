@@ -8,7 +8,7 @@
 #include <cuda_runtime.h>
 #include <device_launch_parameters.h>
 
-namespace block_variant_manager {
+namespace scve::block_variant_manager {
     __managed__ ManagedList<BlockVariant*>* blockVariants;
 
     BlockTexture** blockTextures = nullptr;

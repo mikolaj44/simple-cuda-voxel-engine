@@ -35,7 +35,7 @@ namespace octree_utils {
         }
     };
 
-    __device__ Vector3<> getBlockHitPos(Vector3<int> blockPos, Vector3<> rayOrigin, Vector3<> rayDirection, float epsilon);
+    __device__ scve::Vector3<> getBlockHitPos(scve::Vector3<int> blockPos, scve::Vector3<> rayOrigin, scve::Vector3<> rayDirection, float epsilon);
 
     namespace revelles {
         __device__ unsigned char firstNode(float tx0, float ty0, float tz0, float txm, float tym, float tzm, float epsilon);

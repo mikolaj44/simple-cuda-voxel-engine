@@ -1,5 +1,7 @@
 #pragma once
 
+namespace scve {
+
 template<typename T = float>
 class alignas(4) Vector3 {
 public:
@@ -93,3 +95,5 @@ public:
         return v1.div(v2);
     }
 };
+
+}

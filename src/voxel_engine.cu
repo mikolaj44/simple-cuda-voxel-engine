@@ -14,6 +14,8 @@
 #include <cuda_gl_interop.h>
 #include <device_launch_parameters.h>
 
+namespace scve {
+
 bool VoxelEngine::isInitialized = false;
 bool VoxelEngine::isTextureRenderingEnabled = true;
 bool VoxelEngine::isCalculatingInsertLODsEnabled = false;
@@ -535,3 +537,5 @@ float VoxelEngine::getAmbientLightIntensity() {
 
 template void VoxelEngine::inputLoop<true>(void (*func)());
 template void VoxelEngine::inputLoop<false>(void (*func)());
+
+}

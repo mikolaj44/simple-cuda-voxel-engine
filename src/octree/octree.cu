@@ -100,7 +100,7 @@ __host__ cudaError_t Octree::clear() {
 	return cudaMemset(nodes, 0, allocatedMemoryInBytes);
 }
 
-__device__ Vector3<int> Octree::morton3Ddecode(uint32_t mortonCode) {
+__device__ scve::Vector3<int> Octree::morton3Ddecode(uint32_t mortonCode) {
 	static const uint32_t mostSignificant1 = uint32_t(1) << 31;
 
 	int index = 0;
@@ -133,10 +133,10 @@ __device__ Vector3<int> Octree::morton3Ddecode(uint32_t mortonCode) {
 		size /= 2;
 	}
 
-	return Vector3<int>(x, y, z);
+	return scve::Vector3<int>(x, y, z);
 }
 
-__device__ uint32_t Octree::morton3Dencode(Vector3<int> pos) {
+__device__ uint32_t Octree::morton3Dencode(scve::Vector3<int> pos) {
 	uint32_t mortonCode = 1;
 
 	int x = pos.x - xMin;
@@ -251,7 +251,7 @@ __device__ void Octree::insertFixLOD(uint32_t mortonCode, uint8_t blockId) {
 	nodes[mortonCode].id = blockId;
 }
 
-__device__ void Octree::traverseNewNode(bool& foundSolid, Triple<Vector3<int>, Vector3<>, uint8_t>& intersectionData, octree_utils::Stack& stack, Vector3<> origRayOrigin, Vector3<> origRayDirection, float tx0, float ty0, float tz0, float tx1, float ty1, float tz1, unsigned int nodeIdx, int minNodeSize, int sX, int sY) {
+__device__ void Octree::traverseNewNode(bool& foundSolid, Triple<scve::Vector3<int>, scve::Vector3<>, uint8_t>& intersectionData, octree_utils::Stack& stack, scve::Vector3<> origRayOrigin, scve::Vector3<> origRayDirection, float tx0, float ty0, float tz0, float tx1, float ty1, float tz1, unsigned int nodeIdx, int minNodeSize, int sX, int sY) {
 	using namespace octree_utils::revelles;
 	using namespace octree_utils;
 	
@@ -264,7 +264,7 @@ __device__ void Octree::traverseNewNode(bool& foundSolid, Triple<Vector3<int>, V
 		intersectionData.second = getBlockHitPos(intersectionData.first, origRayOrigin, origRayDirection, blockHitEpsilon);
 		intersectionData.third = nodes[nodeIdx].blockId();
 
-		if(nodeIdx <= 10000) { // intersectionData.first != Vector3<int>(-512, -512, -512)
+		if(nodeIdx <= 10000) { // intersectionData.first != scve::Vector3<int>(-512, -512, -512)
 			printf("%d %d %d -> %f %f %f | morton: %d | id: %d\n", intersectionData.first.x, intersectionData.first.y, intersectionData.first.z, intersectionData.second.x, intersectionData.second.y, intersectionData.second.z, nodeIdx, intersectionData.third);
 		}
 		
@@ -290,7 +290,7 @@ __device__ void Octree::traverseNewNode(bool& foundSolid, Triple<Vector3<int>, V
 	});
 }
 
-__device__ void Octree::traverseChildNodes(bool& foundSolid, Triple<Vector3<int>, Vector3<>, uint8_t>& intersectionData, octree_utils::Stack& stack, octree_utils::Stack::Frame& data, Vector3<> origRayOrigin, Vector3<> origRayDirection, unsigned char a, int minNodeSize, int sX, int sY) {
+__device__ void Octree::traverseChildNodes(bool& foundSolid, Triple<scve::Vector3<int>, scve::Vector3<>, uint8_t>& intersectionData, octree_utils::Stack& stack, octree_utils::Stack::Frame& data, scve::Vector3<> origRayOrigin, scve::Vector3<> origRayDirection, unsigned char a, int minNodeSize, int sX, int sY) {
 	using namespace octree_utils::revelles;
 	
 	switch (data.nodeIndex) {
@@ -323,11 +323,11 @@ __device__ void Octree::traverseChildNodes(bool& foundSolid, Triple<Vector3<int>
 	}
 }
 
-__device__ Triple<Vector3<int>, Vector3<>, uint8_t> Octree::getRayIntersectionData(Vector3<> rayOrigin, Vector3<> rayDirection, int sX, int sY, int minNodeSize) {
+__device__ Triple<scve::Vector3<int>, scve::Vector3<>, uint8_t> Octree::getRayIntersectionData(scve::Vector3<> rayOrigin, scve::Vector3<> rayDirection, int sX, int sY, int minNodeSize) {
 	unsigned char a = 0;
 
-	Vector3<> origRayOrigin = rayOrigin;
-	Vector3<> origRayDirection = rayDirection;
+	scve::Vector3<> origRayOrigin = rayOrigin;
+	scve::Vector3<> origRayDirection = rayDirection;
 
 	if (rayDirection.x < 0) {
 		rayOrigin.x = -rayOrigin.x + (xMin * 2 + maxSize);
@@ -352,7 +352,7 @@ __device__ Triple<Vector3<int>, Vector3<>, uint8_t> Octree::getRayIntersectionDa
 	float tz0 = (zMin - rayOrigin.z) / rayDirection.z;
 	float tz1 = (zMin + maxSize - rayOrigin.z) / rayDirection.z;
 	
-	Triple<Vector3<int>, Vector3<>, uint8_t> intersectionData;
+	Triple<scve::Vector3<int>, scve::Vector3<>, uint8_t> intersectionData;
 
 	if (maxv(maxv(tx0, ty0), tz0) < minv(minv(tx1, ty1), tz1)) {
 		octree_utils::Stack stack;
@@ -368,7 +368,7 @@ __device__ Triple<Vector3<int>, Vector3<>, uint8_t> Octree::getRayIntersectionDa
 	return intersectionData;
 }
 
-__device__ __host__ void Octree::setMinPos(Vector3<> minPos) {
+__device__ __host__ void Octree::setMinPos(scve::Vector3<> minPos) {
 	xMin = minPos.x;
 	yMin = minPos.y;
 	zMin = minPos.z;
@@ -378,8 +378,8 @@ __host__ cudaError_t Octree::setMaxLevel(unsigned int maxLevel_) {
 	return allocateByMaxLevel(maxLevel_);
 }
 
-__device__ __host__ Vector3<int> Octree::getMinPos() const {
-	return Vector3<int>(xMin, yMin, zMin);
+__device__ __host__ scve::Vector3<int> Octree::getMinPos() const {
+	return scve::Vector3<int>(xMin, yMin, zMin);
 };
 
 __device__ __host__ unsigned int Octree::getMaxLevel() const {
@@ -404,7 +404,7 @@ __host__ unsigned int Octree::getMaxOctreeLevelByGPU() {
 	return minv(maxPossibleLevel, maxLevel - 1);
 }
 
-cudaError_t Octree::insertBlocks(uint8_t* blockIdArray, Vector3<int> startOffset, bool isCalculatingInsertLODsEnabled, unsigned int chunkWidth, unsigned int gridSize, unsigned int blockSize) {
+cudaError_t Octree::insertBlocks(uint8_t* blockIdArray, scve::Vector3<int> startOffset, bool isCalculatingInsertLODsEnabled, unsigned int chunkWidth, unsigned int gridSize, unsigned int blockSize) {
 	insertBlocksKernel<<<gridSize, blockSize>>>(this, blockIdArray, chunkWidth, startOffset);
 
 	// if(isCalculatingInsertLODsEnabled) {
@@ -425,7 +425,7 @@ cudaError_t Octree::insertBlocks(uint8_t* blockIdArray, Vector3<int> startOffset
 	return cudaDeviceSynchronize();
 }
 
-__global__ void insertBlocksKernel(Octree* octree, uint8_t* blockIdArray, unsigned int chunkWidth, Vector3<int> startOffset) {            
+__global__ void insertBlocksKernel(Octree* octree, uint8_t* blockIdArray, unsigned int chunkWidth, scve::Vector3<int> startOffset) {            
 	size_t index = threadIdx.x + blockIdx.x * blockDim.x;
 
     size_t x = index % chunkWidth 		  		 + startOffset.x;
@@ -438,16 +438,16 @@ __global__ void insertBlocksKernel(Octree* octree, uint8_t* blockIdArray, unsign
         return;
     }
 	
-    octree->insert(BlockInfo<>(Vector3<int>(x, y, z), blockId));
+    octree->insert(BlockInfo<>(scve::Vector3<int>(x, y, z), blockId));
 }
 
-cudaError_t Octree::getBlocks(uint8_t* outBlockIdArray, Vector3<int> startOffset, unsigned int chunkWidth, unsigned int gridSize, unsigned int blockSize) {
+cudaError_t Octree::getBlocks(uint8_t* outBlockIdArray, scve::Vector3<int> startOffset, unsigned int chunkWidth, unsigned int gridSize, unsigned int blockSize) {
 	getBlocksKernel<<<gridSize, blockSize>>>(this, outBlockIdArray, chunkWidth, startOffset);
 
 	return cudaDeviceSynchronize();
 }
 
-__global__ void getBlocksKernel(Octree* octree, uint8_t* outBlockIdArray, unsigned int chunkWidth, Vector3<int> startOffset) {
+__global__ void getBlocksKernel(Octree* octree, uint8_t* outBlockIdArray, unsigned int chunkWidth, scve::Vector3<int> startOffset) {
 	size_t index = threadIdx.x + blockIdx.x * blockDim.x;
 
     size_t x = index % chunkWidth 		  		 + startOffset.x;
@@ -458,5 +458,5 @@ __global__ void getBlocksKernel(Octree* octree, uint8_t* outBlockIdArray, unsign
         return;
     }
 
-	outBlockIdArray[index] = octree->nodes[octree->morton3Dencode(Vector3<int>::add(Vector3<int>(x, y, z), octree->getMinPos()))].blockId();
+	outBlockIdArray[index] = octree->nodes[octree->morton3Dencode(scve::Vector3<int>::add(scve::Vector3<int>(x, y, z), octree->getMinPos()))].blockId();
 }         

@@ -6,7 +6,7 @@
 #include <device_launch_parameters.h>
 #include <stdio.h>
 
-namespace point_light_manager {
+namespace scve::point_light_manager {
     __managed__ ManagedList<PointLight*>* pointLights;
 
     __managed__ PointLight* ambientLight;
