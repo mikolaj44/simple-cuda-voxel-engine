@@ -6,7 +6,7 @@
 #include <string>
 #include <cmath>
 
-#include "octree/octree.cuh"
+#include "octree.cuh"
 #include "octree/octree_utils.cuh"
 #include "block_variant/block_variant_manager.cuh"
 #include "cuda_math.cuh"

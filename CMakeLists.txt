@@ -1,18 +1,42 @@
-cmake_minimum_required(VERSION 3.23.1 FATAL_ERROR)
+cmake_minimum_required(VERSION 3.10 FATAL_ERROR)
 
 project(cuda-voxel-engine LANGUAGES CXX CUDA)
-# cmake_policy(SET CMP00)
+
+set(CPM_FILE ${CMAKE_CURRENT_BINARY_DIR}/cmake/CPM.cmake)
+
+if(NOT EXISTS ${CPM_FILE})
+  file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/cmake)
+
+  file(
+    DOWNLOAD
+    https://github.com/cpm-cmake/CPM.cmake/releases/download/v0.42.0/CPM.cmake
+    ${CMAKE_CURRENT_BINARY_DIR}/cmake/CPM.cmake
+  )
+endif()
+
+include(${CPM_FILE})
 
 file(GLOB_RECURSE SOURCES "src/*.cpp" "src/*.cu")
-file(GLOB_RECURSE HEADERS "include/*.h" "include/*.hpp" "include/*.cuh")
+file(GLOB_RECURSE HEADERS "include/*.h" "include/*.hpp" "include/*.cuh" "src/*.h" "src/*.hpp" "src/*.cuh")
 
 find_package(CUDAToolkit REQUIRED)
-find_package(SDL2 REQUIRED)
-find_package(SDL2_ttf REQUIRED)
 find_package(OpenGL REQUIRED)
-find_package(glfw3 REQUIRED)
-find_package(GLEW REQUIRED)
-find_package(GLUT REQUIRED)
+find_package(GLUT REQUIRED) # TODO: replace with FreeGLUT through CPM
+
+CPMAddPackage(
+  NAME SDL2
+  URL https://github.com/libsdl-org/SDL/archive/refs/tags/release-2.30.6.zip
+)
+
+CPMAddPackage(CPM_FILE
+  NAME glfw
+  URL https://github.com/glfw/glfw/releases/download/3.4/glfw-3.4.zip
+)
+
+CPMAddPackage(CPM_FILE
+  NAME GLEW
+  URL https://github.com/nigels-com/glew/releases/download/glew-2.2.0/glew-2.2.0.zip
+)
 
 include_directories(${SDL2_INCLUDE_DIRS} ${OPENGL_INCLUDE_DIRS} ${GLEW_INCLUDE_DIRS})
 
@@ -45,7 +69,7 @@ target_compile_options(${PROJECT_NAME} PRIVATE
 set_target_properties(${PROJECT_NAME} PROPERTIES OUTPUT_NAME "engine")
 set_target_properties(${PROJECT_NAME} PROPERTIES CUDA_RESOLVE_DEVICE_SYMBOLS ON)
 
-target_include_directories(${PROJECT_NAME} PRIVATE include)
+target_include_directories(${PROJECT_NAME} PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src)
+target_include_directories(${PROJECT_NAME} PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include/scve)
 
-target_link_libraries(${PROJECT_NAME} PRIVATE SDL2::SDL2 SDL2_ttf::SDL2_ttf)
-target_link_libraries(${PROJECT_NAME} PRIVATE glfw GLEW::GLEW GL GLUT::GLUT)
+target_link_libraries(${PROJECT_NAME} PRIVATE SDL2 glfw GLEW GL GLUT::GLUT)

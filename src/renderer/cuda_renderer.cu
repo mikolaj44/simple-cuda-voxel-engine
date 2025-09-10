@@ -3,8 +3,8 @@
 #include <cmath>
 #include <map>
 
-#include "renderer/cuda_renderer.cuh"
-#include "renderer/cuda_renderer_utils.cuh"
+#include "cuda_renderer.cuh"
+#include "cuda_renderer_utils.cuh"
 #include "block_variant/block_variant_manager.cuh"
 #include "light/point_light_manager.cuh"
 
