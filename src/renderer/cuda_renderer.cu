@@ -11,28 +11,16 @@
 #include <cuda_runtime.h>
 #include <device_launch_parameters.h>
 
-constexpr float FOCAL_LENGTH = 10000; //350 //1200 //4000
-constexpr float SCALE_V = 1;
-
-constexpr float epsilon = 0.01;
-
 namespace scve::cuda_renderer {
+    uchar4* devicePixels;
+
+    __managed__ float focalLength = 10000; //350 //1200 //4000
+
+    constexpr float epsilon = 0.01;
+
     namespace {
-        __device__ void setPixel(uchar4* pixels, int windowWidth, int windowHeight, int sX, int sY, int r, int g, int b, int a) {
+        __device__ void setPixel(uchar4* pixels, unsigned int windowWidth, unsigned int windowHeight, unsigned int sX, unsigned int sY, unsigned int r, unsigned int g, unsigned int b, unsigned int a) {
             pixels[(windowHeight - 1 - sY) * windowWidth + sX] = make_uchar4(r, g, b, a);
-        }
-
-        // https://stackoverflow.com/questions/61277046/convert-just-a-hue-into-rgb
-        __device__ scve::Vector3<> hueToRGB(float hue){
-            float kr = remainderf(5 + hue * 6, 6);
-            float kg = remainderf(3 + hue * 6, 6);
-            float kb = remainderf(1 + hue * 6, 6);
-
-            unsigned int r = (1 - maxv(minv(minv(kr, 4-kr), 1.0f), 0.0f)) * 255;
-            unsigned int g = (1 - maxv(minv(minv(kg, 4-kg), 1.0f), 0.0f)) * 255;
-            unsigned int b = (1 - maxv(minv(minv(kb, 4-kb), 1.0f), 0.0f)) * 255;
-
-            return scve::Vector3<>(r, g, b);
         }
 
         __device__ scve::Vector3<> getPhongIllumination(scve::Vector3<> startColor, scve::Vector3<> pos, scve::Vector3<> cameraPos, scve::Vector3<> normal, Material material, ManagedList<PointLight*>* pointLights, PointLight* ambientLight) {   
@@ -72,14 +60,15 @@ namespace scve::cuda_renderer {
             return resultColor.mul(255.0);
         }
         
-        __device__ void setPixelByHitInfo(uchar4* pixels, int windowWidth, int windowHeight, Triple<scve::Vector3<int>, scve::Vector3<float>, uint8_t> intersectionData, scve::Vector3<> cameraPos, int sX, int sY, bool isTextureRenderingEnabled, bool isMaterialColorOnlyEnabled, bool isPhongIlluminationEnabled) {            
+        __device__ void setPixelByHitInfo(uchar4* pixels, int windowWidth, int windowHeight, Triple<scve::Vector3<int>, scve::Vector3<float>, uint8_t> intersectionData, scve::Vector3<> cameraPos, int sX, int sY, bool isTextureRenderingEnabled, bool isPhongIlluminationEnabled) {            
             using namespace block_variant_manager;
 
-            uint8_t blockId = (intersectionData.third - 1) % blockVariants->size();
+            uint8_t blockId = intersectionData.third - 1;
     
             int imgWidth, imgHeight, imgChannels;
                 
-            if(isTextureRenderingEnabled && !isMaterialColorOnlyEnabled) {
+            if(isTextureRenderingEnabled) {
+                blockId %= numVariantsWithTextures;
                 imgChannels = ((*blockVariants)[blockId])->texture->getChannels();
             }
     
@@ -100,7 +89,7 @@ namespace scve::cuda_renderer {
 
             // check which side of the block we are on    
             if (equals(y, (float)blockY, epsilon)) { // top
-                if(isTextureRenderingEnabled && !isMaterialColorOnlyEnabled){
+                if(isTextureRenderingEnabled){
                     imgWidth  = ((*blockVariants)[blockId])->texture->getWidth(ImagePosition::TOP);
                     imgHeight = ((*blockVariants)[blockId])->texture->getHeight(ImagePosition::TOP);
 
@@ -115,7 +104,7 @@ namespace scve::cuda_renderer {
                 normal = scve::Vector3<>(0, -1, 0);
             }
             else if (equals(y, (float)blockY + 1.0, epsilon)) { // bottom
-                if(isTextureRenderingEnabled && !isMaterialColorOnlyEnabled) {
+                if(isTextureRenderingEnabled) {
                     imgWidth  = ((*blockVariants)[blockId])->texture->getWidth(ImagePosition::BOTTOM);
                     imgHeight = ((*blockVariants)[blockId])->texture->getHeight(ImagePosition::BOTTOM);
 
@@ -130,7 +119,7 @@ namespace scve::cuda_renderer {
                 normal = scve::Vector3<>(0, 1, 0);
             }
             else if (equals(x, (float)blockX, epsilon)) { // left
-                if(isTextureRenderingEnabled && !isMaterialColorOnlyEnabled){
+                if(isTextureRenderingEnabled){
                     imgWidth  = ((*blockVariants)[blockId])->texture->getWidth(ImagePosition::LEFT);
                     imgHeight = ((*blockVariants)[blockId])->texture->getHeight(ImagePosition::LEFT);
 
@@ -145,7 +134,7 @@ namespace scve::cuda_renderer {
                 normal = scve::Vector3<>(-1, 0, 0);
             }
             else if (equals(x, (float)blockX + 1.0, epsilon)) { // right
-                if(isTextureRenderingEnabled && !isMaterialColorOnlyEnabled){
+                if(isTextureRenderingEnabled){
                     imgWidth  = ((*blockVariants)[blockId])->texture->getWidth(ImagePosition::RIGHT);
                     imgHeight = ((*blockVariants)[blockId])->texture->getHeight(ImagePosition::RIGHT);
 
@@ -160,7 +149,7 @@ namespace scve::cuda_renderer {
                 normal = scve::Vector3<>(1, 0, 0);
             }
             else if (equals(z, (float)blockZ, epsilon)) { // front
-                if(isTextureRenderingEnabled && !isMaterialColorOnlyEnabled){
+                if(isTextureRenderingEnabled){
                     imgWidth  = ((*blockVariants)[blockId])->texture->getWidth(ImagePosition::FRONT);
                     imgHeight = ((*blockVariants)[blockId])->texture->getHeight(ImagePosition::FRONT);
 
@@ -175,7 +164,7 @@ namespace scve::cuda_renderer {
                 normal = scve::Vector3<>(0, 0, -1);
             }
             else if (equals(z, (float)blockZ + 1.0, epsilon)) { // back
-                if(isTextureRenderingEnabled && !isMaterialColorOnlyEnabled){
+                if(isTextureRenderingEnabled){
                     imgWidth  = ((*blockVariants)[blockId])->texture->getWidth(ImagePosition::BACK);
                     imgHeight = ((*blockVariants)[blockId])->texture->getHeight(ImagePosition::BACK);
 
@@ -197,11 +186,8 @@ namespace scve::cuda_renderer {
 
             scve::Vector3<> color = scve::Vector3<>(r, g, b);
 
-            if(isMaterialColorOnlyEnabled) {
+            if(!isTextureRenderingEnabled) {
                 color = ((*blockVariants)[blockId])->material.color;
-            }
-            else if(!isTextureRenderingEnabled) {
-                color = hueToRGB(float(blockId) * 2.8125 / 360.0);
             }
     
             if(isPhongIlluminationEnabled) {
@@ -211,7 +197,7 @@ namespace scve::cuda_renderer {
             setPixel(pixels, windowWidth, windowHeight, sX, sY, (int)color.x, (int)color.y, (int)color.z, 255);
         }
 
-        __global__ void renderKernel(uchar4* pixels, Octree* octree, scve::Vector3<> cameraPos, scve::Vector3<> cameraAngle2d, int windowWidth, int windowHeight, bool isTextureRenderingEnabled, bool isMaterialColorOnlyEnabled, bool isPhongIlluminationEnabled) {                        
+        __global__ void renderKernel(uchar4* pixels, Octree* octree, scve::Vector3<> cameraPos, scve::Vector3<> cameraAngle2d, int windowWidth, int windowHeight, bool isTextureRenderingEnabled, bool isPhongIlluminationEnabled) {                        
             unsigned int index = threadIdx.x + blockDim.x * blockIdx.x;
 
             if (index >= windowWidth * windowHeight) {
@@ -221,8 +207,8 @@ namespace scve::cuda_renderer {
             int sX = index % windowWidth;
             int sY = index / windowWidth;
 
-            float alpha = (atanf(-(sX - windowWidth  / 2) / FOCAL_LENGTH) - cameraAngle2d.y + M_PI / 2); // horizontal angle
-            float polar = (atanf(-(sY - windowHeight / 2) / FOCAL_LENGTH) + cameraAngle2d.x + M_PI / 2); // vertical angle
+            float alpha = (atanf(-(sX - windowWidth  / 2) / focalLength) - cameraAngle2d.y + M_PI / 2); // horizontal angle
+            float polar = (atanf(-(sY - windowHeight / 2) / focalLength) + cameraAngle2d.x + M_PI / 2); // vertical angle
 
             float dX = sin(polar) * cos(alpha);
             float dZ = sin(polar) * sin(alpha);
@@ -231,12 +217,10 @@ namespace scve::cuda_renderer {
             Triple<scve::Vector3<int>, scve::Vector3<>, uint8_t> intersectionData = octree->getRayIntersectionData(cameraPos, scve::Vector3<>(dX, dY, dZ), sX, sY, 1);
 
             if(intersectionData.third == 0) {
-                setPixel(pixels, windowWidth, windowHeight, sX, sY, 0, 0, 255, 255);
+                setPixel(pixels, windowWidth, windowHeight, sX, sY, point_light_manager::backgroundLight->color.x, point_light_manager::backgroundLight->color.y, point_light_manager::backgroundLight->color.z, 255);
             }
             else {
-                // setPixel(pixels, windowWidth, windowHeight, sX, sY, intersectionData.third, intersectionData.third, intersectionData.third, 255);
-
-                setPixelByHitInfo(pixels, windowWidth, windowHeight, intersectionData, cameraPos, sX, sY, isTextureRenderingEnabled, isMaterialColorOnlyEnabled, isPhongIlluminationEnabled);
+                setPixelByHitInfo(pixels, windowWidth, windowHeight, intersectionData, cameraPos, sX, sY, isTextureRenderingEnabled, isPhongIlluminationEnabled);
             }
         }
     }
@@ -247,28 +231,35 @@ namespace scve::cuda_renderer {
     }
 
     cudaError_t cleanup() {
-        return cuda_renderer_utils::cleanupSDL();
+        cudaError_t error = cuda_renderer_utils::cleanupSDL();
+
+        if(error != cudaSuccess) {
+            return error;
+        }
+
+        return cudaFree(devicePixels);
     }
 
     // I'm not error checking for performance reasons
-    void render(Octree* octree, scve::Vector3<> cameraPos, scve::Vector3<> cameraAngle2d, int windowWidth, int windowHeight, bool isTextureRenderingEnabled, bool isMaterialColorOnlyEnabled, bool isPhongIlluminationEnabled, unsigned int gridSize, unsigned int blockSize) {
+    void render(Octree* octree, scve::Vector3<> cameraPos, scve::Vector3<> cameraAngle2d, int windowWidth, int windowHeight, bool isTextureRenderingEnabled, bool isPhongIlluminationEnabled, unsigned int gridSize, unsigned int blockSize) {
         using namespace cuda_renderer_utils;
+
+        cudaFree(devicePixels);
 
         cudaArray* cudaArrayPtr;
         cudaGraphicsMapResources(1, &cudaResource, 0);
         cudaGraphicsSubResourceGetMappedArray(&cudaArrayPtr, cudaResource, 0, 0);
     
         // Copy data to CUDA array
-        uchar4* devPtr;
         size_t pitch;
-        cudaMallocPitch(&devPtr, &pitch, windowWidth * sizeof(uchar4), windowHeight);
+        cudaMallocPitch(&devicePixels, &pitch, windowWidth * sizeof(uchar4), windowHeight);
     
         // cudaEvent_t start, stop;
         // cudaEventCreate(&start);
         // cudaEventCreate(&stop);
         // cudaEventRecord(start);
         
-        renderKernel<<<gridSize,blockSize>>>(devPtr, octree, cameraPos, cameraAngle2d, windowWidth, windowHeight, isTextureRenderingEnabled, isMaterialColorOnlyEnabled, isPhongIlluminationEnabled);
+        renderKernel<<<gridSize,blockSize>>>(devicePixels, octree, cameraPos, cameraAngle2d, windowWidth, windowHeight, isTextureRenderingEnabled, isPhongIlluminationEnabled);
     
         // cudaEventRecord(stop);
         // cudaEventSynchronize(stop);
@@ -278,8 +269,7 @@ namespace scve::cuda_renderer {
         // cudaDeviceSynchronize();
     
         // Copy memory from CUDA device to OpenGL texture
-        cudaMemcpy2DToArray(cudaArrayPtr, 0, 0, devPtr, pitch, windowWidth * sizeof(uchar4), windowHeight, cudaMemcpyDeviceToDevice);
-        cudaFree(devPtr);
+        cudaMemcpy2DToArray(cudaArrayPtr, 0, 0, devicePixels, pitch, windowWidth * sizeof(uchar4), windowHeight, cudaMemcpyDeviceToDevice);
     
         cudaGraphicsUnmapResources(1, &cudaResource, 0);
     

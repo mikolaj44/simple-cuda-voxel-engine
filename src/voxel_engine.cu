@@ -19,7 +19,6 @@ namespace scve {
 bool VoxelEngine::isInitialized = false;
 bool VoxelEngine::isTextureRenderingEnabled = true;
 bool VoxelEngine::isCalculatingInsertLODsEnabled = false;
-bool VoxelEngine::isMaterialColorOnlyEnabled = false;
 bool VoxelEngine::isMouseControlEnabled = false;
 bool VoxelEngine::isKeyboardControlEnabled = true;
 bool VoxelEngine::isPhongIlluminationEnabled = true;
@@ -46,6 +45,21 @@ int VoxelEngine::prevMouseY;
 
 unsigned int VoxelEngine::renderBlocksPerGrid;
 
+namespace {
+    // https://stackoverflow.com/questions/61277046/convert-just-a-hue-into-rgb
+    __device__ scve::Vector3<> hueToRGB(float hue){
+        float kr = remainderf(5 + hue * 6, 6);
+        float kg = remainderf(3 + hue * 6, 6);
+        float kb = remainderf(1 + hue * 6, 6);
+
+        unsigned int r = (1 - maxv(minv(minv(kr, 4-kr), 1.0f), 0.0f)) * 255;
+        unsigned int g = (1 - maxv(minv(minv(kg, 4-kg), 1.0f), 0.0f)) * 255;
+        unsigned int b = (1 - maxv(minv(minv(kb, 4-kb), 1.0f), 0.0f)) * 255;
+
+        return scve::Vector3<>(r, g, b);
+    }
+}
+
 void VoxelEngine::handleCameraMovement(int mouseX, int mouseY) {
     mouseX -= windowWidth / 2;
     mouseY -= windowHeight / 2;
@@ -68,8 +82,7 @@ cudaError_t VoxelEngine::clearVoxels(){
     return octree->clear();
 }
 
-template <bool displayFrame>
-void VoxelEngine::inputLoop(void (*func)()) {
+void VoxelEngine::inputLoop(void (*func)(), bool displayFrame) {
     bool quit = false;
 
     while (!quit) {
@@ -114,9 +127,6 @@ void VoxelEngine::inputLoop(void (*func)()) {
                             break;
                         case SDLK_v:
                             isPhongIlluminationEnabled = !isPhongIlluminationEnabled;
-                            break;
-                        case SDLK_b:
-                            isMaterialColorOnlyEnabled = !isMaterialColorOnlyEnabled;
                             break;
 
                         case SDLK_UP:
@@ -169,8 +179,8 @@ void VoxelEngine::inputLoop(void (*func)()) {
             }
         }
 
-        if constexpr (displayFrame) {
-            cuda_renderer::render(octree, cameraPos, cameraAngle, windowWidth, windowHeight, isTextureRenderingEnabled, isMaterialColorOnlyEnabled, isPhongIlluminationEnabled, renderBlocksPerGrid, renderThreadsPerBlock);
+        if(displayFrame) {
+            cuda_renderer::render(octree, cameraPos, cameraAngle, windowWidth, windowHeight, isTextureRenderingEnabled, isPhongIlluminationEnabled, renderBlocksPerGrid, renderThreadsPerBlock);
             SDL_GL_SwapWindow(window);
 
             frameNumber++;
@@ -221,11 +231,17 @@ cudaError_t VoxelEngine::init(unsigned int windowWidth_, unsigned int windowHeig
         return error;
     }
 
-    error = point_light_manager::init(initialNumLights, PointLight());
+    error = point_light_manager::init(initialNumLights);
 
     if(error != cudaSuccess) {
         return error;
     }
+
+    auto defaultIdFrameToMaterialFunction = [] __device__ (uint8_t blockId, uint64_t frameNumber) {
+        return Material(hueToRGB((blockId) * 2.8125 / 360.0), 1.0, 0.0, 20.0);
+    };
+
+    setMaterials(defaultIdFrameToMaterialFunction);
 
     error = cuda_renderer::init(windowWidth_, windowHeight_);
 
@@ -295,14 +311,15 @@ void VoxelEngine::test(cudaError_t error) {
 
 cudaError_t VoxelEngine::setPointLights(const std::vector<PointLight>& pointLights) {
     PointLight ambientLight = *point_light_manager::ambientLight;
-
+    PointLight backgroundLight = *point_light_manager::backgroundLight;
+    
     cudaError_t error = point_light_manager::cleanup();
 
     if(error != cudaSuccess) {
         return error;
     }
 
-    error = point_light_manager::init(pointLights.size(), ambientLight);
+    error = point_light_manager::init(pointLights.size());
 
     if(error != cudaSuccess) {
         return error;
@@ -314,19 +331,28 @@ cudaError_t VoxelEngine::setPointLights(const std::vector<PointLight>& pointLigh
         (*(point_light_manager::pointLights))[i]->intensity = pointLights[i].intensity;
     }
 
+    point_light_manager::ambientLight->color = ambientLight.color;
+    point_light_manager::ambientLight->pos = ambientLight.pos;
+    point_light_manager::ambientLight->intensity = ambientLight.intensity;
+
+    point_light_manager::backgroundLight->color = backgroundLight.color;
+    point_light_manager::backgroundLight->pos = backgroundLight.pos;
+    point_light_manager::backgroundLight->intensity = backgroundLight.intensity;
+
     return error;
 }
 
 cudaError_t VoxelEngine::setPointLights(PointLight* pointLights, unsigned int numLights) {
     PointLight ambientLight = *point_light_manager::ambientLight;
-
+    PointLight backgroundLight = *point_light_manager::backgroundLight;
+    
     cudaError_t error = point_light_manager::cleanup();
 
     if(error != cudaSuccess) {
         return error;
     }
 
-    error = point_light_manager::init(numLights, ambientLight);
+    error = point_light_manager::init(numLights);
 
     if(error != cudaSuccess) {
         return error;
@@ -337,6 +363,14 @@ cudaError_t VoxelEngine::setPointLights(PointLight* pointLights, unsigned int nu
         (*(point_light_manager::pointLights))[i]->pos = pointLights[i].pos;
         (*(point_light_manager::pointLights))[i]->intensity = pointLights[i].intensity;
     }
+
+    point_light_manager::ambientLight->color = ambientLight.color;
+    point_light_manager::ambientLight->pos = ambientLight.pos;
+    point_light_manager::ambientLight->intensity = ambientLight.intensity;
+
+    point_light_manager::backgroundLight->color = backgroundLight.color;
+    point_light_manager::backgroundLight->pos = backgroundLight.pos;
+    point_light_manager::backgroundLight->intensity = backgroundLight.intensity;
 
     return error;
 }
@@ -397,10 +431,33 @@ cudaError_t VoxelEngine::getVoxels(uint8_t** hostBlockIdArrayPtr, unsigned int c
 
     if(error != cudaSuccess) {
         cudaFree(deviceBlockIdArray);
+        delete[] *hostBlockIdArrayPtr;
         return error;
     }
 
-    return cudaFree(deviceBlockIdArray);
+    error = cudaFree(deviceBlockIdArray);
+
+    if(error != cudaSuccess) {
+        delete[] *hostBlockIdArrayPtr;
+        return error;
+    }
+
+    return error;
+}
+
+cudaError_t VoxelEngine::getPixels(uchar4** hostPixelArrayPtr) {
+    size_t arrayLength = windowHeight * windowWidth * 4;
+
+    *hostPixelArrayPtr = new uchar4[arrayLength];
+
+    cudaError_t error = cudaMemcpy(*hostPixelArrayPtr, cuda_renderer::devicePixels, arrayLength * sizeof(uchar4), cudaMemcpyDeviceToHost);
+
+    if(error != cudaSuccess) {
+        delete[] *hostPixelArrayPtr;
+        return error;
+    }
+
+    return error;
 }
 
 bool VoxelEngine::getIsInitialized() {
@@ -461,14 +518,6 @@ bool VoxelEngine::getCalculatingInsertLODsEnabled() {
 
 unsigned int VoxelEngine::getMaxOctreeLevelByGPU() {
     return Octree::getMaxOctreeLevelByGPU();
-}
-
-void VoxelEngine::setMaterialColorOnlyEnabled(bool isEnabled) {
-    isMaterialColorOnlyEnabled = isEnabled;
-}
-
-bool VoxelEngine::getMaterialColorOnlyEnabled() {
-    return isMaterialColorOnlyEnabled;
 }
 
 float VoxelEngine::getCameraSpeed() {
@@ -535,7 +584,20 @@ float VoxelEngine::getAmbientLightIntensity() {
     return point_light_manager::ambientLight->intensity;
 }
 
-template void VoxelEngine::inputLoop<true>(void (*func)());
-template void VoxelEngine::inputLoop<false>(void (*func)());
+void VoxelEngine::setBackgroundColor(Vector3<> color) {
+    point_light_manager::backgroundLight->color = color;
+}
+
+Vector3<> VoxelEngine::getBackgroundColor() {
+    return point_light_manager::backgroundLight->color;
+}
+
+void VoxelEngine::setFocalLength(float focalLength) {
+    cuda_renderer::focalLength = focalLength;
+}
+
+float VoxelEngine::getFocalLength() {
+    return cuda_renderer::focalLength;
+}
 
 }

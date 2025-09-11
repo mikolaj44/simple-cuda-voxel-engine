@@ -66,8 +66,6 @@ int main() {
 
     VoxelEngine::setCalculatingInsertLODsEnabled(false);
 
-    VoxelEngine::setMaterialColorOnlyEnabled(false);
-
     VoxelEngine::setMouseControlEnabled(true);
 
     VoxelEngine::setPhongIlluminationEnabled(true);
@@ -76,12 +74,12 @@ int main() {
 
     VoxelEngine::setMaterials(blockIdFrameToIdFunction);
 
-    VoxelEngine::setPointLights({PointLight(Vector3<>(0, 0, -300000), Vector3<>(255, 0, 0)), PointLight(Vector3<>(0, -300000, -300000), Vector3<>(0, 0, 255))});    
-
-    VoxelEngine::setAmbientLightIntensity(0.5);
-
+    VoxelEngine::setBackgroundColor(Vector3<>(0, 0, 0));
 
     VoxelEngine::insertVoxels(blockPosFrameToIdFunction);
+
+    VoxelEngine::setPointLights({PointLight(Vector3<>(0, 0, -300000), Vector3<>(255, 0, 0)), PointLight(Vector3<>(0, -300000, -300000), Vector3<>(0, 0, 255))});    
+
 
 
     // size_t chunkWidth = 8;

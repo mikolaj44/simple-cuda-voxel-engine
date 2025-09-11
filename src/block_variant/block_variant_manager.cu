@@ -10,6 +10,7 @@
 
 namespace scve::block_variant_manager {
     __managed__ ManagedList<BlockVariant*>* blockVariants;
+    __managed__ int numVariantsWithTextures = 0;
 
     BlockTexture** blockTextures = nullptr;
 
@@ -65,16 +66,18 @@ namespace scve::block_variant_manager {
             return error;
         }
 
+        numVariantsWithTextures = variantIndex;
+
         new (blockVariants) ManagedList<BlockVariant*>();
 
-        error = blockVariants->init(variantIndex);
+        error = blockVariants->init(maxNumVariants);
 
         if(error != cudaSuccess) {
             cudaFree(blockVariants);
             return error;
         }
 
-        for(int i = 0; i < variantIndex; i++) {
+        for(int i = 0; i < maxNumVariants; i++) {
             BlockVariant* blockVariant;
 
             error = cudaMallocManaged(&blockVariant, sizeof(BlockVariant));
@@ -83,7 +86,12 @@ namespace scve::block_variant_manager {
                 return error;
             }
 
-            new (blockVariant) BlockVariant(Material(Vector3<>(255, 0, 255), 1, 0, 20), blockTextures[i]);
+            if(i < numVariantsWithTextures) {
+                new (blockVariant) BlockVariant(Material(Vector3<>(255, 0, 255), 1, 0, 20), blockTextures[i]);
+            }
+            else {
+                new (blockVariant) BlockVariant(Material(Vector3<>(255, 0, 255), 1, 0, 20), nullptr);
+            }
 
             error = blockVariants->add(blockVariant);
 
@@ -99,10 +107,12 @@ namespace scve::block_variant_manager {
         cudaError_t error = cudaSuccess;
 
         for(int i = 0; i < blockVariants->size(); i++) {
-            error = ((*blockVariants)[i])->texture->cleanup();
+            if(i < numVariantsWithTextures) {
+                error = ((*blockVariants)[i])->texture->cleanup();
 
-            if(error != cudaSuccess) {
-                return error;
+                if(error != cudaSuccess) {
+                    return error;
+                }
             }
 
             error = cudaFree((*blockVariants)[i]);
@@ -123,6 +133,8 @@ namespace scve::block_variant_manager {
         if(error != cudaSuccess) {
             return error;
         }
+
+        numVariantsWithTextures = 0;
 
         return cudaFree(blockTextures);
     }

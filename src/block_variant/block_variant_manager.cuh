@@ -8,6 +8,8 @@
 namespace scve::block_variant_manager {
     extern __managed__ ManagedList<BlockVariant*>* blockVariants;
 
+    extern __managed__ int numVariantsWithTextures;
+
     cudaError_t init(unsigned int maxNumVariants);
 
     cudaError_t cleanup();

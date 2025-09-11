@@ -46,10 +46,6 @@ public:
 
     static bool getCalculatingInsertLODsEnabled();
 
-    static void setMaterialColorOnlyEnabled(bool isEnabled);
-
-    static bool getMaterialColorOnlyEnabled();
-
     static unsigned int getMaxOctreeLevelByGPU();
 
     static unsigned int getWindowWidth();
@@ -90,6 +86,14 @@ public:
 
     static float getAmbientLightIntensity();
 
+    static void setBackgroundColor(Vector3<> color);
+
+    static Vector3<> getBackgroundColor();
+
+    static void setFocalLength(float focalLength);
+
+    static float getFocalLength();
+
     static cudaError_t insertVoxels(uint8_t* hostBlockIdArray, unsigned int chunkWidth, Vector3<int> startOffset = Vector3<int>(0, 0, 0));
 
     template<typename XYZFrameToIdFunction>
@@ -103,22 +107,21 @@ public:
 
     static cudaError_t getVoxels(uint8_t** hostBlockIdArrayPtr, unsigned int chunkWidth, Vector3<int> startOffset = Vector3<int>(0, 0, 0));
 
+    static cudaError_t getPixels(uchar4** hostPixelArrayPtr);
+
     template<typename IdFrameToMaterialFunction>
     static void setMaterials(IdFrameToMaterialFunction func) {
         int numVariants = block_variant_manager::blockVariants->size();
         block_variant_manager::setBlocksVariantMaterialsKernel<<<1, numVariants>>>(func, frameNumber);
     }
 
-    template <bool displayFrame = true>
-    static void inputLoop(void (*func)() = nullptr);
+    static void inputLoop(void (*func)() = nullptr, bool displayFrame = true);
 private:
     static bool isInitialized;
 
     static bool isTextureRenderingEnabled;
 
     static bool isCalculatingInsertLODsEnabled;
-
-    static bool isMaterialColorOnlyEnabled;
 
     static bool isKeyboardControlEnabled;
 
