@@ -10,7 +10,7 @@ namespace scve::block_variant_manager {
 
     extern __managed__ int numVariantsWithTextures;
 
-    cudaError_t init(std::string texturesPath, unsigned int maxNumVariants);
+    cudaError_t init(std::string texturesPath, unsigned int maxNumVariants, bool skipTextureLoading = false);
 
     cudaError_t cleanup();
 

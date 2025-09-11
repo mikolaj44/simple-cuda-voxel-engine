@@ -67,7 +67,7 @@ namespace scve::cuda_renderer {
     
             int imgWidth, imgHeight, imgChannels;
                 
-            if(isTextureRenderingEnabled) {
+            if(isTextureRenderingEnabled && numVariantsWithTextures != 0) {
                 blockId %= numVariantsWithTextures;
                 imgChannels = ((*blockVariants)[blockId])->texture->getChannels();
             }
@@ -89,7 +89,7 @@ namespace scve::cuda_renderer {
 
             // check which side of the block we are on    
             if (equals(y, (float)blockY, epsilon)) { // top
-                if(isTextureRenderingEnabled){
+                if(isTextureRenderingEnabled && numVariantsWithTextures != 0){
                     imgWidth  = ((*blockVariants)[blockId])->texture->getWidth(ImagePosition::TOP);
                     imgHeight = ((*blockVariants)[blockId])->texture->getHeight(ImagePosition::TOP);
 
@@ -104,7 +104,7 @@ namespace scve::cuda_renderer {
                 normal = scve::Vector3<>(0, -1, 0);
             }
             else if (equals(y, (float)blockY + 1.0, epsilon)) { // bottom
-                if(isTextureRenderingEnabled) {
+                if(isTextureRenderingEnabled && numVariantsWithTextures != 0) {
                     imgWidth  = ((*blockVariants)[blockId])->texture->getWidth(ImagePosition::BOTTOM);
                     imgHeight = ((*blockVariants)[blockId])->texture->getHeight(ImagePosition::BOTTOM);
 
@@ -119,7 +119,7 @@ namespace scve::cuda_renderer {
                 normal = scve::Vector3<>(0, 1, 0);
             }
             else if (equals(x, (float)blockX, epsilon)) { // left
-                if(isTextureRenderingEnabled){
+                if(isTextureRenderingEnabled && numVariantsWithTextures != 0){
                     imgWidth  = ((*blockVariants)[blockId])->texture->getWidth(ImagePosition::LEFT);
                     imgHeight = ((*blockVariants)[blockId])->texture->getHeight(ImagePosition::LEFT);
 
@@ -134,7 +134,7 @@ namespace scve::cuda_renderer {
                 normal = scve::Vector3<>(-1, 0, 0);
             }
             else if (equals(x, (float)blockX + 1.0, epsilon)) { // right
-                if(isTextureRenderingEnabled){
+                if(isTextureRenderingEnabled && numVariantsWithTextures != 0){
                     imgWidth  = ((*blockVariants)[blockId])->texture->getWidth(ImagePosition::RIGHT);
                     imgHeight = ((*blockVariants)[blockId])->texture->getHeight(ImagePosition::RIGHT);
 
@@ -149,7 +149,7 @@ namespace scve::cuda_renderer {
                 normal = scve::Vector3<>(1, 0, 0);
             }
             else if (equals(z, (float)blockZ, epsilon)) { // front
-                if(isTextureRenderingEnabled){
+                if(isTextureRenderingEnabled && numVariantsWithTextures != 0){
                     imgWidth  = ((*blockVariants)[blockId])->texture->getWidth(ImagePosition::FRONT);
                     imgHeight = ((*blockVariants)[blockId])->texture->getHeight(ImagePosition::FRONT);
 
@@ -164,7 +164,7 @@ namespace scve::cuda_renderer {
                 normal = scve::Vector3<>(0, 0, -1);
             }
             else if (equals(z, (float)blockZ + 1.0, epsilon)) { // back
-                if(isTextureRenderingEnabled){
+                if(isTextureRenderingEnabled && numVariantsWithTextures != 0){
                     imgWidth  = ((*blockVariants)[blockId])->texture->getWidth(ImagePosition::BACK);
                     imgHeight = ((*blockVariants)[blockId])->texture->getHeight(ImagePosition::BACK);
 

@@ -9,9 +9,9 @@ int main() {
 
     VoxelEngine::setOctreeMinPos(Vector3<>(-512, -512, -512));
 
-    auto blockPosFrameToIdFunction = [] __device__ (int x, int y, int z, uint64_t frameNumber) {        
-        return (absv(x) + absv(y) + absv(z)) % 127 + 1;
-        
+    auto blockPosFrameToIdFunction = [] __device__ (int x, int y, int z, uint64_t frameNumber) {                
+        return int(sqrtf(x*x + y*y + z*z)) % 127 + 1;
+
         int maxIterations = 4;
 
         float newX = float(x) / 450.0;

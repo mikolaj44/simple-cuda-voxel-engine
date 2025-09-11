@@ -225,7 +225,12 @@ cudaError_t VoxelEngine::init(unsigned int windowWidth_, unsigned int windowHeig
         return error;
     }
 
-    error = block_variant_manager::init(texturesPath, 127);
+    if(texturesPath == "") {
+        error = block_variant_manager::init(texturesPath, 127, true);
+    }
+    else {
+        error = block_variant_manager::init(texturesPath, 127, false);
+    }
 
     if(error != cudaSuccess) {
         return error;

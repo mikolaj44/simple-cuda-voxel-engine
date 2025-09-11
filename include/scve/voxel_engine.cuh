@@ -8,9 +8,29 @@
 
 namespace scve {
 
+/**
+*
+* @brief This is the main voxel engine class. It needs to be initialized with \ref init before using and cleaned up with \ref cleanup at the end.
+* */
 class VoxelEngine {
 public:
-    static cudaError_t init(unsigned int windowWidth, unsigned int windowHeight, std::string texturesPath, unsigned int initialMaxOctreeDepth = 1);
+
+    /**
+     * @details Initializes the engine - it can return a CUDA error if initialization fails, same with any other methods that return a cudaError_t, so it's recommended
+     * to check these error codes, for example using \ref test.
+     * @param texturesPath  the absolute path to a folder containing texture files.
+     *                      each block type for which you want to add a texture needs to be in a folder named from 1 to 127 and needs to contain the following files:
+     *                      1/
+     *                       front.png
+     *                       back.png
+     *                       left.png
+     *                       right.png
+     *                       top.png
+     *                       bottom.png
+     *                      
+     * @return CUDA error code
+     * */
+    static cudaError_t init(unsigned int windowWidth, unsigned int windowHeight, std::string texturesPath = "", unsigned int initialMaxOctreeDepth = 1);
     
     static cudaError_t cleanup();
 

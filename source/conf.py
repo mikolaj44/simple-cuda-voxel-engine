@@ -13,12 +13,14 @@ author = 'mikolaj44'
 # -- General configuration ---------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#general-configuration
 
-extensions = []
+extensions = ["breathe"]
 
 templates_path = ['_templates']
 exclude_patterns = []
 
-
+breathe_projects = {
+    "simple-cuda-voxel-engine": "../build/xml"
+}
 
 # -- Options for HTML output -------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#options-for-html-output

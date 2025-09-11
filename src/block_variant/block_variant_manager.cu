@@ -14,54 +14,57 @@ namespace scve::block_variant_manager {
 
     BlockTexture** blockTextures = nullptr;
 
-    cudaError_t init(std::string texturesPath, unsigned int maxNumVariants) {
+    cudaError_t init(std::string texturesPath, unsigned int maxNumVariants, bool skipTextureLoading) {
         cudaError_t error = cudaMallocManaged(&blockTextures, size_t(sizeof(BlockTexture*) * maxNumVariants));
 
         if(error != cudaSuccess) {
             return error;
         }
 
-        if(texturesPath[texturesPath.length() - 1] != '/') {
-            texturesPath += '/';
-        }
-    
-        std::filesystem::path textureDirPath = texturesPath;
-    
-        if(!std::filesystem::exists(textureDirPath)) {
-            throw "texture path does not exist";
-        }
-    
-        int index = 0;
         int variantIndex = 0;
-    
-        while(index < maxNumVariants) {            
-            std::filesystem::path currentPath = textureDirPath;
-    
-            currentPath += std::to_string(index + 1);
-    
-            if(!std::filesystem::exists(currentPath)) {
-                index++;
-                continue;
+
+        if(!skipTextureLoading) {
+            if(texturesPath[texturesPath.length() - 1] != '/') {
+                texturesPath += '/';
             }
-    
-            error = cudaMallocManaged(&blockTextures[variantIndex], sizeof(BlockTexture));
-
-            if(error != cudaSuccess) {
-                return error;
-            }
-    
-            std::string paths[6] = {currentPath.string() + "/top.png", currentPath.string() + "/bottom.png", currentPath.string() + "/left.png", currentPath.string() + "/right.png", currentPath.string() + "/front.png", currentPath.string() + "/back.png"};
-                          
-            new (blockTextures[variantIndex]) BlockTexture();
-
-            error = blockTextures[variantIndex]->init(4, paths);
-
-            if(error != cudaSuccess) {
-                return error;
-            }    
         
-            index++;
-            variantIndex++;
+            std::filesystem::path textureDirPath = texturesPath;
+        
+            if(!std::filesystem::exists(textureDirPath)) {
+                throw "texture path does not exist";
+            }
+        
+            int index = 0;
+        
+            while(index < maxNumVariants) {            
+                std::filesystem::path currentPath = textureDirPath;
+        
+                currentPath += std::to_string(index + 1);
+        
+                if(!std::filesystem::exists(currentPath)) {
+                    index++;
+                    continue;
+                }
+        
+                error = cudaMallocManaged(&blockTextures[variantIndex], sizeof(BlockTexture));
+
+                if(error != cudaSuccess) {
+                    return error;
+                }
+        
+                std::string paths[6] = {currentPath.string() + "/top.png", currentPath.string() + "/bottom.png", currentPath.string() + "/left.png", currentPath.string() + "/right.png", currentPath.string() + "/front.png", currentPath.string() + "/back.png"};
+                            
+                new (blockTextures[variantIndex]) BlockTexture();
+
+                error = blockTextures[variantIndex]->init(4, paths);
+
+                if(error != cudaSuccess) {
+                    return error;
+                }    
+            
+                index++;
+                variantIndex++;
+            }
         }
 
         error = cudaMallocManaged(&blockVariants, sizeof(ManagedList<BlockVariant*>));
