@@ -10,7 +10,7 @@ namespace scve {
 
 class VoxelEngine {
 public:
-    static cudaError_t init(unsigned int windowWidth, unsigned int windowHeight, unsigned int initialMaxOctreeDepth = 1, unsigned int initialNumLights = 1);
+    static cudaError_t init(unsigned int windowWidth, unsigned int windowHeight, std::string texturesPath, unsigned int initialMaxOctreeDepth = 1);
     
     static cudaError_t cleanup();
 

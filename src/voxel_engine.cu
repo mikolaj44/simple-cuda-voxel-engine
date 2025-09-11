@@ -47,14 +47,14 @@ unsigned int VoxelEngine::renderBlocksPerGrid;
 
 namespace {
     // https://stackoverflow.com/questions/61277046/convert-just-a-hue-into-rgb
-    __device__ scve::Vector3<> hueToRGB(float hue){
-        float kr = remainderf(5 + hue * 6, 6);
-        float kg = remainderf(3 + hue * 6, 6);
-        float kb = remainderf(1 + hue * 6, 6);
+    __device__ scve::Vector3<> hueToRGB(float hue) {
+        float kr = fmodf(5.0f + hue * 6.0f, 6.0f);
+        float kg = fmodf(3.0f + hue * 6.0f, 6.0f);
+        float kb = fmodf(1.0f + hue * 6.0f, 6.0f);
 
-        unsigned int r = (1 - maxv(minv(minv(kr, 4-kr), 1.0f), 0.0f)) * 255;
-        unsigned int g = (1 - maxv(minv(minv(kg, 4-kg), 1.0f), 0.0f)) * 255;
-        unsigned int b = (1 - maxv(minv(minv(kb, 4-kb), 1.0f), 0.0f)) * 255;
+        float r = (1.0f - maxv(minv(minv(kr, 4 - kr), 1.0f), 0.0f)) * 255.0f;
+        float g = (1.0f - maxv(minv(minv(kg, 4 - kg), 1.0f), 0.0f)) * 255.0f;
+        float b = (1.0f - maxv(minv(minv(kb, 4 - kb), 1.0f), 0.0f)) * 255.0f;
 
         return scve::Vector3<>(r, g, b);
     }
@@ -193,7 +193,7 @@ void VoxelEngine::inputLoop(void (*func)(), bool displayFrame) {
     }
 }
 
-cudaError_t VoxelEngine::init(unsigned int windowWidth_, unsigned int windowHeight_, unsigned int initialMaxOctreeDepth, unsigned int initialNumLights) {
+cudaError_t VoxelEngine::init(unsigned int windowWidth_, unsigned int windowHeight_, std::string texturesPath, unsigned int initialMaxOctreeDepth) {
     size_t freeBytes, totalBytes;
 
 	cudaError_t error = cudaMemGetInfo(&freeBytes, &totalBytes);
@@ -225,20 +225,20 @@ cudaError_t VoxelEngine::init(unsigned int windowWidth_, unsigned int windowHeig
         return error;
     }
 
-    error = block_variant_manager::init(127);
+    error = block_variant_manager::init(texturesPath, 127);
 
     if(error != cudaSuccess) {
         return error;
     }
 
-    error = point_light_manager::init(initialNumLights);
+    error = point_light_manager::init(1);
 
     if(error != cudaSuccess) {
         return error;
     }
 
     auto defaultIdFrameToMaterialFunction = [] __device__ (uint8_t blockId, uint64_t frameNumber) {
-        return Material(hueToRGB((blockId) * 2.8125 / 360.0), 1.0, 0.0, 20.0);
+        return Material(hueToRGB((blockId) * 2.8346 / 360.0), 1.0, 0.0, 20.0);
     };
 
     setMaterials(defaultIdFrameToMaterialFunction);
