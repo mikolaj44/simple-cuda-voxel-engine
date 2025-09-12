@@ -2,6 +2,8 @@
 
 #include "vector3.cuh"
 
+namespace scve {
+
 class Material {
 public:
     scve::Vector3<> color;
@@ -16,3 +18,5 @@ public:
 
     __device__ __host__ Material(scve::Vector3<> color_, float diffuse_, float specular_, float specularExponent_) : color(color_), diffuse(diffuse_), specular(specular_), specularExponent(specularExponent_) {};
 };
+
+}

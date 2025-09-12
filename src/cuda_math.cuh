@@ -3,6 +3,8 @@
 #include <cuda_runtime.h>
 #include <device_launch_parameters.h>
 
+namespace scve {
+
 template<typename Number>
 __device__ __host__ inline Number maxv(Number a, Number b) {
 	if (a > b)
@@ -28,4 +30,6 @@ __device__ __host__ inline bool equals(float a, float b, float epsilon) {
 	if (absv(a - b) <= epsilon)
 		return true;
 	return false;
+}
+
 }

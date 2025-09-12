@@ -3,7 +3,7 @@
 #include "cuda_math.cuh"
 #include "block_variant/block_variant_manager.cuh"
 
-namespace octree_utils {
+namespace scve::octree_utils {
     __device__ scve::Vector3<> getBlockHitPos(scve::Vector3<int> blockPos, scve::Vector3<> rayOrigin, scve::Vector3<> rayDirection, float epsilon) {
         // if (rayDirection.x == 0)
         //     rayDirection.x = blockPos.x;

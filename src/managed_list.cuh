@@ -1,5 +1,7 @@
 #pragma once
 
+namespace scve {
+
 template<typename T>
 class ManagedList {
 public:
@@ -79,3 +81,5 @@ private:
         return error;
     }
 };
+
+}

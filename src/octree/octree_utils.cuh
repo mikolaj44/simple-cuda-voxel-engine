@@ -3,7 +3,7 @@
 #include <stdint.h>
 #include "vector3.cuh"
 
-namespace octree_utils {
+namespace scve::octree_utils {
     constexpr unsigned int CUDA_STACK_SIZE = 11;
 
     class Stack {

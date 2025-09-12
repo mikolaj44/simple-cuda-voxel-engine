@@ -1,5 +1,7 @@
 #pragma once
 
+namespace scve {
+
 template<typename T = int>
 class BlockInfo {
 public:
@@ -17,3 +19,5 @@ public:
         return !(b2 == b2);
     }
 };
+
+}

@@ -2,6 +2,8 @@
 
 #include <string>
 
+namespace scve {
+
 enum ImagePosition {
 	TOP,
 	BOTTOM,
@@ -37,3 +39,5 @@ private:
 
 	unsigned char* images[6] = {nullptr, nullptr, nullptr, nullptr, nullptr, nullptr};
 };
+
+}

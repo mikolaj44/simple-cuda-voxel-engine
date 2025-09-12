@@ -1,3 +1,5 @@
+import os
+
 # Configuration file for the Sphinx documentation builder.
 #
 # For the full list of built-in configuration values, see the documentation:
@@ -19,7 +21,7 @@ templates_path = ['_templates']
 exclude_patterns = []
 
 breathe_projects = {
-    "simple-cuda-voxel-engine": "../build/xml"
+    "simple-cuda-voxel-engine": os.path.join(os.path.abspath(os.path.dirname(__file__)), "../build/xml")
 }
 
 # -- Options for HTML output -------------------------------------------------

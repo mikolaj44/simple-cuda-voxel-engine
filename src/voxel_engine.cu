@@ -82,6 +82,13 @@ cudaError_t VoxelEngine::clearVoxels(){
     return octree->clear();
 }
 
+void VoxelEngine::displayFrame() {
+    cuda_renderer::render(octree, cameraPos, cameraAngle, windowWidth, windowHeight, isTextureRenderingEnabled, isPhongIlluminationEnabled, renderBlocksPerGrid, renderThreadsPerBlock);
+
+    frameNumber++;
+    frameNumber %= UINT64_MAX;
+}
+
 void VoxelEngine::inputLoop(void (*func)(), bool displayFrame) {
     bool quit = false;
 
@@ -180,11 +187,7 @@ void VoxelEngine::inputLoop(void (*func)(), bool displayFrame) {
         }
 
         if(displayFrame) {
-            cuda_renderer::render(octree, cameraPos, cameraAngle, windowWidth, windowHeight, isTextureRenderingEnabled, isPhongIlluminationEnabled, renderBlocksPerGrid, renderThreadsPerBlock);
-            SDL_GL_SwapWindow(window);
-
-            frameNumber++;
-            frameNumber %= UINT64_MAX;
+            VoxelEngine::displayFrame();
         }
 
         if(func != nullptr) {
@@ -205,7 +208,7 @@ cudaError_t VoxelEngine::init(unsigned int windowWidth_, unsigned int windowHeig
 	printf("\n%zu bytes free out of %zu\n", freeBytes, totalBytes);
 
     if(isInitialized) {
-        throw "The engine has already been initialized.";
+        throw std::runtime_error("The engine has already been initialized.");
     }
 
     VoxelEngine::windowWidth = windowWidth_;
@@ -225,12 +228,7 @@ cudaError_t VoxelEngine::init(unsigned int windowWidth_, unsigned int windowHeig
         return error;
     }
 
-    if(texturesPath == "") {
-        error = block_variant_manager::init(texturesPath, 127, true);
-    }
-    else {
-        error = block_variant_manager::init(texturesPath, 127, false);
-    }
+    error = block_variant_manager::init(texturesPath, 127, texturesPath == "" ? true : false);
 
     if(error != cudaSuccess) {
         return error;
@@ -246,7 +244,7 @@ cudaError_t VoxelEngine::init(unsigned int windowWidth_, unsigned int windowHeig
         return Material(hueToRGB((blockId) * 2.8346 / 360.0), 1.0, 0.0, 20.0);
     };
 
-    setMaterials(defaultIdFrameToMaterialFunction);
+    setMaterials<decltype(defaultIdFrameToMaterialFunction)>(defaultIdFrameToMaterialFunction);
 
     error = cuda_renderer::init(windowWidth_, windowHeight_);
 
@@ -473,8 +471,16 @@ cudaError_t VoxelEngine::setMaxOctreeDepth(int depth) {
     return octree->setMaxLevel(depth);
 }
 
-void VoxelEngine::setOctreeMinPos(Vector3<> pos) {
+void VoxelEngine::setOctreeMinPos(Vector3<int> pos) {
     octree->setMinPos(pos);
+}
+
+Vector3<int> VoxelEngine::getOctreeMinPos() {
+    return octree->getMinPos();
+}
+
+int VoxelEngine::getOctreeMaxSize() {
+    return octree->getMaxSize();
 }
 
 unsigned int VoxelEngine::getWindowWidth() {
@@ -513,11 +519,11 @@ bool VoxelEngine::getTextureRenderingEnabled() {
     return isTextureRenderingEnabled;
 }
 
-void VoxelEngine::setCalculatingInsertLODsEnabled(bool isEnabled) {
+void VoxelEngine::setPropagatingInsertLODsEnabled(bool isEnabled) {
     isCalculatingInsertLODsEnabled = isEnabled;
 }
 
-bool VoxelEngine::getCalculatingInsertLODsEnabled() {
+bool VoxelEngine::getPropagatingInsertLODsEnabled() {
     return isCalculatingInsertLODsEnabled;
 }
 
@@ -525,11 +531,11 @@ unsigned int VoxelEngine::getMaxOctreeLevelByGPU() {
     return Octree::getMaxOctreeLevelByGPU();
 }
 
-float VoxelEngine::getCameraSpeed() {
+float VoxelEngine::getCameraMoveSpeed() {
     return cameraSpeed;
 }
 
-void VoxelEngine::setCameraSpeed(float speed) {
+void VoxelEngine::setCameraMoveSpeed(float speed) {
     cameraSpeed = speed;
 }
 

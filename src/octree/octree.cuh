@@ -6,9 +6,10 @@
 #include "octree/octree_utils.cuh"
 
 #include "cuda_math.cuh"
-#include "octree/octree_utils.cuh"
-#include "pair.cuh"
+#include "tuple.cuh"
 #include "block_info.cuh"
+
+namespace scve {
 
 class Octree {
 public:
@@ -24,20 +25,20 @@ public:
     cudaError_t insertBlocksByXYZFrameFunction(XYZFrametoIdFunction blockPosToIdFunction, uint64_t frameNumber, bool isCalculatingInsertLODsEnabled, unsigned int gridSize, unsigned int blockSize) {
         insertBlockByXYZFrameFunctionKernel<<<gridSize, blockSize>>>(this, blockPosToIdFunction, frameNumber);
 
-		if(isCalculatingInsertLODsEnabled) {
-			for(int level = 0; level <= maxLevel; level++) {
-				// printf("grid size: %d, total: %d, side length: %d\n", gridSize, gridSize * blockSize, (int)cbrtf(float(gridSize) * float(blockSize)));
+		// if(isCalculatingInsertLODsEnabled) {
+		// 	for(int level = 0; level <= maxLevel; level++) {
+		// 		// printf("grid size: %d, total: %d, side length: %d\n", gridSize, gridSize * blockSize, (int)cbrtf(float(gridSize) * float(blockSize)));
 
-				insertBlocksByXYZFrameFunctionFixLODKernel<<<gridSize, blockSize>>>(this, blockPosToIdFunction, frameNumber, level);
+		// 		insertBlocksByXYZFrameFunctionFixLODKernel<<<gridSize, blockSize>>>(this, blockPosToIdFunction, frameNumber, level);
 
-				if(blockSize >= 8) {
-					blockSize /= 8;
-				}
-				else if(gridSize >= 8) {
-					gridSize /= 8;
-				}
-			}
-		}
+		// 		if(blockSize >= 8) {
+		// 			blockSize /= 8;
+		// 		}
+		// 		else if(gridSize >= 8) {
+		// 			gridSize /= 8;
+		// 		}
+		// 	}
+		// }
 
 		return cudaDeviceSynchronize();
     }
@@ -48,11 +49,11 @@ public:
 
 	__device__ Triple<scve::Vector3<int>, scve::Vector3<float>, uint8_t> getRayIntersectionData(scve::Vector3<> rayOrigin, scve::Vector3<> rayDirection, int sX, int sY, int minNodeSize);
 
-	__device__ __host__ void setMinPos(scve::Vector3<> minPos);
-
-	__host__ cudaError_t setMaxLevel(unsigned int maxLevel);
+	__device__ __host__ void setMinPos(scve::Vector3<int> minPos);
 
 	__device__ __host__ scve::Vector3<int> getMinPos() const;
+
+	__host__ cudaError_t setMaxLevel(unsigned int maxLevel);
 
 	__device__ __host__ unsigned int getMaxLevel() const;
 
@@ -86,7 +87,7 @@ private:
 
 	unsigned int maxSize;
 
-	size_t allocatedMemoryInBytes;
+	size_t allocatedMemoryInBytes = 0;
 
 	constexpr static unsigned int maxPossibleLevel = 10;
 
@@ -178,4 +179,6 @@ __global__ void insertBlocksByXYZFrameFunctionFixLODKernel(Octree* octree, XYZFr
 	}
 
 	// printf("1\n");
+}
+
 }

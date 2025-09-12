@@ -3,8 +3,11 @@
 #include "block_variant/block_texture.cuh"
 #include "stb_image.h"
 
+#include <stdexcept>
 #include <cuda_runtime.h>
 #include <device_launch_parameters.h>
+
+namespace scve {
 
 std::string imagePositionName[6] = {"top", "bottom", "left", "right", "front", "back"};
 
@@ -53,7 +56,7 @@ __host__ cudaError_t BlockTexture::init(int channelsInImg_, std::string* paths) 
 		bool imageLoaded = getPngImageResolution(paths[i], widths[i], heights[i]);
 
 		if(!imageLoaded) {
-			throw "Could not load the " + imagePositionName[i] + " side image. Make sure that \"" + imagePositionName[i] + ".png\" is present. Also verify that all images have " + std::to_string(channelsInImg_) + " channels.";
+			throw std::runtime_error("Could not load the " + imagePositionName[i] + " side image. Make sure that \"" + imagePositionName[i] + ".png\" is present. Also verify that all images have " + std::to_string(channelsInImg_) + " channels.");
 		}
 
 		hostImages[i] = stbi_load(paths[i].c_str(), &widths[i], &heights[i], &channelsInImg, channels);
@@ -110,4 +113,6 @@ __host__ __device__ int BlockTexture::getHeight(ImagePosition position) const {
 
 __host__ __device__ unsigned char* BlockTexture::getImage(ImagePosition position) const {
 	return images[position];
+}
+
 }

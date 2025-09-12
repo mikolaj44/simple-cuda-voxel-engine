@@ -2,17 +2,17 @@
 
 #include <cuda_gl_interop.h>
 
-GLuint textureID;
-cudaGraphicsResource* cudaResource;
+namespace scve::cuda_renderer_utils {
+    GLuint textureID;
+    cudaGraphicsResource* cudaResource;
 
-SDL_Window* window;
-SDL_Renderer* renderer;
-SDL_Texture* texture;
+    SDL_Window* window;
+    SDL_Renderer* renderer;
+    SDL_Texture* texture;
 
-SDL_Surface* textSurface;
-SDL_Texture* textTexture;
+    SDL_Surface* textSurface;
+    SDL_Texture* textTexture;
 
-namespace cuda_renderer_utils {
     namespace {
         cudaError_t createCUDATexture(int windowWidth, int windowHeight) {
             glGenTextures(1, &textureID);

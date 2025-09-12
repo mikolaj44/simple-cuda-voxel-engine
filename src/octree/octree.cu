@@ -7,7 +7,6 @@
 #include <cmath>
 
 #include "octree.cuh"
-#include "octree/octree_utils.cuh"
 #include "block_variant/block_variant_manager.cuh"
 #include "cuda_math.cuh"
 #include "renderer/cuda_renderer.cuh"
@@ -16,6 +15,8 @@
 
 #include <cuda_runtime.h>
 #include <device_launch_parameters.h>
+
+namespace scve {
 
 constexpr float epsilon = 0.00001;
 constexpr float blockHitEpsilon = 0.00001;
@@ -27,7 +28,13 @@ namespace {
 }
 
 __host__  cudaError_t Octree::allocateByMaxLevel(unsigned int newMaxLevel) {
+	if(newMaxLevel == maxLevel) {
+		return cudaSuccess;
+	}
+
 	newMaxLevel = minv(maxPossibleLevel, newMaxLevel);
+
+	size_t oldAllocatedMemoryInBytes = allocatedMemoryInBytes;
 
 	allocatedMemoryInBytes = getAllocatedMemoryInBytes(newMaxLevel);
 	maxLevel = newMaxLevel;
@@ -35,27 +42,55 @@ __host__  cudaError_t Octree::allocateByMaxLevel(unsigned int newMaxLevel) {
 
 	cudaError_t error = cudaSuccess;
 
-	// TODO: copy from the old node array
-	error = cudaFree(nodes);
+	// When new octree is bigger
+	if(allocatedMemoryInBytes > oldAllocatedMemoryInBytes) {		
+		Node* nodesCopy;
 
-	if(error != cudaSuccess) {
-		return error;
+		error = cudaMalloc(&nodesCopy, allocatedMemoryInBytes);
+
+		if(error != cudaSuccess) {
+			return error;
+		}
+
+		error = cudaMemset(nodesCopy, 0, allocatedMemoryInBytes);
+
+		if(error != cudaSuccess) {
+			return error;
+		}
+
+		error = cudaMemcpy(nodesCopy, nodes, oldAllocatedMemoryInBytes, cudaMemcpyDeviceToDevice);
+
+		if(error != cudaSuccess) {
+			return error;
+		}
+
+		error = cudaFree(nodes);
+
+		if(error != cudaSuccess) {
+			return error;
+		}
+
+		nodes = nodesCopy;
 	}
+	// When new octree is smaller
+	else {
+		error = cudaFree(nodes);
 
-	// testKernel<<<1,1>>>();
+		if(error != cudaSuccess) {
+			return error;
+		}
 
-	error = cudaMalloc(&nodes, allocatedMemoryInBytes);
+		error = cudaMalloc(&nodes, allocatedMemoryInBytes);
 
-	// testKernel<<<1,1>>>();
+		if(error != cudaSuccess) {
+			return error;
+		}
 
-	if(error != cudaSuccess) {
-		return error;
-	}
+		error = cudaMemset(nodes, 0, allocatedMemoryInBytes);
 
-	error = cudaMemset(nodes, 0, allocatedMemoryInBytes);
-
-	if(error != cudaSuccess) {
-		return error;
+		if(error != cudaSuccess) {
+			return error;
+		}
 	}
 
 	size_t freeBytes, totalBytes;
@@ -263,10 +298,6 @@ __device__ void Octree::traverseNewNode(bool& foundSolid, Triple<scve::Vector3<i
 		intersectionData.first = morton3Ddecode(nodeIdx);
 		intersectionData.second = getBlockHitPos(intersectionData.first, origRayOrigin, origRayDirection, blockHitEpsilon);
 		intersectionData.third = nodes[nodeIdx].blockId();
-
-		if(nodeIdx <= 10000) { // intersectionData.first != scve::Vector3<int>(-512, -512, -512)
-			printf("%d %d %d -> %f %f %f | morton: %d | id: %d\n", intersectionData.first.x, intersectionData.first.y, intersectionData.first.z, intersectionData.second.x, intersectionData.second.y, intersectionData.second.z, nodeIdx, intersectionData.third);
-		}
 		
 		foundSolid = true;
 		return;
@@ -368,7 +399,7 @@ __device__ Triple<scve::Vector3<int>, scve::Vector3<>, uint8_t> Octree::getRayIn
 	return intersectionData;
 }
 
-__device__ __host__ void Octree::setMinPos(scve::Vector3<> minPos) {
+__device__ __host__ void Octree::setMinPos(scve::Vector3<int> minPos) {
 	xMin = minPos.x;
 	yMin = minPos.y;
 	zMin = minPos.z;
@@ -459,4 +490,6 @@ __global__ void getBlocksKernel(Octree* octree, uint8_t* outBlockIdArray, unsign
     }
 
 	outBlockIdArray[index] = octree->nodes[octree->morton3Dencode(scve::Vector3<int>::add(scve::Vector3<int>(x, y, z), octree->getMinPos()))].blockId();
-}         
+}
+
+}

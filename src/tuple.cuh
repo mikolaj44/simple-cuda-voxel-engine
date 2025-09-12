@@ -1,5 +1,7 @@
 #pragma once
 
+namespace scve {
+
 template<typename A, typename B>
 class Pair {
 public:
@@ -38,3 +40,5 @@ public:
         return !(t1 == t2);
     }
 };
+
+}

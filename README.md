@@ -2,6 +2,10 @@
 
 # I'm currently working on turning this project into a library, working on documentation and adding the last couple of features
 
+## Documentation (only API reference for now, will add an installation guide and examples soon):
+
+https://simple-cuda-voxel-engine.readthedocs.io
+
 ## Sources I used:
 
 - I implemented the morton encoding using an algorithm from [this blog post](https://forceflow.be/2013/10/07/morton-encodingdecoding-through-bit-interleaving-implementations/), you can also check out the [libmorton](https://github.com/Forceflow/libmorton) library.
@@ -15,7 +19,7 @@ Inserting voxel data from blockId arrays
 
 Saving voxel data to blockId arrays
 
-Two texturing modes, each for 127 block types: custom textures (any resolution) or custom color mapping (you can use hue mapping or provide your own blockId -> Material function)
+Two texturing modes, each for 127 block types: custom textures (any resolution) or custom color mapping (you can use the default blockId -> hue mapping or provide your own blockId -> Material function)
 
 (Work in progress) Phong reflection model based lighting with an ambient light and multiple light sources, all of which you can easily set.
 
@@ -28,6 +32,7 @@ Camera movement (mouse + keyboard controls)
 - Full documentation
 - Phong lighting math fix
 - Making this package a library that can be installed with CPM
+- Better CUDA error handling
 
 
 ## Plans for future updates:

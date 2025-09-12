@@ -10,7 +10,6 @@
 
 namespace scve::block_variant_manager {
     __managed__ ManagedList<BlockVariant*>* blockVariants;
-    __managed__ int numVariantsWithTextures = 0;
 
     BlockTexture** blockTextures = nullptr;
 
@@ -21,8 +20,6 @@ namespace scve::block_variant_manager {
             return error;
         }
 
-        int variantIndex = 0;
-
         if(!skipTextureLoading) {
             if(texturesPath[texturesPath.length() - 1] != '/') {
                 texturesPath += '/';
@@ -31,7 +28,7 @@ namespace scve::block_variant_manager {
             std::filesystem::path textureDirPath = texturesPath;
         
             if(!std::filesystem::exists(textureDirPath)) {
-                throw "texture path does not exist";
+                throw std::runtime_error("texture path does not exist");
             }
         
             int index = 0;
@@ -46,7 +43,7 @@ namespace scve::block_variant_manager {
                     continue;
                 }
         
-                error = cudaMallocManaged(&blockTextures[variantIndex], sizeof(BlockTexture));
+                error = cudaMallocManaged(&blockTextures[index], sizeof(BlockTexture));
 
                 if(error != cudaSuccess) {
                     return error;
@@ -54,16 +51,15 @@ namespace scve::block_variant_manager {
         
                 std::string paths[6] = {currentPath.string() + "/top.png", currentPath.string() + "/bottom.png", currentPath.string() + "/left.png", currentPath.string() + "/right.png", currentPath.string() + "/front.png", currentPath.string() + "/back.png"};
                             
-                new (blockTextures[variantIndex]) BlockTexture();
+                new (blockTextures[index]) BlockTexture();
 
-                error = blockTextures[variantIndex]->init(4, paths);
+                error = blockTextures[index]->init(4, paths);
 
                 if(error != cudaSuccess) {
                     return error;
                 }    
             
                 index++;
-                variantIndex++;
             }
         }
 
@@ -72,8 +68,6 @@ namespace scve::block_variant_manager {
         if(error != cudaSuccess) {
             return error;
         }
-
-        numVariantsWithTextures = variantIndex;
 
         new (blockVariants) ManagedList<BlockVariant*>();
 
@@ -93,12 +87,7 @@ namespace scve::block_variant_manager {
                 return error;
             }
 
-            if(i < numVariantsWithTextures) {
-                new (blockVariant) BlockVariant(Material(Vector3<>(255, 0, 255), 1, 0, 20), blockTextures[i]);
-            }
-            else {
-                new (blockVariant) BlockVariant(Material(Vector3<>(255, 0, 255), 1, 0, 20), nullptr);
-            }
+            new (blockVariant) BlockVariant(Material(Vector3<>(255, 0, 255), 1, 0, 20), blockTextures[i]);
 
             error = blockVariants->add(blockVariant);
 
@@ -114,7 +103,7 @@ namespace scve::block_variant_manager {
         cudaError_t error = cudaSuccess;
 
         for(int i = 0; i < blockVariants->size(); i++) {
-            if(i < numVariantsWithTextures) {
+            if(((*blockVariants)[i])->texture != nullptr) {
                 error = ((*blockVariants)[i])->texture->cleanup();
 
                 if(error != cudaSuccess) {
@@ -140,8 +129,6 @@ namespace scve::block_variant_manager {
         if(error != cudaSuccess) {
             return error;
         }
-
-        numVariantsWithTextures = 0;
 
         return cudaFree(blockTextures);
     }
