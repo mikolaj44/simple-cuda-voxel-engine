@@ -234,13 +234,21 @@ namespace scve::cuda_renderer {
     }
 
     cudaError_t cleanup() {
+        cudaError_t lastError = cudaSuccess;
+
         cudaError_t error = cuda_renderer_utils::cleanupSDL();
 
         if(error != cudaSuccess) {
-            return error;
+            lastError = error;
         }
 
-        return cudaFree(devicePixels);
+        error = cudaFree(devicePixels);
+
+        if(error != cudaSuccess) {
+            lastError = error;
+        }
+
+        return lastError;
     }
 
     // I'm not error checking for performance reasons

@@ -29,7 +29,7 @@ public:
 
     /**
      * @details Initializes the engine - it can return a CUDA error if initialization fails, same with any other methods that return a cudaError_t, so it's recommended
-     * to check these error codes, for example using \ref test.
+     * to check these error codes, for example using \ref test. The created octree is centered by default (see \ref setOctreeCenter or \ref setOctreeMinPos to move it around)
      * Each block type for which you want to add a texture needs to be in a folder named from 1 to 127 and needs to contain the following files: \par
      * @code
      * 1/
@@ -45,7 +45,7 @@ public:
      * @param windowWidth The width of the window
      * @param windowHeight The height of the window
      * @param texturesPath  The absolute path to a folder containing texture files. You can leave it as an empty string to not load any textures.
-     * @param initialMaxOctreeDepth Initial maximum depth/level of the octree - this is further explained in \ref setMaxOctreeDepth. You can leave it as 0, but change to the value you want (from 0 to 10) before inserting voxels
+     * @param initialMaxOctreeDepth Initial maximum depth/level of the octree - this is further explained in \ref setOctreeMaxDepth. You can leave it as 0, but change to the value you want (from 0 to 10) before inserting voxels
      * @return CUDA error code
      * @throws std::runtime_error If called on an initialized engine, if the path to the textures folder does not exist or if one of the images in a folder like 1/ can't be loaded.
      * */
@@ -65,7 +65,8 @@ public:
     static cudaError_t cleanup();
 
     /**
-     * @details Removes all voxels from the octree, so it becomes empty.
+     * @details Removes all voxels from the octree, so it becomes empty but stays the same size (depth/level doesn't change). Equivalent to calling
+     * \ref setOctreeMaxDepth with \ref getOctreeMaxDepth as the argument
      * @return CUDA error code
      * */
     static cudaError_t clearVoxels();
@@ -85,15 +86,13 @@ public:
     static void inputLoop(void (*func)() = nullptr, bool displayFrame = true);
 
     /**
-    * @details Sets the max octree depth/level (one side has 2 ^ maxLevel voxels) - max **depth** value is 10, min value is 0.
+    * @details Sets the max octree depth/level (one side has 2 ^ maxLevel voxels, max **depth** value is 10, min value is 0) and **clears the octree**.
     * It also allocates the memory which is 2 ^ (3 * maxLevel + 1) bytes, so the value of **10** is about 2 GB of VRAM used, while **9** is about 270 MB.
     * This basically allows you to insert more/less voxels and you need to set this **before inserting** them. \ref getMaxOctreeLevelByGPU is useful here.
-    * **Important:** The octree will be cleared when setting a smaller depth than the one that is currently set. \par
-    * **Note:** copying data over inside the octree structure when changing the depth might temporarily use more memory, so it is recommended to wrap this function with \ref test to make sure everything works correctly.
     * @param depth The maximum octree depth that will be available (no more than 10)
     * @return CUDA error code
     * */
-    static cudaError_t setMaxOctreeDepth(int depth);
+    static cudaError_t setOctreeMaxDepth(int depth);
 
     /**
      * @details Sets the point lights used for Phong lighting if \ref setPhongIlluminationEnabled is set to **true**.
@@ -155,9 +154,25 @@ public:
     static void setOctreeMinPos(Vector3<int> pos);
 
     /**
-     * @return The octree's maximum size (span, number of voxels on one side, calculated by 2 ^ level
+     * @return The octree's center position, (0, 0, 0) by default
+     * */
+    static Vector3<int> getOctreeCenter();
+
+    /**
+    * @details Sets the position of the center of the octree
+    * @param pos The new center position
+    * */
+    static void setOctreeCenter(Vector3<int> pos);
+
+    /**
+     * @return The octree's maximum size (span, number of voxels on one side, calculated by 2 ^ level)
      * */
     static int getOctreeMaxSize();
+
+    /**
+    * @return The octree's maximum depth/level (sqrt(size))
+    * */
+    static cudaError_t getOctreeMaxDepth(int depth);
     
     /**
     * @return The camera angle (first two vector components, third is zero)
@@ -288,6 +303,17 @@ public:
     static void setPhongIlluminationEnabled(bool isEnabled);
 
     /**
+    * @return A boolean value indicating whether displaying the information about free memory when allocating the octree or when using init or cleanup is enabled
+    * */
+   static bool getDisplayingMemoryInfoEnabled();
+
+   /**
+   * @details Enables/disables displaying the information about free memory when allocating the octree or when using init or cleanup is enabled
+   * @param isEnabled The boolean value that enables/disables displaying the information
+   * */
+   static void setDisplayingMemoryInfoEnabled(bool isEnabled);
+
+    /**
     * @return The color of the ambient light (default light when Phong lighting is enabled)
     * */
     static Vector3<> getAmbientLightColor();
@@ -396,6 +422,8 @@ private:
     static bool isMouseControlEnabled;
 
     static bool isPhongIlluminationEnabled;
+
+    static bool isDisplayingMemoryInfoEnabled;
 
     static unsigned int windowWidth, windowHeight;
 

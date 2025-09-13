@@ -21,7 +21,7 @@ templates_path = ['_templates']
 exclude_patterns = []
 
 breathe_projects = {
-    "simple-cuda-voxel-engine": os.path.join(os.path.abspath(os.path.dirname(__file__)), "../build/xml")
+    "simple-cuda-voxel-engine": os.path.abspath(os.path.join(os.path.abspath(os.path.dirname(__file__)), "../build/xml"))
 }
 
 # -- Options for HTML output -------------------------------------------------

@@ -46,6 +46,7 @@ namespace scve::block_variant_manager {
                 error = cudaMallocManaged(&blockTextures[index], sizeof(BlockTexture));
 
                 if(error != cudaSuccess) {
+                    cleanup();
                     return error;
                 }
         
@@ -56,6 +57,7 @@ namespace scve::block_variant_manager {
                 error = blockTextures[index]->init(4, paths);
 
                 if(error != cudaSuccess) {
+                    cleanup();
                     return error;
                 }    
             
@@ -66,6 +68,7 @@ namespace scve::block_variant_manager {
         error = cudaMallocManaged(&blockVariants, sizeof(ManagedList<BlockVariant*>));
 
         if(error != cudaSuccess) {
+            cleanup();
             return error;
         }
 
@@ -74,7 +77,7 @@ namespace scve::block_variant_manager {
         error = blockVariants->init(maxNumVariants);
 
         if(error != cudaSuccess) {
-            cudaFree(blockVariants);
+            cleanup();
             return error;
         }
 
@@ -84,6 +87,7 @@ namespace scve::block_variant_manager {
             error = cudaMallocManaged(&blockVariant, sizeof(BlockVariant));
 
             if(error != cudaSuccess) {
+                cleanup();
                 return error;
             }
 
@@ -92,6 +96,7 @@ namespace scve::block_variant_manager {
             error = blockVariants->add(blockVariant);
 
             if(error != cudaSuccess) {
+                cleanup();
                 return error;
             }
         }
@@ -100,36 +105,42 @@ namespace scve::block_variant_manager {
     }
 
     cudaError_t cleanup() {
-        cudaError_t error = cudaSuccess;
+        cudaError_t lastError = cudaSuccess;
 
         for(int i = 0; i < blockVariants->size(); i++) {
             if(((*blockVariants)[i])->texture != nullptr) {
-                error = ((*blockVariants)[i])->texture->cleanup();
+                cudaError_t error = ((*blockVariants)[i])->texture->cleanup();
 
                 if(error != cudaSuccess) {
-                    return error;
+                    lastError = error;
                 }
             }
 
-            error = cudaFree((*blockVariants)[i]);
+            cudaError_t error = cudaFree((*blockVariants)[i]);
 
             if(error != cudaSuccess) {
-                return error;
+                lastError = error;
             }
         }
 
-        error = blockVariants->cleanup();
+        cudaError_t error = blockVariants->cleanup();
 
         if(error != cudaSuccess) {
-            return error;
+            lastError = error;
         }
 
         error = cudaFree(blockVariants);
 
         if(error != cudaSuccess) {
-            return error;
+            lastError = error;
         }
 
-        return cudaFree(blockTextures);
+        error = cudaFree(blockTextures);
+
+        if(error != cudaSuccess) {
+            lastError = error;
+        }
+
+        return lastError;
     }
 }

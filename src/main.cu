@@ -13,11 +13,13 @@ int main() {
         return 1;
     }
 
-    VoxelEngine::setOctreeMinPos(Vector3<int>(-VoxelEngine::getOctreeMaxSize() / 2, -VoxelEngine::getOctreeMaxSize() / 2, -VoxelEngine::getOctreeMaxSize() / 2));
+    VoxelEngine::setOctreeMaxDepth(8);
+
+    VoxelEngine::setOctreeCenter(Vector3<int>(0, 0, 0));
+
+    // VoxelEngine::setOctreeMinPos(Vector3<int>(-VoxelEngine::getOctreeMaxSize() / 2, -VoxelEngine::getOctreeMaxSize() / 2, -VoxelEngine::getOctreeMaxSize() / 2));
 
     auto blockPosFrameToIdFunction = [] __device__ (int x, int y, int z, uint64_t frameNumber) {                
-        //return int(sqrtf(x*x + y*y + z*z)) % 127 + 1;
-
         int maxIterations = 4;
 
         float newX = float(x) / 450.0;
@@ -68,24 +70,32 @@ int main() {
         return Material(Vector3<>(blockId * blockId, blockId * 3 * blockId, blockId * 5 + 100), 1.0, 0.0, 20.0);
     };
 
-    VoxelEngine::setCameraPos(Vector3<>(0, 0, -100));
+    VoxelEngine::setCameraPos(Vector3<>(0, 0, -10000));
 
     VoxelEngine::setTextureRenderingEnabled(false);
 
     VoxelEngine::setPropagatingInsertLODsEnabled(false);
 
-    VoxelEngine::setMouseControlEnabled(true);
+    VoxelEngine::setKeyboardControlEnabled(true);
+
+    VoxelEngine::setMouseControlEnabled(false);
 
     VoxelEngine::setPhongIlluminationEnabled(false);
 
 
     // VoxelEngine::setMaterials<decltype(blockIdFrameToMaterialFunction)>(blockIdFrameToMaterialFunction);
 
-    VoxelEngine::setBackgroundColor(Vector3<>(0, 0, 0));
+    //VoxelEngine::setBackgroundColor(Vector3<>(0, 0, 0));
+
+
+    //VoxelEngine::setPointLights({PointLight(Vector3<>(0, 0, -300000), Vector3<>(255, 0, 0)), PointLight(Vector3<>(0, -300000, -300000), Vector3<>(0, 0, 255))});    
+
+    
 
     VoxelEngine::insertVoxels<decltype(blockPosFrameToIdFunction)>(blockPosFrameToIdFunction);
 
-    VoxelEngine::setPointLights({PointLight(Vector3<>(0, 0, -300000), Vector3<>(255, 0, 0)), PointLight(Vector3<>(0, -300000, -300000), Vector3<>(0, 0, 255))});    
+    // VoxelEngine::setOctreeCenter(Vector3<int>(0,0,0));
+
 
     // size_t chunkWidth = 8;
 

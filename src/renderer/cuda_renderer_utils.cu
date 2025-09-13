@@ -45,15 +45,10 @@ namespace scve::cuda_renderer_utils {
     cudaError_t cleanupSDL() {
         cudaError_t error = cudaGraphicsUnregisterResource(cudaResource);
 
-        if(error != cudaSuccess) {
-            return error;
-        }
-
         glDeleteTextures(1, &textureID);
     
         SDL_FreeSurface(textSurface);
         SDL_DestroyTexture(textTexture);
-        // TTF_Quit();
     
         SDL_DestroyRenderer(renderer);
         SDL_DestroyWindow(window);

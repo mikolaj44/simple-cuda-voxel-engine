@@ -22,6 +22,7 @@ bool VoxelEngine::isCalculatingInsertLODsEnabled = false;
 bool VoxelEngine::isMouseControlEnabled = false;
 bool VoxelEngine::isKeyboardControlEnabled = true;
 bool VoxelEngine::isPhongIlluminationEnabled = true;
+bool VoxelEngine::isDisplayingMemoryInfoEnabled = true;
 
 unsigned int VoxelEngine::windowWidth;
 unsigned int VoxelEngine::windowHeight;
@@ -197,15 +198,19 @@ void VoxelEngine::inputLoop(void (*func)(), bool displayFrame) {
 }
 
 cudaError_t VoxelEngine::init(unsigned int windowWidth_, unsigned int windowHeight_, std::string texturesPath, unsigned int initialMaxOctreeDepth) {
-    size_t freeBytes, totalBytes;
+    cudaError_t error = cudaSuccess;
 
-	cudaError_t error = cudaMemGetInfo(&freeBytes, &totalBytes);
+    if(isDisplayingMemoryInfoEnabled) {
+        size_t freeBytes, totalBytes;
 
-    if(error != cudaSuccess) {
-        return error;
+        error = cudaMemGetInfo(&freeBytes, &totalBytes);
+
+        if(error != cudaSuccess) {
+            return error;
+        }
+
+	    printf("\ninit: %zu bytes free out of %zu\n", freeBytes, totalBytes);
     }
-
-	printf("\n%zu bytes free out of %zu\n", freeBytes, totalBytes);
 
     if(isInitialized) {
         throw std::runtime_error("The engine has already been initialized.");
@@ -222,21 +227,26 @@ cudaError_t VoxelEngine::init(unsigned int windowWidth_, unsigned int windowHeig
         return error;
     }
 
-    error = octree->init(initialMaxOctreeDepth);
+    error = octree->init(initialMaxOctreeDepth, isDisplayingMemoryInfoEnabled);
 
     if(error != cudaSuccess) {
+        cleanup();
         return error;
     }
+
+    setOctreeCenter(Vector3<int>(0, 0, 0));
 
     error = block_variant_manager::init(texturesPath, 127, texturesPath == "" ? true : false);
 
     if(error != cudaSuccess) {
+        cleanup();
         return error;
     }
 
     error = point_light_manager::init(1);
 
     if(error != cudaSuccess) {
+        cleanup();
         return error;
     }
 
@@ -249,6 +259,7 @@ cudaError_t VoxelEngine::init(unsigned int windowWidth_, unsigned int windowHeig
     error = cuda_renderer::init(windowWidth_, windowHeight_);
 
     if(error != cudaSuccess) {
+        cleanup();
         return error;
     }
 
@@ -258,51 +269,55 @@ cudaError_t VoxelEngine::init(unsigned int windowWidth_, unsigned int windowHeig
 }
 
 cudaError_t VoxelEngine::cleanup() {
-    cudaError_t error = cudaSuccess;
+    cudaError_t lastError = cudaSuccess;
     
-    error = octree->cleanup();
+    cudaError_t error = octree->cleanup();
 
     if(error != cudaSuccess) {
-        return error;
+        lastError = error;
     }
 
     error = cudaFree(octree);
 
     if(error != cudaSuccess) {
-        return error;
+        lastError = error;
     }
 
     error = cuda_renderer::cleanup();
 
     if(error != cudaSuccess) {
-        return error;
+        lastError = error;
     }
 
     error = block_variant_manager::cleanup();
 
     if(error != cudaSuccess) {
-        return error;
+        lastError = error;
     }
 
     error = point_light_manager::cleanup();
 
     if(error != cudaSuccess) {
-        return error;
+        lastError = error;
     }
 
-    size_t freeBytes, totalBytes;
+    if(isDisplayingMemoryInfoEnabled) {
+        size_t freeBytes, totalBytes;
 
-    error = cudaMemGetInfo(&freeBytes, &totalBytes);
+        error = cudaMemGetInfo(&freeBytes, &totalBytes);
 
-    if(error != cudaSuccess) {
-        return error;
+        if(error != cudaSuccess) {
+            lastError = error;
+        }
+
+        printf("\ncleanup: %zu bytes free out of %zu\n\n", freeBytes, totalBytes);
     }
 
-    printf("\n%zu bytes free out of %zu\n\n", freeBytes, totalBytes);
+    if(error == cudaSuccess) {
+        isInitialized = false;
+    }
 
-    isInitialized = false;
-
-    return error;
+    return lastError;
 }
 
 void VoxelEngine::test(cudaError_t error) {
@@ -467,8 +482,16 @@ bool VoxelEngine::getIsInitialized() {
     return isInitialized;
 }
 
-cudaError_t VoxelEngine::setMaxOctreeDepth(int depth) {
-    return octree->setMaxLevel(depth);
+cudaError_t VoxelEngine::setOctreeMaxDepth(int depth) {
+    Vector3<int> minPos = octree->getMinPos();
+
+    cudaError_t error = octree->cleanup();
+
+    if(error != cudaSuccess) {
+        return error;
+    }
+
+    return octree->init(minPos.x, minPos.y, minPos.z, depth, isDisplayingMemoryInfoEnabled);
 }
 
 void VoxelEngine::setOctreeMinPos(Vector3<int> pos) {
@@ -477,6 +500,14 @@ void VoxelEngine::setOctreeMinPos(Vector3<int> pos) {
 
 Vector3<int> VoxelEngine::getOctreeMinPos() {
     return octree->getMinPos();
+}
+
+Vector3<int> VoxelEngine::getOctreeCenter() {
+    return Vector3<int>::add(octree->getMinPos(), Vector3<int>(getOctreeMaxSize()).div(2));
+}
+
+void VoxelEngine::setOctreeCenter(Vector3<int> pos) {
+    octree->setMinPos(pos.sub(Vector3<int>(getOctreeMaxSize()).div(2)));
 }
 
 int VoxelEngine::getOctreeMaxSize() {
@@ -577,6 +608,14 @@ bool VoxelEngine::getPhongIlluminationEnabled() {
 
 void VoxelEngine::setPhongIlluminationEnabled(bool isEnabled) {
     isPhongIlluminationEnabled = isEnabled;
+}
+
+bool VoxelEngine::getDisplayingMemoryInfoEnabled() {
+    return isDisplayingMemoryInfoEnabled;
+}
+
+void VoxelEngine::setDisplayingMemoryInfoEnabled(bool isEnabled) {
+    isDisplayingMemoryInfoEnabled = isEnabled;
 }
 
 void VoxelEngine::setAmbientLightColor(Vector3<> color) {

@@ -22,12 +22,14 @@ namespace scve::point_light_manager {
         error = cudaMallocManaged(&ambientLight, sizeof(PointLight));
 
         if(error != cudaSuccess) {
+            cleanup();
             return error;
         }
 
         error = cudaMallocManaged(&backgroundLight, sizeof(PointLight));
 
         if(error != cudaSuccess) {
+            cleanup();
             return error;
         }
 
@@ -39,7 +41,7 @@ namespace scve::point_light_manager {
         error = pointLights->init(numLights_);
 
         if(error != cudaSuccess) {
-            cudaFree(pointLights);
+            cleanup();
             return error;
         }
 
@@ -49,6 +51,7 @@ namespace scve::point_light_manager {
             error = cudaMallocManaged(&pointLight, sizeof(PointLight));
 
             if(error != cudaSuccess) {
+                cleanup();
                 return error;
             }
 
@@ -57,6 +60,7 @@ namespace scve::point_light_manager {
             error = pointLights->add(pointLight);
 
             if(error != cudaSuccess) {
+                cleanup();
                 return error;
             }
         }
@@ -65,34 +69,40 @@ namespace scve::point_light_manager {
     }
 
     cudaError_t cleanup() {
-        cudaError_t error = cudaSuccess;
+        cudaError_t lastError = cudaSuccess;
 
         for(int i = 0; i < pointLights->size(); i++) {
-            error = cudaFree((*pointLights)[i]);
+            cudaError_t error = cudaFree((*pointLights)[i]);
     
             if(error != cudaSuccess) {
-                return error;
+                lastError = error;
             }    
         }
 
-        error = pointLights->cleanup();
+        cudaError_t error = pointLights->cleanup();
 
         if(error != cudaSuccess) {
-            return error;
-        }
+            lastError = error;
+        } 
 
         error = cudaFree(pointLights);
 
         if(error != cudaSuccess) {
-            return error;
+            lastError = error;
         }
 
         error = cudaFree(backgroundLight);
 
         if(error != cudaSuccess) {
-            return error;
+            lastError = error;
         }
 
-        return cudaFree(ambientLight);
+        error = cudaFree(ambientLight);
+
+        if(error != cudaSuccess) {
+            lastError = error;
+        }
+
+        return lastError;
     }
 }

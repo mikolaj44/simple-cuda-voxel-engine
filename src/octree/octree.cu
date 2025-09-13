@@ -27,14 +27,12 @@ namespace {
 	}
 }
 
-__host__  cudaError_t Octree::allocateByMaxLevel(unsigned int newMaxLevel) {
+__host__  cudaError_t Octree::allocateByMaxLevel(unsigned int newMaxLevel, bool displayMemoryInfo) {
 	if(newMaxLevel == maxLevel) {
 		return cudaSuccess;
 	}
 
-	newMaxLevel = minv(maxPossibleLevel, newMaxLevel);
-
-	size_t oldAllocatedMemoryInBytes = allocatedMemoryInBytes;
+	newMaxLevel = minv(MAX_POSSIBLE_LEVEL, newMaxLevel);
 
 	allocatedMemoryInBytes = getAllocatedMemoryInBytes(newMaxLevel);
 	maxLevel = newMaxLevel;
@@ -42,89 +40,60 @@ __host__  cudaError_t Octree::allocateByMaxLevel(unsigned int newMaxLevel) {
 
 	cudaError_t error = cudaSuccess;
 
-	// When new octree is bigger
-	if(allocatedMemoryInBytes > oldAllocatedMemoryInBytes) {		
-		Node* nodesCopy;
+	if(displayMemoryInfo) {
+		size_t freeBytes, totalBytes;
 
-		error = cudaMalloc(&nodesCopy, allocatedMemoryInBytes);
-
-		if(error != cudaSuccess) {
-			return error;
-		}
-
-		error = cudaMemset(nodesCopy, 0, allocatedMemoryInBytes);
+		error = cudaMemGetInfo(&freeBytes, &totalBytes);
 
 		if(error != cudaSuccess) {
 			return error;
 		}
 
-		error = cudaMemcpy(nodesCopy, nodes, oldAllocatedMemoryInBytes, cudaMemcpyDeviceToDevice);
+		printf("\noctree: %zu bytes free out of %zu before allocation\n", freeBytes, totalBytes);
 
-		if(error != cudaSuccess) {
-			return error;
-		}
-
-		error = cudaFree(nodes);
-
-		if(error != cudaSuccess) {
-			return error;
-		}
-
-		nodes = nodesCopy;
-	}
-	// When new octree is smaller
-	else {
-		error = cudaFree(nodes);
-
-		if(error != cudaSuccess) {
-			return error;
-		}
-
-		error = cudaMalloc(&nodes, allocatedMemoryInBytes);
-
-		if(error != cudaSuccess) {
-			return error;
-		}
-
-		error = cudaMemset(nodes, 0, allocatedMemoryInBytes);
-
-		if(error != cudaSuccess) {
-			return error;
-		}
+		printf("octree: allocating %zu bytes (%d levels)\n", allocatedMemoryInBytes, maxLevel);
 	}
 
-	size_t freeBytes, totalBytes;
-
-	error = cudaMemGetInfo(&freeBytes, &totalBytes);
+	error = cudaMalloc(&nodes, allocatedMemoryInBytes);
 
 	if(error != cudaSuccess) {
 		return error;
 	}
 
-	printf("\n%zu bytes free out of %zu\n", freeBytes, totalBytes);
-
-	printf("allocating %zu bytes (%d levels)\n", allocatedMemoryInBytes, maxLevel);
-
-	error = cudaMemGetInfo(&freeBytes, &totalBytes);
+	error = cudaMemset(nodes, 0, allocatedMemoryInBytes);
 
 	if(error != cudaSuccess) {
+		cudaFree(nodes);
 		return error;
 	}
 
-	printf("%zu bytes free out of %zu\n", freeBytes, totalBytes);
+	return cudaDeviceSynchronize();
+
+	if(displayMemoryInfo) {
+		size_t freeBytes, totalBytes;
+
+		error = cudaMemGetInfo(&freeBytes, &totalBytes);
+
+		if(error != cudaSuccess) {
+			cudaFree(nodes);
+			return error;
+		}
+
+		printf("octree: %zu bytes free out of %zu after allocation\n", freeBytes, totalBytes);
+	}
 
 	return error;
 }
 
-__host__ cudaError_t Octree::init(int xMin_, int yMin_, int zMin_, unsigned int maxLevel_) {
+__host__ cudaError_t Octree::init(int xMin_, int yMin_, int zMin_, unsigned int maxLevel_, bool displayMemoryInfo) {
 	xMin = xMin_;
 	yMin = yMin_;
 	zMin = zMin_;
-	return allocateByMaxLevel(maxLevel_);
+	return allocateByMaxLevel(maxLevel_, displayMemoryInfo);
 }
 
-__host__ cudaError_t Octree::init(unsigned int maxLevel) {
-	return init(0, 0, 0, maxLevel);
+__host__ cudaError_t Octree::init(unsigned int maxLevel, bool displayMemoryInfo) {
+	return init(0, 0, 0, maxLevel, displayMemoryInfo);
 }
 
 __host__ cudaError_t Octree::cleanup() {
@@ -132,7 +101,13 @@ __host__ cudaError_t Octree::cleanup() {
 }
 
 __host__ cudaError_t Octree::clear() {
-	return cudaMemset(nodes, 0, allocatedMemoryInBytes);
+	cudaError_t error = cudaMemset(nodes, 0, allocatedMemoryInBytes);
+
+	if (error != cudaSuccess) {
+		return error;
+	}
+
+	return cudaDeviceSynchronize();
 }
 
 __device__ scve::Vector3<int> Octree::morton3Ddecode(uint32_t mortonCode) {
@@ -405,10 +380,6 @@ __device__ __host__ void Octree::setMinPos(scve::Vector3<int> minPos) {
 	zMin = minPos.z;
 }
 
-__host__ cudaError_t Octree::setMaxLevel(unsigned int maxLevel_) {
-	return allocateByMaxLevel(maxLevel_);
-}
-
 __device__ __host__ scve::Vector3<int> Octree::getMinPos() const {
 	return scve::Vector3<int>(xMin, yMin, zMin);
 };
@@ -432,7 +403,7 @@ __host__ unsigned int Octree::getMaxOctreeLevelByGPU() {
 		maxLevel++;
 	}
 
-	return minv(maxPossibleLevel, maxLevel - 1);
+	return minv(MAX_POSSIBLE_LEVEL, maxLevel - 1);
 }
 
 cudaError_t Octree::insertBlocks(uint8_t* blockIdArray, scve::Vector3<int> startOffset, bool isCalculatingInsertLODsEnabled, unsigned int chunkWidth, unsigned int gridSize, unsigned int blockSize) {

@@ -32,10 +32,8 @@ Camera movement (mouse + keyboard controls)
 - Full documentation
 - Phong lighting math fix
 - Making this package a library that can be installed with CPM
-- Better CUDA error handling
-
 
 ## Plans for future updates:
 
-- Removing voxel data
+- Removing voxel data functionality
 - Keyboard mapping

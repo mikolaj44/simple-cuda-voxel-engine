@@ -13,17 +13,17 @@ namespace scve {
 
 class Octree {
 public:
-	__host__ cudaError_t init(int xMin, int yMin, int zMin, unsigned int maxLevel);
+	__host__ cudaError_t init(int xMin, int yMin, int zMin, unsigned int maxLevel, bool displayMemoryInfo = false);
 
-	__host__ cudaError_t init(unsigned int maxLevel);
+	__host__ cudaError_t init(unsigned int maxLevel, bool displayMemoryInfo = false);
 
 	__host__ cudaError_t cleanup();
 
 	__host__ cudaError_t clear();
 
 	template<typename XYZFrametoIdFunction>
-    cudaError_t insertBlocksByXYZFrameFunction(XYZFrametoIdFunction blockPosToIdFunction, uint64_t frameNumber, bool isCalculatingInsertLODsEnabled, unsigned int gridSize, unsigned int blockSize) {
-        insertBlockByXYZFrameFunctionKernel<<<gridSize, blockSize>>>(this, blockPosToIdFunction, frameNumber);
+    cudaError_t insertBlocksByXYZFrameFunction(XYZFrametoIdFunction blockPosToIdFunction, uint64_t frameNumber, bool isCalculatingInsertLODsEnabled, unsigned int gridSize, unsigned int blockSize) {		
+		insertBlockByXYZFrameFunctionKernel<<<gridSize, blockSize>>>(this, blockPosToIdFunction, frameNumber);
 
 		// if(isCalculatingInsertLODsEnabled) {
 		// 	for(int level = 0; level <= maxLevel; level++) {
@@ -52,8 +52,6 @@ public:
 	__device__ __host__ void setMinPos(scve::Vector3<int> minPos);
 
 	__device__ __host__ scve::Vector3<int> getMinPos() const;
-
-	__host__ cudaError_t setMaxLevel(unsigned int maxLevel);
 
 	__device__ __host__ unsigned int getMaxLevel() const;
 
@@ -89,7 +87,7 @@ private:
 
 	size_t allocatedMemoryInBytes = 0;
 
-	constexpr static unsigned int maxPossibleLevel = 10;
+	constexpr static unsigned int MAX_POSSIBLE_LEVEL = 10;
 
 
 	__device__ void insert(const BlockInfo<>& block);
@@ -98,7 +96,7 @@ private:
 
 
 
-	__host__ cudaError_t allocateByMaxLevel(unsigned int newMaxLevel);
+	__host__ cudaError_t allocateByMaxLevel(unsigned int newMaxLevel, bool displayMemoryInfo);
 
 
 
