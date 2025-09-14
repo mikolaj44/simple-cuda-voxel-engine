@@ -81,6 +81,7 @@
         "__string": "cpp",
         "__availability": "cpp",
         "version": "cpp",
-        "__preprocessor": "cpp"
+        "__preprocessor": "cpp",
+        "filesystem": "cpp"
     }
 }

@@ -9,9 +9,13 @@ API Reference
    :project: simple-cuda-voxel-engine
    :members:
 
-.. literalinclude:: ../src/functor.h
-   :language: cuda
-   :linenos:
+.. doxygenclass:: scve::XYZFrameToIdFunctor
+   :project: simple-cuda-voxel-engine
+   :members:
+
+.. doxygenclass:: scve::IdFrameToMaterialFunctor
+   :project: simple-cuda-voxel-engine
+   :members:
 
 .. doxygenclass:: scve::Material
    :project: simple-cuda-voxel-engine

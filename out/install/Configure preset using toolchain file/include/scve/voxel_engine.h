@@ -5,12 +5,14 @@
 #include <cstdint>
 #include <vector>
 
-#include "../src/octree/octree.cuh"
-#include "block_variant/block_variant_manager.cuh"
+// #include "cuda_math.cuh"
+#include "scve/internal/octree/octree.cuh"
+#include "scve/internal/structure/vector3.h"
+#include "scve/internal/structure/material.h"
+#include "scve/internal/structure/functor.h"
+#include "scve/internal/light/point_light.h"
 
-#include "cuda_math.cuh"
-#include "material.cuh"
-#include "light/point_light.cuh"
+#include "scve/internal/block_variant/block_variant_manager.cuh"
 
 class Octree;
 
@@ -114,17 +116,16 @@ public:
     * @details Sets the materials for all block types (127 of them) using your own (**blockId**, **frameNumber**) to **material** mapping,
     * so you can decide the material a block type should have, maybe also dependent on the current frame number. If not called by the user,
     * the default mapping is as follows: \par
-    * Material color: hue value for the color ofeach block type (in HSB, where saturation and brightness are set to max) \par
+    * Material color: hue value for the color of each block type (in HSB, where saturation and brightness are set to max) \par
     * In detail: Material(hueToRGB((blockId) * 2.8346 / 360.0), 1.0, 0.0, 20.0)
-    * @param func the device lambda that takes 2 parameters: **uint8_t blockId from 1 to 127** and **uint64_t frameNumber** and returns the **Material material** used by that block type.
+    * @param functor the host-device functor that takes 2 parameters: **uint8_t blockId from 1 to 127** and **uint64_t frameNumber** and returns the **Material material** used by that block type.
+    * You should pass a \ref scve::IdFrameToMaterialFunctor here. You can also check out the examples.
     * */
-    #ifdef __CUDACC__
-        template<typename IdFrameToMaterialFunction>
-        static void setMaterials(IdFrameToMaterialFunction func) {
-            int numVariants = block_variant_manager::blockVariants->size();
-            block_variant_manager::setBlocksVariantMaterialsKernel<<<1, numVariants>>>(func, frameNumber);
-        }
-    #endif
+    template<typename IdFrameToMaterialFunctor>
+    static void setMaterials(IdFrameToMaterialFunctor functor) {
+        int numVariants = block_variant_manager::blockVariants->size();
+        block_variant_manager::setBlocksVariantMaterialsKernel<<<1, numVariants>>>(functor, frameNumber);
+    }
 
     /// @}
 
@@ -376,18 +377,19 @@ public:
     static cudaError_t insertVoxels(uint8_t* hostBlockIdArray, unsigned int chunkWidth, Vector3<int> startOffset = Vector3<int>(0, 0, 0));
 
     /**
-    * @details Inserts voxels using your own (**x**, **y**, **z**, **frameNumber**) to **block id** mapping, so you can decide what block type should be at
+    * @details Inserts voxels using your own (**x**, **y**, **z**, **frameNumber**) to **block id** functor, so you can decide what block type should be at
     * a particular position, also taking the current frame number into consideration.
-    * @param func the device lambda that takes 4 parameters: **int x**, **int y**, **int z** and **uint64_t frameNumber** and returns the **uint8_t blockType**.
+    * @param functor the host-device functor that takes 4 parameters: **int x**, **int y**, **int z** and **uint64_t frameNumber** and returns the **uint8_t blockType**.
+    * You should pass a \ref scve::XYZFrameToIdFunctor here.
     * @return CUDA error code (from cudaDeviceSynchronize)
     * */
-    template<typename XYZFrameToIdFunction>
-    static cudaError_t insertVoxels(XYZFrameToIdFunction func) {
+    template<typename XYZFrameToIdFunctor>
+    static cudaError_t insertVoxels(XYZFrameToIdFunctor functor) {
         size_t totalVoxels = octree->getMaxSize();
-
+    
         totalVoxels = totalVoxels * totalVoxels * totalVoxels;
-
-        return octree->insertBlocksByXYZFrameFunction(func, frameNumber, isCalculatingInsertLODsEnabled, (totalVoxels + insertionBlockSize - 1) / insertionBlockSize, minv((size_t)insertionBlockSize, totalVoxels));
+    
+        return octree->insertBlocksByXYZFrameFunctor(functor, frameNumber, isCalculatingInsertLODsEnabled, (totalVoxels + insertionBlockSize - 1) / insertionBlockSize, minv((size_t)insertionBlockSize, totalVoxels));
     }
 
     /**

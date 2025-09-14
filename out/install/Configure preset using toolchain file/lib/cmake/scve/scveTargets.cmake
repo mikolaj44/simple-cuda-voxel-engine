@@ -60,7 +60,7 @@ add_library(scve::scve STATIC IMPORTED)
 
 set_target_properties(scve::scve PROPERTIES
   INTERFACE_INCLUDE_DIRECTORIES "/usr/local/cuda-12.8/targets/x86_64-linux/include;${_IMPORT_PREFIX}/include/scve"
-  INTERFACE_LINK_LIBRARIES "\$<LINK_ONLY:CUDA::cudart>;\$<LINK_ONLY:SDL2::SDL2>;\$<LINK_ONLY:glfw>;\$<LINK_ONLY:GLEW::GLEW>;\$<LINK_ONLY:GL>"
+  INTERFACE_LINK_LIBRARIES "CUDA::cudart;SDL2::SDL2;glfw;GLEW::GLEW;GL"
 )
 
 # Load information for each installed configuration.

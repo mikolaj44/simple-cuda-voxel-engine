@@ -1,4 +1,5 @@
 #include <iostream>
+#include <filesystem>
 
 #include "scve/voxel_engine.h"
 
@@ -53,9 +54,13 @@ class MyXYZFrameToIdFunctor : public scve::XYZFrameToIdFunctor {
 
 int main() {
     using namespace scve;
+
+    std::filesystem::path texturesPath = __FILE__;
+
+    texturesPath = texturesPath.parent_path() / "textures";
     
     try {
-       VoxelEngine::test(VoxelEngine::init(1920, 1080, "/home/mikolaj/Desktop/cuda-voxel-engine/res/textures/", 10));
+       VoxelEngine::test(VoxelEngine::init(1920, 1080, texturesPath, 10));
     }
     catch (const std::exception& e) {
         std::cout << "Caught exception: " << e.what() << "\n";

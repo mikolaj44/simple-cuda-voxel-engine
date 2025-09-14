@@ -6,13 +6,13 @@
 #include <vector>
 
 // #include "cuda_math.cuh"
-#include "octree/octree.cuh"
-#include "vector3.h"
-#include "material.h"
-#include "functor.h"
-#include "light/point_light.h"
+#include "scve/internal/octree/octree.cuh"
+#include "scve/internal/structure/vector3.h"
+#include "scve/internal/structure/material.h"
+#include "scve/internal/structure/functor.h"
+#include "scve/internal/light/point_light.h"
 
-#include "block_variant/block_variant_manager.cuh"
+#include "scve/internal/block_variant/block_variant_manager.cuh"
 
 class Octree;
 

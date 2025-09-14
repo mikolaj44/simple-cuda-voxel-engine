@@ -27,10 +27,8 @@ set(CMAKE_CUDA_ARCHITECTURES "${CUDA_ARCHITECTURE_NUM}-real;${CUDA_ARCHITECTURE_
 
 
 
-file(GLOB_RECURSE CPP_SOURCES "src/*.cpp")
-file(GLOB_RECURSE CUDA_SOURCES "src/*.cu")
-
-#file(GLOB_RECURSE HEADERS "include/*.h" "include/*.hpp" "include/*.cuh" "src/*.h" "src/*.hpp" "src/*.cuh")
+file(GLOB_RECURSE CPP_SOURCES "include/scve/internal/*.cpp")
+file(GLOB_RECURSE CUDA_SOURCES "include/scve/internal/*.cu")
 
 add_library(scve
   STATIC
@@ -45,19 +43,18 @@ set_target_properties(scve
   CMAKE_CXX_STANDARD 20
   CUDA_SEPARABLE_COMPILATION ON
   CUDA_RESOLVE_DEVICE_SYMBOLS ON
-  OUTPUT_NAME "engine"
+  OUTPUT_NAME "scve"
 )
 
 target_include_directories(scve
   PUBLIC
     "$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>"
     "$<BUILD_INTERFACE:${CMAKE_CURRENT_BINARY_DIR}/include>"
-    "$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/src>"
     "${CMAKE_CUDA_TOOLKIT_INCLUDE_DIRECTORIES}"
 )
 
 target_link_libraries(scve
-  PRIVATE
+  PUBLIC
     CUDA::cudart
     SDL2::SDL2
     glfw
