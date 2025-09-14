@@ -1,7 +1,7 @@
 #pragma once
 
 #include "block_texture.cuh"
-#include "material.cuh"
+#include "material.h"
 
 namespace scve {
 

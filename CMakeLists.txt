@@ -1,75 +1,156 @@
 cmake_minimum_required(VERSION 3.10 FATAL_ERROR)
 
-project(cuda-voxel-engine LANGUAGES CXX CUDA)
+cmake_policy(SET CMP0072 NEW)
 
-set(CPM_FILE ${CMAKE_CURRENT_BINARY_DIR}/cmake/CPM.cmake)
+project(simple-cuda-voxel-engine LANGUAGES CXX CUDA)
 
-if(NOT EXISTS ${CPM_FILE})
-  file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/cmake)
+include(GNUInstallDirs)
+include(CMakePackageConfigHelpers)
 
-  file(
-    DOWNLOAD
-    https://github.com/cpm-cmake/CPM.cmake/releases/download/v0.42.0/CPM.cmake
-    ${CMAKE_CURRENT_BINARY_DIR}/cmake/CPM.cmake
-  )
-endif()
 
-include(${CPM_FILE})
 
-file(GLOB_RECURSE SOURCES "src/*.cpp" "src/*.cu")
-file(GLOB_RECURSE HEADERS "include/*.h" "include/*.hpp" "include/*.cuh" "src/*.h" "src/*.hpp" "src/*.cuh")
+option(BUILD_EXAMPLES "Build scve examples" ON)
+
+set(CUDA_ARCHITECTURE_NUM "75" CACHE STRING "Set the CUDA architecture, 75 by default")
+
+
 
 find_package(CUDAToolkit REQUIRED)
 find_package(OpenGL REQUIRED)
-find_package(GLUT REQUIRED) # TODO: replace with FreeGLUT through CPM
+find_package(GLEW REQUIRED)
+find_package(SDL2 REQUIRED)
+find_package(glfw3 REQUIRED)
 
-CPMAddPackage(
-  NAME SDL2
-  URL https://github.com/libsdl-org/SDL/archive/refs/tags/release-2.30.6.zip
+
+
+set(CMAKE_CUDA_ARCHITECTURES "${CUDA_ARCHITECTURE_NUM}-real;${CUDA_ARCHITECTURE_NUM}-virtual")
+
+
+
+file(GLOB_RECURSE CPP_SOURCES "src/*.cpp")
+file(GLOB_RECURSE CUDA_SOURCES "src/*.cu")
+
+#file(GLOB_RECURSE HEADERS "include/*.h" "include/*.hpp" "include/*.cuh" "src/*.h" "src/*.hpp" "src/*.cuh")
+
+add_library(scve
+  STATIC
+  ${CPP_SOURCES}
+  ${CUDA_SOURCES}
 )
 
-CPMAddPackage(CPM_FILE
-  NAME glfw
-  URL https://github.com/glfw/glfw/releases/download/3.4/glfw-3.4.zip
+#set_source_files_properties(${CUDA_SOURCES} PROPERTIES LANGUAGE CUDA)
+
+set_target_properties(scve 
+  PROPERTIES
+  CMAKE_CXX_STANDARD 20
+  CUDA_SEPARABLE_COMPILATION ON
+  CUDA_RESOLVE_DEVICE_SYMBOLS ON
+  OUTPUT_NAME "engine"
 )
 
-CPMAddPackage(CPM_FILE
-  NAME GLEW
-  URL https://github.com/nigels-com/glew/releases/download/glew-2.2.0/glew-2.2.0.zip
+target_include_directories(scve
+  PUBLIC
+    "$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>"
+    "$<BUILD_INTERFACE:${CMAKE_CURRENT_BINARY_DIR}/include>"
+    "$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/src>"
+    "${CMAKE_CUDA_TOOLKIT_INCLUDE_DIRECTORIES}"
 )
 
-include_directories(${SDL2_INCLUDE_DIRS} ${OPENGL_INCLUDE_DIRS} ${GLEW_INCLUDE_DIRS})
+target_link_libraries(scve
+  PRIVATE
+    CUDA::cudart
+    SDL2::SDL2
+    glfw
+    GLEW::GLEW
+    GL
+)
 
-set(CMAKE_CUDA_ARCHITECTURES "75-real;75-virtual")
+install(TARGETS scve
+  EXPORT scveTargets
+  LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
+  ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
+  RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
+  INCLUDES DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/scve
+)
 
-# set(CMAKE_CUDA_FLAGS_RELEASE "-O3 -Xptxas -O3")
-# set(CMAKE_CUDA_FLAGS_RELWITHDEBINFO "-O2 -Xptxas -O2")
+install(DIRECTORY include/scve
+  DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
+)
 
-add_executable(${PROJECT_NAME} ${SOURCES} ${HEADERS})
+install(EXPORT scveTargets
+  FILE scveTargets.cmake
+  NAMESPACE scve::
+  DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/scve
+)
 
-set_target_properties(${PROJECT_NAME} PROPERTIES CUDA_SEPARABLE_COMPILATION ON)
+configure_package_config_file(
+  ${CMAKE_CURRENT_SOURCE_DIR}/Config.cmake.in
+  "${CMAKE_CURRENT_BINARY_DIR}/scveConfig.cmake"
+  INSTALL_DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/scve
+)
 
-target_compile_options(${PROJECT_NAME} PRIVATE
+install(FILES
+  "${CMAKE_CURRENT_BINARY_DIR}/scveConfig.cmake"
+  DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/scve
+)
+
+
+
+target_compile_options(scve PRIVATE
   $<$<COMPILE_LANGUAGE:CUDA>:
+    -O3
     --expt-extended-lambda
     -use_fast_math
     -diag-suppress=550
     -diag-suppress=177
     -diag-suppress=1650
+    -diag-suppress=20044
     -Xcompiler -w
   >
 )
 
-target_compile_options(${PROJECT_NAME} PRIVATE
+target_compile_options(scve PRIVATE
   $<$<COMPILE_LANGUAGE:CXX>:
     -O3
   >
 )
 
-set_target_properties(${PROJECT_NAME} PROPERTIES OUTPUT_NAME "engine")
-set_target_properties(${PROJECT_NAME} PROPERTIES CUDA_RESOLVE_DEVICE_SYMBOLS ON)
+if(BUILD_EXAMPLES)
+  file(GLOB EXAMPLES "${CMAKE_CURRENT_SOURCE_DIR}/examples/*.cu")
 
-target_include_directories(${PROJECT_NAME} PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src)
-target_include_directories(${PROJECT_NAME} PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include/scve)
+  foreach(example_file IN LISTS EXAMPLES)
+    get_filename_component(example_name ${example_file} NAME_WE)
 
-target_link_libraries(${PROJECT_NAME} PRIVATE SDL2 glfw GLEW GL GLUT::GLUT)
+    add_executable(${example_name} ${example_file})
+
+    set_source_files_properties(${example_file} PROPERTIES LANGUAGE CUDA)
+
+    target_link_libraries(${example_name} PRIVATE scve CUDA::cudart)
+
+    set_target_properties(${example_name} 
+      PROPERTIES
+      CMAKE_CXX_STANDARD 20
+      CUDA_SEPARABLE_COMPILATION ON
+      CUDA_RESOLVE_DEVICE_SYMBOLS ON
+    )
+
+    target_compile_options(${example_name} PRIVATE
+      $<$<COMPILE_LANGUAGE:CUDA>:
+        -O3
+        --expt-extended-lambda
+        -use_fast_math
+        -diag-suppress=550
+        -diag-suppress=177
+        -diag-suppress=1650
+        -diag-suppress=20044
+        -Xcompiler -w
+      >
+    )
+
+    target_compile_options(${example_name} PRIVATE
+      $<$<COMPILE_LANGUAGE:CXX>:
+        -O3
+      >
+    )
+  endforeach()
+endif()

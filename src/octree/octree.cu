@@ -183,66 +183,6 @@ __device__ uint32_t Octree::morton3Dencode(scve::Vector3<int> pos) {
 	return mortonCode;
 }
 
-// First part of the insertion (top-down): inserting the correct leaf-voxel data
-__device__ void Octree::insert(const BlockInfo<>& block) {
-	int x = block.pos.x;
-	int y = block.pos.y;
-	int z = block.pos.z;
-
-	int size = maxSize;
-
-	int xMin = 0;
-	int yMin = 0;
-	int zMin = 0;
-
-	int xM;
-	int yM;
-	int zM;
-
-	uint32_t index = 1; // root node index
-	// uint32_t prevIndex = 1;
-
-	// Iterate over all node levels up until the leaf node
-	do {
-		// Get the node at index (to insert the right block data)
-		if (size == 1) {
-			nodes[index].id = block.id;
-			return;
-		}
-
-		nodes[index].id = 128;
-
-		// prevIndex = index;
-
-		// Get the midpoint
-		xM = (2 * xMin + size) / 2;
-		yM = (2 * yMin + size) / 2;
-		zM = (2 * zMin + size) / 2;
-
-		index <<= 3;
-
-		// Compute the coordinates and morton code of the child node
-		if (x >= xM) {
-			xMin += size / 2;
-			index |= 1;
-		}
-		if (y >= yM) {
-			yMin += size / 2;
-			index |= 2;
-		}
-
-		if (z >= zM) {	
-			zMin += size / 2;
-			index |= 4;
-		}
-
-		// nodes[prevIndex].id = 128;
-
-		size /= 2;
-
-	} while (size >= 1);
-}
-
 // Second and final part of the insertion (bottom-up): fixing the LOD data (determining if nodes are solid)
 __device__ void Octree::insertFixLOD(uint32_t mortonCode, uint8_t blockId) {
 	static uint8_t combinations[8] = {0b000, 0b001, 0b010, 0b011, 0b100, 0b101, 0b110, 0b111};
@@ -380,17 +320,17 @@ __device__ __host__ void Octree::setMinPos(scve::Vector3<int> minPos) {
 	zMin = minPos.z;
 }
 
-__device__ __host__ scve::Vector3<int> Octree::getMinPos() const {
-	return scve::Vector3<int>(xMin, yMin, zMin);
-};
+// __device__ __host__ scve::Vector3<int> Octree::getMinPos() const {
+// 	return scve::Vector3<int>(xMin, yMin, zMin);
+// };
 
-__device__ __host__ unsigned int Octree::getMaxLevel() const {
-	return maxLevel;
-}
+// __device__ __host__ unsigned int Octree::getMaxLevel() const {
+// 	return maxLevel;
+// }
 
-__device__ __host__ unsigned int Octree::getMaxSize() const {
-	return maxSize;
-}
+// __device__ __host__ unsigned int Octree::getMaxSize() const {
+// 	return maxSize;
+// }
 
 __host__ unsigned int Octree::getMaxOctreeLevelByGPU() {
 	size_t freeBytes, totalBytes;
@@ -413,7 +353,7 @@ cudaError_t Octree::insertBlocks(uint8_t* blockIdArray, scve::Vector3<int> start
 	// 	for(int level = 0; level <= maxLevel; level++) {
 	// 		// printf("grid size: %d, total: %d, side length: %d\n", gridSize, gridSize * blockSize, (int)cbrtf(float(gridSize) * float(blockSize)));
 
-	// 		insertBlocksByXYZFrameFunctionFixLODKernel<<<gridSize, blockSize>>>(this, blockPosToIdFunction, frameNumber, level);
+	// 		insertBlocksByXYZFrameFunctorFixLODKernel<<<gridSize, blockSize>>>(this, blockPosToIdFunction, frameNumber, level);
 
 	// 		if(blockSize >= 8) {
 	// 			blockSize /= 8;

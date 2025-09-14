@@ -1,6 +1,6 @@
 #pragma once
 
-#include "light/point_light.cuh"
+#include "light/point_light.h"
 #include "managed_list.cuh"
 #include <stdint.h>
 

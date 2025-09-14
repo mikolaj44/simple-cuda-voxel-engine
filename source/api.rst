@@ -8,3 +8,11 @@ API Reference
 .. doxygenclass:: scve::Vector3
    :project: simple-cuda-voxel-engine
    :members:
+
+.. literalinclude:: ../src/functor.h
+   :language: cuda
+   :linenos:
+
+.. doxygenclass:: scve::Material
+   :project: simple-cuda-voxel-engine
+   :members:

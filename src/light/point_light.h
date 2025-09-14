@@ -1,6 +1,6 @@
 #pragma once
 
-#include "vector3.cuh"
+#include "vector3.h"
 
 #include <cuda_runtime.h>
 

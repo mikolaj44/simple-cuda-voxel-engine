@@ -1,4 +1,4 @@
-#include "voxel_engine.cuh"
+#include "scve/voxel_engine.h"
 #include "block_variant/block_texture.cuh"
 #include "block_variant/block_variant_manager.cuh"
 #include "light/point_light_manager.cuh"

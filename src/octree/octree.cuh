@@ -2,9 +2,10 @@
 
 #include <stdint.h>
 
-#include "vector3.cuh"
-#include "octree/octree_utils.cuh"
+#include "vector3.h"
+#include "octree_utils.cuh"
 
+#include "functor.h"
 #include "cuda_math.cuh"
 #include "tuple.cuh"
 #include "block_info.cuh"
@@ -21,15 +22,15 @@ public:
 
 	__host__ cudaError_t clear();
 
-	template<typename XYZFrametoIdFunction>
-    cudaError_t insertBlocksByXYZFrameFunction(XYZFrametoIdFunction blockPosToIdFunction, uint64_t frameNumber, bool isCalculatingInsertLODsEnabled, unsigned int gridSize, unsigned int blockSize) {		
-		insertBlockByXYZFrameFunctionKernel<<<gridSize, blockSize>>>(this, blockPosToIdFunction, frameNumber);
+	template<typename XYZFrameToIdFunctor>
+    cudaError_t insertBlocksByXYZFrameFunctor(XYZFrameToIdFunctor blockPosToIdFunctor, uint64_t frameNumber, bool isCalculatingInsertLODsEnabled, unsigned int gridSize, unsigned int blockSize) {		
+		insertBlockByXYZFrameFunctorKernel<<<gridSize, blockSize>>>(this, blockPosToIdFunctor, frameNumber);
 
 		// if(isCalculatingInsertLODsEnabled) {
 		// 	for(int level = 0; level <= maxLevel; level++) {
 		// 		// printf("grid size: %d, total: %d, side length: %d\n", gridSize, gridSize * blockSize, (int)cbrtf(float(gridSize) * float(blockSize)));
 
-		// 		insertBlocksByXYZFrameFunctionFixLODKernel<<<gridSize, blockSize>>>(this, blockPosToIdFunction, frameNumber, level);
+		// 		insertBlocksByXYZFrameFunctorFixLODKernel<<<gridSize, blockSize>>>(this, blockPosToIdFunctor, frameNumber, level);
 
 		// 		if(blockSize >= 8) {
 		// 			blockSize /= 8;
@@ -51,11 +52,17 @@ public:
 
 	__device__ __host__ void setMinPos(scve::Vector3<int> minPos);
 
-	__device__ __host__ scve::Vector3<int> getMinPos() const;
+	__device__ __host__ scve::Vector3<int> getMinPos() const {
+		return scve::Vector3<int>(xMin, yMin, zMin);
+	};
 
-	__device__ __host__ unsigned int getMaxLevel() const;
+	__device__ __host__ unsigned int getMaxLevel() const {
+		return maxLevel;
+	}
 
-	__device__ __host__ unsigned int getMaxSize() const;
+	__device__ __host__ unsigned int getMaxSize() const {
+		return maxSize;
+	}
 
 	__host__ static unsigned int getMaxOctreeLevelByGPU();
 private:
@@ -89,9 +96,62 @@ private:
 
 	constexpr static unsigned int MAX_POSSIBLE_LEVEL = 10;
 
+	// First part of the insertion (top-down): inserting the correct leaf-voxel data
+	__device__ void insert(const BlockInfo<>& block) {
+		int x = block.pos.x;
+		int y = block.pos.y;
+		int z = block.pos.z;
+	
+		int size = maxSize;
+	
+		int xMin = 0;
+		int yMin = 0;
+		int zMin = 0;
+	
+		int xM;
+		int yM;
+		int zM;
+	
+		uint32_t index = 1; // root node index
+	
+		// Iterate over all node levels up until the leaf node
+		do {
+			// Get the node at index (to insert the right block data)
+			if (size == 1) {
+				nodes[index].id = block.id;
+				return;
+			}
+	
+			nodes[index].id = 128;
+		
+			// Get the midpoint
+			xM = (2 * xMin + size) / 2;
+			yM = (2 * yMin + size) / 2;
+			zM = (2 * zMin + size) / 2;
+	
+			index <<= 3;
+	
+			// Compute the coordinates and morton code of the child node
+			if (x >= xM) {
+				xMin += size / 2;
+				index |= 1;
+			}
+			if (y >= yM) {
+				yMin += size / 2;
+				index |= 2;
+			}
+	
+			if (z >= zM) {	
+				zMin += size / 2;
+				index |= 4;
+			}
+		
+			size /= 2;
+	
+		} while (size >= 1);
+	}
 
-	__device__ void insert(const BlockInfo<>& block);
-
+	// Second and final part of the insertion (bottom-up): fixing the LOD data (determining if nodes are solid)
 	__device__ void insertFixLOD(uint32_t mortonCode, uint8_t blockId);
 
 
@@ -110,19 +170,19 @@ private:
 
 	__device__ void traverseChildNodes(bool& foundSolid, Triple<scve::Vector3<int>, scve::Vector3<float>, uint8_t>& intersectionData, octree_utils::Stack& stack, octree_utils::Stack::Frame& data, scve::Vector3<> origRayOrigin, scve::Vector3<> origRayDirection, unsigned char a, int minNodeSize, int sX, int sY);
 
-	template<typename XYZFrametoIdFunction>
-	friend __global__ void insertBlockByXYZFrameFunctionKernel(Octree* octree, XYZFrametoIdFunction blockPosToIdFunction, uint64_t frameNumber);
+	template<typename XYZFrameToIdFunctor>
+	friend __global__ void insertBlockByXYZFrameFunctorKernel(Octree* octree, XYZFrameToIdFunctor blockPosToIdFunctor, uint64_t frameNumber);
 
-	template<typename XYZFrametoIdFunction>
-	friend __global__ void insertBlocksByXYZFrameFunctionFixLODKernel(Octree* octree, XYZFrametoIdFunction blockPosToIdFunction, uint64_t frameNumber, unsigned int level);
+	template<typename XYZFrameToIdFunctor>
+	friend __global__ void insertBlocksByXYZFrameFunctorFixLODKernel(Octree* octree, XYZFrameToIdFunctor blockPosToIdFunctor, uint64_t frameNumber, unsigned int level);
 
 	friend __global__ void insertBlocksKernel(Octree* octree, uint8_t* blockIdArray, unsigned int chunkWidth, scve::Vector3<int> startOffset);
 
 	friend __global__ void getBlocksKernel(Octree* octree, uint8_t* outBlockIdArray, unsigned int chunkWidth, scve::Vector3<int> startOffset);
 };
 
-template<typename XYZFrametoIdFunction>
-__global__ void insertBlockByXYZFrameFunctionKernel(Octree* octree, XYZFrametoIdFunction blockPosToIdFunction, uint64_t frameNumber) {            
+template<typename XYZFrameToIdFunctor>
+__global__ void insertBlockByXYZFrameFunctorKernel(Octree* octree, XYZFrameToIdFunctor blockPosToIdFunctor, uint64_t frameNumber) {            
     size_t size = octree->getMaxSize();
 
 	size_t index = threadIdx.x + blockIdx.x * blockDim.x;
@@ -137,15 +197,15 @@ __global__ void insertBlockByXYZFrameFunctionKernel(Octree* octree, XYZFrametoId
 
     scve::Vector3<int> minPos = octree->getMinPos();
 
-    uint8_t id = blockPosToIdFunction(x + minPos.x, y + minPos.y, z + minPos.z, frameNumber);
+    uint8_t id = blockPosToIdFunctor(x + minPos.x, y + minPos.y, z + minPos.z, frameNumber);
 	
     if(id != 0) {
         octree->insert(BlockInfo<>(scve::Vector3<int>(x, y, z), id));
     }
 }
 
-template<typename XYZFrametoIdFunction>
-__global__ void insertBlocksByXYZFrameFunctionFixLODKernel(Octree* octree, XYZFrametoIdFunction blockPosToIdFunction, uint64_t frameNumber, unsigned int level) {
+template<typename XYZFrameToIdFunctor>
+__global__ void insertBlocksByXYZFrameFunctorFixLODKernel(Octree* octree, XYZFrameToIdFunctor blockPosToIdFunctor, uint64_t frameNumber, unsigned int level) {
 	unsigned int size = octree->getMaxSize();
 
 	unsigned int index = threadIdx.x + blockIdx.x * blockDim.x;
@@ -160,7 +220,7 @@ __global__ void insertBlocksByXYZFrameFunctionFixLODKernel(Octree* octree, XYZFr
 
 	scve::Vector3<int> pos = scve::Vector3<int>::add(scve::Vector3<int>(x, y, z), octree->getMinPos());
 
-    uint8_t id = blockPosToIdFunction(pos.x, pos.y, pos.z, frameNumber);
+    uint8_t id = blockPosToIdFunctor(pos.x, pos.y, pos.z, frameNumber);
 
 
 

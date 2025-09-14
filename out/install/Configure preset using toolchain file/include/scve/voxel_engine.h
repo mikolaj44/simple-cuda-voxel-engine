@@ -3,8 +3,9 @@
 
 #include <string>
 #include <cstdint>
+#include <vector>
 
-#include "octree/octree.cuh"
+#include "../src/octree/octree.cuh"
 #include "block_variant/block_variant_manager.cuh"
 
 #include "cuda_math.cuh"
@@ -117,11 +118,13 @@ public:
     * In detail: Material(hueToRGB((blockId) * 2.8346 / 360.0), 1.0, 0.0, 20.0)
     * @param func the device lambda that takes 2 parameters: **uint8_t blockId from 1 to 127** and **uint64_t frameNumber** and returns the **Material material** used by that block type.
     * */
-    template<typename IdFrameToMaterialFunction>
-    static void setMaterials(IdFrameToMaterialFunction func) {
-        int numVariants = block_variant_manager::blockVariants->size();
-        block_variant_manager::setBlocksVariantMaterialsKernel<<<1, numVariants>>>(func, frameNumber);
-    }
+    #ifdef __CUDACC__
+        template<typename IdFrameToMaterialFunction>
+        static void setMaterials(IdFrameToMaterialFunction func) {
+            int numVariants = block_variant_manager::blockVariants->size();
+            block_variant_manager::setBlocksVariantMaterialsKernel<<<1, numVariants>>>(func, frameNumber);
+        }
+    #endif
 
     /// @}
 

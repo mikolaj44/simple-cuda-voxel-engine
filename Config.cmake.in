@@ -1,0 +1,14 @@
+@PACKAGE_INIT@
+
+include("${CMAKE_CURRENT_LIST_DIR}/scveTargets.cmake")
+
+check_required_components(scve)
+
+include(CMakeFindDependencyMacro)
+
+find_dependency(CUDAToolkit REQUIRED)
+find_dependency(OpenGL REQUIRED)
+find_dependency(GLUT REQUIRED) # TODO: replace with FreeGLUT through CPM
+find_dependency(GLEW REQUIRED)
+find_dependency(SDL2 REQUIRED)
+find_dependency(glfw REQUIRED)  

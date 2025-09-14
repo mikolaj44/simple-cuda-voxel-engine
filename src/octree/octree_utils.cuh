@@ -1,7 +1,7 @@
 #pragma once
 
 #include <stdint.h>
-#include "vector3.cuh"
+#include "vector3.h"
 
 namespace scve::octree_utils {
     constexpr unsigned int CUDA_STACK_SIZE = 11;

@@ -1,0 +1,76 @@
+cmake_minimum_required(VERSION 3.10 FATAL_ERROR)
+
+project(cuda-voxel-engine LANGUAGES CXX CUDA)
+
+# Gets CPM
+set(CPM_FILE ${CMAKE_CURRENT_BINARY_DIR}/cmake/CPM.cmake)
+
+if(NOT EXISTS ${CPM_FILE})
+  file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/cmake)
+
+  file(
+    DOWNLOAD
+    https://github.com/cpm-cmake/CPM.cmake/releases/download/v0.42.0/CPM.cmake
+    ${CMAKE_CURRENT_BINARY_DIR}/cmake/CPM.cmake
+  )
+endif()
+
+include(${CPM_FILE})
+
+file(GLOB_RECURSE SOURCES "src/*.cpp" "src/*.cu")
+file(GLOB_RECURSE HEADERS "include/*.h" "include/*.hpp" "include/*.cuh" "src/*.h" "src/*.hpp" "src/*.cuh")
+
+# You have to have these installed
+find_package(CUDAToolkit REQUIRED)
+find_package(OpenGL REQUIRED)
+
+CPMAddPackage(
+  NAME SDL2
+  URL https://github.com/libsdl-org/SDL/archive/refs/tags/release-2.30.6.zip
+)
+
+CPMAddPackage(CPM_FILE
+  NAME glfw
+  URL https://github.com/glfw/glfw/releases/download/3.4/glfw-3.4.zip
+)
+
+CPMAddPackage(CPM_FILE
+  NAME GLEW
+  URL https://github.com/nigels-com/glew/releases/download/glew-2.2.0/glew-2.2.0.zip
+)
+
+include_directories(${SDL2_INCLUDE_DIRS} ${OPENGL_INCLUDE_DIRS} ${GLEW_INCLUDE_DIRS})
+
+set(CMAKE_CUDA_ARCHITECTURES "75-real;75-virtual")
+
+# set(CMAKE_CUDA_FLAGS_RELEASE "-O3 -Xptxas -O3")
+# set(CMAKE_CUDA_FLAGS_RELWITHDEBINFO "-O2 -Xptxas -O2")
+
+add_executable(${PROJECT_NAME} ${SOURCES} ${HEADERS})
+
+set_target_properties(${PROJECT_NAME} PROPERTIES CUDA_SEPARABLE_COMPILATION ON)
+
+target_compile_options(${PROJECT_NAME} PRIVATE
+  $<$<COMPILE_LANGUAGE:CUDA>:
+    --expt-extended-lambda
+    -use_fast_math
+    -diag-suppress=550
+    -diag-suppress=177
+    -diag-suppress=1650
+    -Xcompiler -w
+  >
+)
+
+target_compile_options(${PROJECT_NAME} PRIVATE
+  $<$<COMPILE_LANGUAGE:CXX>:
+    -O3
+  >
+)
+
+set_target_properties(${PROJECT_NAME} PROPERTIES OUTPUT_NAME "engine")
+set_target_properties(${PROJECT_NAME} PROPERTIES CUDA_RESOLVE_DEVICE_SYMBOLS ON)
+
+target_include_directories(${PROJECT_NAME} PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src)
+target_include_directories(${PROJECT_NAME} PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include/scve)
+
+target_link_libraries(${PROJECT_NAME} PRIVATE SDL2 glfw GLEW GL)

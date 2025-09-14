@@ -1,16 +1,5 @@
 # A simple, fully raytraced, CUDA-based voxel engine, designed for ease of use
 
-# I'm currently working on turning this project into a library, working on documentation and adding the last couple of features
-
-## Documentation (only API reference for now, will add an installation guide and examples soon):
-
-https://simple-cuda-voxel-engine.readthedocs.io
-
-## Sources I used:
-
-- I implemented the morton encoding using an algorithm from [this blog post](https://forceflow.be/2013/10/07/morton-encodingdecoding-through-bit-interleaving-implementations/), you can also check out the [libmorton](https://github.com/Forceflow/libmorton) library.
-- I use a modified version of the [Revelles algorithm](https://www.ugr.es/~curena/publ/2000-wscg/revelles-wscg00.pdf) that I temporarily took from [this repository](https://github.com/BadGraphixD/Cuda-Voxel-Raytracing), which is licensed under the MIT License.
-
 ## Features:
 
 Inserting voxel data using (x, y, z) -> blockId functions
@@ -27,13 +16,54 @@ An octree data structure with morton encoding, that's optimized for speed and sp
 
 Camera movement (mouse + keyboard controls)
 
+## Prerequisites
+
+You need to have the following packages installed:\
+**The CUDA Toolkit**, **SDL2**, **glfw3**, **OpenGL**
+
+You can check out the [Documentation](https://simple-cuda-voxel-engine.readthedocs.io) for a CMakeLists.txt example that installs all of these packages besides the CUDA Toolkit, which is large.
+
+## Installation
+
+You can clone this repo, build and install the library with CMake as shown below. The options passed in the last command are optional:
+
+**BUILD_EXAMPLES** - builds the examples located in the examples directory, **OFF** by default
+
+**CUDA_ARCHITECTURE_NUM** - the CUDA architecture, **75** by default
+
+```bash
+    cd path/to/simple-cuda-voxel-engine
+    mkdir -p build
+    cmake -S . -B build -DBUILD_EXAMPLES=OFF -DCUDA_ARCHITECTURE_NUM=75
+    cmake --build build
+    cmake --install build
+```
+
+You can also add the package with **[CPM](https://github.com/cpm-cmake/CPM.cmake)** (CMake Package Manager) like so:
+
+```
+CPMAddPackage(
+    NAME scve
+    GITHUB_REPOSITORY mikolaj44/simple-cuda-voxel-engine
+    OPTIONS
+        "BUILD_EXAMPLES=OFF"
+        "CUDA_ARCHITECTURE_NUM=75"
+)
+```
+
+## Documentation: 
+### https://simple-cuda-voxel-engine.readthedocs.io
+
+## Sources I used:
+
+- I implemented the morton encoding using an algorithm from [this blog post](https://forceflow.be/2013/10/07/morton-encodingdecoding-through-bit-interleaving-implementations/), you can also check out the [libmorton](https://github.com/Forceflow/libmorton) library.
+- I use a modified version of the [Revelles algorithm](https://www.ugr.es/~curena/publ/2000-wscg/revelles-wscg00.pdf) that I temporarily took from [this repository](https://github.com/BadGraphixD/Cuda-Voxel-Raytracing), which is licensed under the MIT License.
+
 ## What will be added soon:
 
-- Full documentation
 - Phong lighting math fix
-- Making this package a library that can be installed with CPM
 
 ## Plans for future updates:
 
 - Removing voxel data functionality
-- Keyboard mapping
+- Custom keyboard mapping in inputLoop()

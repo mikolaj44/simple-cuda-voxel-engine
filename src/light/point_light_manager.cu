@@ -1,5 +1,3 @@
-#pragma once
-
 #include "light/point_light_manager.cuh"
 
 #include <cuda_runtime.h>
