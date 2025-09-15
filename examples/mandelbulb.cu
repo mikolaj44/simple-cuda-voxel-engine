@@ -1,12 +1,11 @@
 #include <iostream>
-#include <filesystem>
 
 #include "scve/voxel_engine.h"
 
 // This functor provides a device-side (GPU) function that generates the mandelbulb fractal
 // I got this algorithm from here: https://iquilezles.org/articles/mandelbulb/
 class MyXYZFrameToIdFunctor : public scve::XYZFrameToIdFunctor {
-    __device__ uint8_t operator()(int x, int y, int z, uint64_t frameNumber) override {
+    __device__ uint8_t operator()(int x, int y, int z, uint64_t frameNumber) const override {
         int maxIterations = 4;
 
         float newX = float(x) / 450.0;
@@ -57,18 +56,16 @@ class MyXYZFrameToIdFunctor : public scve::XYZFrameToIdFunctor {
 int main() {
     using namespace scve;
 
-    std::filesystem::path texturesPath = __FILE__;
-
-    texturesPath = texturesPath.parent_path() / "textures";
-    
     // Initialize the engine while checking for CUDA error messages with VoxelEngine::test and catching any exceptions with loading textures
     try {
-       VoxelEngine::test(VoxelEngine::init(1920, 1080, "", 10));
+       VoxelEngine::test(VoxelEngine::init(500, 500, "D:\\Pulpit\\simple-cuda-voxel-engine\\examples\\textures", 10));
     }
     catch (const std::exception& e) {
         std::cout << "Caught exception: " << e.what() << "\n";
         return 1;
     }
+
+
 
     // Set the position of the camera further back, so the fractal is visible
     VoxelEngine::setCameraPos(Vector3<>(0, 0, -10000));
@@ -91,20 +88,24 @@ int main() {
     VoxelEngine::setPropagatingInsertLODsEnabled(false);
 
 
-    // You can set materials with a host-allocated map or a functor just like the one above this function, but IdFrameToMaterialFunctor:
+    // // You can set materials with a host-allocated map or a functor just like the one above this function, but IdFrameToMaterialFunctor:
 
-    // std::unordered_map<uint8_t, Material> map;
-    // map[127] = Material(Vector3<>(255, 0, 0));
-    // VoxelEngine::setMaterials(map);
+    // // std::unordered_map<uint8_t, Material> map;
+    // // map[127] = Material(Vector3<>(255, 0, 0));
+    // // VoxelEngine::setMaterials(map);
 
 
     // Insert the voxels using the XYZFrameToIdFunctor functor
     VoxelEngine::insertVoxels(MyXYZFrameToIdFunctor());
 
 
-    // Start the input loop that also renders frames (displayFrame = true)
-    VoxelEngine::inputLoop();
+    // Start the input loop that also renders frames at the end of the program (displayFrame = true)
+    VoxelEngine::test(VoxelEngine::inputLoop());
 
-    // Cleanup at the end and check for CUDA error codes
-    VoxelEngine::test(VoxelEngine::cleanup());
+    // testKernel<<<10,10>>>();
+
+    // cudaError_t err = cudaDeviceSynchronize();
+    // if (err != cudaSuccess) {
+    //     printf("CUDA Error: %s\n", cudaGetErrorString(err));
+    // }
 }

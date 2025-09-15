@@ -4,7 +4,8 @@
 #include <device_launch_parameters.h>
 #include <stdio.h>
 
-namespace scve::point_light_manager {
+namespace scve {
+namespace point_light_manager {
     __managed__ ManagedList<PointLight*>* pointLights;
 
     __managed__ PointLight* ambientLight;
@@ -33,8 +34,6 @@ namespace scve::point_light_manager {
 
         *ambientLight = PointLight(Vector3<>(0, 0, 0), Vector3<>(0, 0, 0));
         *backgroundLight = PointLight(Vector3<>(0, 0, 0), Vector3<>(0, 0, 255));
-
-        new (pointLights) ManagedList<PointLight*>(); 
 
         error = pointLights->init(numLights_);
 
@@ -103,4 +102,5 @@ namespace scve::point_light_manager {
 
         return lastError;
     }
+}
 }

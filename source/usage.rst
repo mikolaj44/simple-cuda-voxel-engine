@@ -3,8 +3,13 @@ Usage
 
 To use this library, you need to compile your project using the CUDA Toolkit, which also means that your source files need to be .cu, not .cpp. This is because the functors are declared as host-device as they need to be used on the GPU.
 
+The library should was tested on both Linux (NVCC) and Windows (NVCC + MSVC). Only the **Release** build is available at the moment.
+
 Installation
 ------------
+
+You need to have the following packages installed:
+The **CUDA Toolkit**, **SDL2**, **glfw3**, **GLEW**, **OpenGL**
 
 You can clone the `repo <https://github.com/mikolaj44/simple-cuda-voxel-engine>`_ , build and install the library with CMake as shown below. The options passed in the last command are optional:
 
@@ -16,9 +21,13 @@ You can clone the `repo <https://github.com/mikolaj44/simple-cuda-voxel-engine>`
 
    cd path/to/simple-cuda-voxel-engine
    mkdir -p build
-   cmake -S . -B build -DBUILD_EXAMPLES=OFF -DCUDA_ARCHITECTURE_NUM=75
-   cmake --build build
-   sudo cmake --install build
+   cmake -S . -B build -DBUILD_EXAMPLES=OFF -DCUDA_ARCHITECTURE_NUM=75 -DCMAKE_BUILD_TYPE=Release
+   cmake --build build --config Release
+   cmake --install build --config Release
+
+The last command may require using sudo / running the command line as administrator on Windows.
+
+On Windows, you can get **SDL2**, **glfw3** and **GLEW** via `vcpkg <https://github.com/microsoft/vcpkg>`_ and add this option to the third command: **-DCMAKE_TOOLCHAIN_FILE=path/to/vcpkg/scripts/buildsystems/vcpkg.cmake**
 
 You can also add the package with `CPM <https://github.com/cpm-cmake/CPM.cmake>`_ (CMake Package Manager) like so:
 
@@ -37,7 +46,7 @@ It should work on both Linux and Windows, although I am in the process of verify
 Quickstart
 ----------
 
-Check out this mandelbulb fractal example from the **`repo <https://github.com/mikolaj44/simple-cuda-voxel-engine/tree/main/examples>`_**:
+Check out this mandelbulb fractal example from the `repo <https://github.com/mikolaj44/simple-cuda-voxel-engine/tree/main/examples>`_ :
 
 .. literalinclude:: ../examples/mandelbulb.cu
    :language: cuda

@@ -2,8 +2,6 @@
 
 #include "scve/internal/structure/vector3.h"
 
-#include <cuda_runtime.h>
-
 namespace scve {
 
 class PointLight {
@@ -13,9 +11,9 @@ public:
 
     float intensity = 1;
 
-    PointLight() {};
+    __host__ PointLight() = default;
 
-    PointLight(Vector3<> pos_, Vector3<> color_ = Vector3<>(255, 255, 255), float intensity_ = 1) : pos(pos_), color(color_), intensity(intensity_) {};
+    __host__ PointLight(Vector3<> pos_, Vector3<> color_ = Vector3<>(255, 255, 255), float intensity_ = 1) : pos(pos_), color(color_), intensity(intensity_) {};
 };
 
 }

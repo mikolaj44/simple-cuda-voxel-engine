@@ -8,7 +8,8 @@
 #include <cuda_runtime.h>
 #include <device_launch_parameters.h>
 
-namespace scve::block_variant_manager {
+namespace scve {
+namespace block_variant_manager {
     __managed__ ManagedList<BlockVariant*>* blockVariants;
 
     BlockTexture** blockTextures = nullptr;
@@ -71,8 +72,6 @@ namespace scve::block_variant_manager {
             cleanup();
             return error;
         }
-
-        new (blockVariants) ManagedList<BlockVariant*>();
 
         error = blockVariants->init(maxNumVariants);
 
@@ -143,4 +142,6 @@ namespace scve::block_variant_manager {
 
         return lastError;
     }
+
+}
 }

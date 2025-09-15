@@ -9,17 +9,49 @@ include(CMakePackageConfigHelpers)
 
 
 
-option(BUILD_EXAMPLES "Build scve examples" ON)
+option(BUILD_EXAMPLES "Build scve examples" OFF)
 
 set(CUDA_ARCHITECTURE_NUM "75" CACHE STRING "Set the CUDA architecture, 75 by default")
 
 
 
+if(MSVC)
+    string(REPLACE "/RTC1" "" CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG}")
+    string(REPLACE "/RTC1" "" CMAKE_CUDA_FLAGS_DEBUG "${CMAKE_CUDA_FLAGS_DEBUG}")
+endif()
+
+if(CMAKE_CONFIGURATION_TYPES)
+    message(STATUS "Forcing multi-config generator to only use Release")
+    set(CMAKE_CONFIGURATION_TYPES "Release" CACHE STRING "" FORCE)
+elseif(NOT CMAKE_BUILD_TYPE)
+    message(STATUS "No build type specified, defaulting to Release")
+    set(CMAKE_BUILD_TYPE Release FORCE)
+endif()
+
+
+
 find_package(CUDAToolkit REQUIRED)
 find_package(OpenGL REQUIRED)
-find_package(GLEW REQUIRED)
-find_package(SDL2 REQUIRED)
-find_package(glfw3 REQUIRED)
+
+
+
+find_package(GLEW CONFIG QUIET)
+
+if(NOT GLEW_FOUND)
+    find_package(GLEW REQUIRED)
+endif()
+
+find_package(SDL2 CONFIG QUIET)
+
+if(NOT SDL2_FOUND)
+    find_package(SDL2 REQUIRED)
+endif()
+
+find_package(glfw3 CONFIG QUIET)
+
+if(NOT glfw3_FOUND)
+    find_package(glfw3 REQUIRED)
+endif()
 
 
 
@@ -36,11 +68,11 @@ add_library(scve
   ${CUDA_SOURCES}
 )
 
-#set_source_files_properties(${CUDA_SOURCES} PROPERTIES LANGUAGE CUDA)
-
 set_target_properties(scve 
   PROPERTIES
   CMAKE_CXX_STANDARD 20
+  CUDA_STANDARD 20
+  CUDA_STANDARD_REQUIRED ON
   CUDA_SEPARABLE_COMPILATION ON
   CUDA_RESOLVE_DEVICE_SYMBOLS ON
   CUDA_ARCHITECTURES ${CUDA_ARCHITECTURE_NUM}
@@ -54,13 +86,36 @@ target_include_directories(scve
     "${CMAKE_CUDA_TOOLKIT_INCLUDE_DIRECTORIES}"
 )
 
+if(TARGET GLEW::GLEW)
+    target_link_libraries(scve PUBLIC GLEW::GLEW)
+else()
+    target_include_directories(scve PUBLIC ${GLEW_INCLUDE_DIRS})
+    target_link_libraries(scve PUBLIC ${GLEW_LIBRARIES})
+endif()
+
+if(TARGET SDL2::SDL2)
+    target_link_libraries(scve PUBLIC SDL2::SDL2)
+else()
+    target_include_directories(scve PUBLIC ${SDL2_INCLUDE_DIRS})
+    target_link_libraries(scve PUBLIC ${SDL2_LIBRARIES})
+endif()
+
+if(TARGET glfw)
+    target_link_libraries(scve PUBLIC glfw)
+else()
+    target_include_directories(scve PUBLIC ${GLFW_INCLUDE_DIRS})
+    target_link_libraries(scve PUBLIC ${GLFW_LIBRARIES})
+endif()
+
+if(TARGET OpenGL::GL)
+    target_link_libraries(scve PUBLIC OpenGL::GL)
+elseif(WIN32)
+    target_link_libraries(scve PUBLIC opengl32)
+endif()
+
 target_link_libraries(scve
   PUBLIC
     CUDA::cudart
-    SDL2::SDL2
-    glfw
-    GLEW::GLEW
-    GL
 )
 
 install(TARGETS scve

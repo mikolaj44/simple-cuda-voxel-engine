@@ -11,7 +11,8 @@
 #include <cuda_runtime.h>
 #include <device_launch_parameters.h>
 
-namespace scve::cuda_renderer {
+namespace scve {
+namespace cuda_renderer {
     uchar4* devicePixels;
 
     __managed__ float focalLength = 10000; //350 //1200 //4000
@@ -20,7 +21,7 @@ namespace scve::cuda_renderer {
 
     namespace {
         __device__ void setPixel(uchar4* pixels, unsigned int windowWidth, unsigned int windowHeight, unsigned int sX, unsigned int sY, unsigned int r, unsigned int g, unsigned int b, unsigned int a) {
-            pixels[(windowHeight - 1 - sY) * windowWidth + sX] = make_uchar4(r, g, b, a);
+            pixels[(windowHeight - 0 - sY) * windowWidth + sX] = make_uchar4(r, g, b, a);
         }
 
         __device__ scve::Vector3<> getPhongIllumination(scve::Vector3<> startColor, scve::Vector3<> pos, scve::Vector3<> cameraPos, scve::Vector3<> normal, Material material, ManagedList<PointLight*>* pointLights, PointLight* ambientLight) {   
@@ -182,8 +183,6 @@ namespace scve::cuda_renderer {
                 normal = scve::Vector3<>(0, 0, 1);
             }
             else {
-                // printf("black\n");
-                // printf("%d %d %d -> %f %f %f\n", blockX, blockY, blockZ, x, y, z);
                 return;
             }
 
@@ -262,8 +261,7 @@ namespace scve::cuda_renderer {
         cudaGraphicsSubResourceGetMappedArray(&cudaArrayPtr, cudaResource, 0, 0);
     
         // Copy data to CUDA array
-        size_t pitch;
-        cudaMallocPitch(&devicePixels, &pitch, windowWidth * sizeof(uchar4), windowHeight);
+        cudaMalloc(&devicePixels, windowWidth * windowHeight * sizeof(uchar4));
     
         // cudaEvent_t start, stop;
         // cudaEventCreate(&start);
@@ -271,6 +269,8 @@ namespace scve::cuda_renderer {
         // cudaEventRecord(start);
         
         renderKernel<<<gridSize,blockSize>>>(devicePixels, octree, cameraPos, cameraAngle2d, windowWidth, windowHeight, isTextureRenderingEnabled, isPhongIlluminationEnabled);
+
+        // cudaDeviceSynchronize();
     
         // cudaEventRecord(stop);
         // cudaEventSynchronize(stop);
@@ -280,7 +280,7 @@ namespace scve::cuda_renderer {
         // cudaDeviceSynchronize();
     
         // Copy memory from CUDA device to OpenGL texture
-        cudaMemcpy2DToArray(cudaArrayPtr, 0, 0, devicePixels, pitch, windowWidth * sizeof(uchar4), windowHeight, cudaMemcpyDeviceToDevice);
+        cudaMemcpy2DToArray(cudaArrayPtr, 0, 0, devicePixels, windowWidth * sizeof(uchar4), windowWidth * sizeof(uchar4), windowHeight, cudaMemcpyDeviceToDevice);
     
         cudaGraphicsUnmapResources(1, &cudaResource, 0);
     
@@ -300,4 +300,5 @@ namespace scve::cuda_renderer {
 
         SDL_GL_SwapWindow(window);
     }
+}
 }

@@ -19,7 +19,7 @@ class Octree;
 
 namespace scve {
 /**
-* @brief This is the main voxel engine class. It needs to be initialized with \ref init before use and cleaned up with \ref cleanup at the end.
+* @brief This is the main voxel engine class. It needs to be initialized with \ref init before use and cleaned up with \ref cleanup at the end (\ref inputLoop calls \ref cleanup).
 Note: I use the term "host-allocated" in this documentation, which means CPU-side, so the RAM memory. Most resources are "device-allocated" internally by
 the engine, so in the VRAM.
 * */
@@ -83,11 +83,13 @@ public:
     /**
      * @details Handles keyboard input (if enabled, you can do so with \ref setKeyboardControlEnabled), handles mouse controls
      * (if enabled, you can do so with \ref setMouseControlEnabled), then calls \ref displayFrame (if **displayFrame** is set to **true**),
-     * calls your function (**func**) if it's not **nullptr** after all of this - you can move the octree around here or do whatever you want.
-     * @param func a function pointer to your custom function that gets called at the end
-     * @param displayFrame will call \ref displayFrame if set to true, otherwise won't render a frame
+     * calls your function (**func**) if it's not **nullptr** after all of this - you can move the octree around here or do whatever you want. \par 
+     * Calls cleanup at the end, so put this at the end of your program. \par 
+     * **Keystrokes:** **z** - divides camera move speed by 2,  **x** - divides multiplies move speed by 2, **c** - toggles texture rendering mode, **v** - toggles Phong illumination mode
+     * @param func A function pointer to your custom function that gets called at the end
+     * @param displayFrame Will call \ref displayFrame if set to true, otherwise won't render a frame
      * */
-    static void inputLoop(void (*func)() = nullptr, bool displayFrame = true);
+    static cudaError_t inputLoop(void (*func)() = nullptr, bool displayFrame = true);
 
     /**
     * @details Sets the max octree depth/level (one side has 2 ^ maxLevel voxels, max **depth** value is 10, min value is 0) and **clears the octree**.
@@ -121,11 +123,13 @@ public:
     * In detail: Material(hueToRGB((blockId) * 2.8346 / 360.0), 1.0, 0.0, 20.0)
     * @param functor The host-device functor that takes 2 parameters: **uint8_t blockId from 1 to 127** and **uint64_t frameNumber** and returns the **Material material** used by that block type.
     * You should pass a \ref scve::IdFrameToMaterialFunctor here. You can also check out the examples.
+    * @return CUDA error code from cudaDeviceSynchronize
     * */
     template<typename IdFrameToMaterialFunctor>
-    static void setMaterials(IdFrameToMaterialFunctor functor) {
+    static cudaError_t setMaterials(IdFrameToMaterialFunctor functor) {
         int numVariants = block_variant_manager::blockVariants->size();
         block_variant_manager::setBlocksVariantMaterialsKernel<<<1, numVariants>>>(functor, frameNumber);
+        return cudaDeviceSynchronize();
     }
 
     /**
@@ -388,7 +392,7 @@ public:
     /**
     * @details Inserts voxels using your own (**x**, **y**, **z**, **frameNumber**) to **block id** functor, so you can decide what block type should be at
     * a particular position, also taking the current frame number into consideration.
-    * @param functor the host-device functor that takes 4 parameters: **int x**, **int y**, **int z** and **uint64_t frameNumber** and returns the **uint8_t blockType**.
+    * @param functor The host-device functor that takes 4 parameters: **int x**, **int y**, **int z** and **uint64_t frameNumber** and returns the **uint8_t blockType**.
     * You should pass a \ref scve::XYZFrameToIdFunctor here.
     * @return CUDA error code (from cudaDeviceSynchronize)
     * */
@@ -453,9 +457,6 @@ private:
 
     static uint64_t frameNumber;
 
-    static dim3 maxGridSize;
-    static dim3 blockSize;
-
     static Vector3<> cameraPos;
     static Vector3<> cameraAngle;
 
@@ -466,6 +467,8 @@ private:
     static void initBlockTextures();
 
     static void handleCameraMovement(int mouseX, int mouseY);
+
+    static void showCursorIfEnabled();
 
     static cudaError_t initLights();
 };

@@ -15,11 +15,19 @@ enum ImagePosition {
 
 class BlockTexture {
 public:
-	__host__ BlockTexture() {};
+	BlockTexture() = default;
+
+    BlockTexture(const BlockTexture&) = delete;
+	
+    BlockTexture(BlockTexture&&) = delete;
 
 	__host__ cudaError_t init(int channelsInImg, std::string* paths);
 
 	__host__ cudaError_t cleanup();
+
+	BlockTexture& operator=(const BlockTexture&) = delete;
+
+    BlockTexture& operator=(BlockTexture&&) = delete;
 
 	__host__ __device__ int getChannels() const;
 

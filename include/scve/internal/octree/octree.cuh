@@ -15,6 +15,12 @@ namespace scve {
 
 class Octree {
 public:
+	Octree() = delete;
+
+    Octree(const Octree&) = delete;
+
+    Octree(Octree&&) = delete;
+
 	__host__ cudaError_t init(int xMin, int yMin, int zMin, unsigned int maxLevel, bool displayMemoryInfo = false);
 
 	__host__ cudaError_t init(unsigned int maxLevel, bool displayMemoryInfo = false);
@@ -22,6 +28,10 @@ public:
 	__host__ cudaError_t cleanup();
 
 	__host__ cudaError_t clear();
+
+	Octree& operator=(const Octree&) = delete;
+
+    Octree& operator=(Octree&&) = delete;
 
 	template<typename XYZFrameToIdFunctor>
     cudaError_t insertBlocksByXYZFrameFunctor(XYZFrameToIdFunctor blockPosToIdFunctor, uint64_t frameNumber, bool isCalculatingInsertLODsEnabled, unsigned int gridSize, unsigned int blockSize) {		
@@ -207,6 +217,8 @@ __global__ void insertBlockByXYZFrameFunctorKernel(Octree* octree, XYZFrameToIdF
 
 template<typename XYZFrameToIdFunctor>
 __global__ void insertBlocksByXYZFrameFunctorFixLODKernel(Octree* octree, XYZFrameToIdFunctor blockPosToIdFunctor, uint64_t frameNumber, unsigned int level) {
+	printf("in\n");
+
 	unsigned int size = octree->getMaxSize();
 
 	unsigned int index = threadIdx.x + blockIdx.x * blockDim.x;
@@ -223,21 +235,9 @@ __global__ void insertBlocksByXYZFrameFunctorFixLODKernel(Octree* octree, XYZFra
 
     uint8_t id = blockPosToIdFunctor(pos.x, pos.y, pos.z, frameNumber);
 
-
-
-	// scve::Vector3<int> original = scve::Vector3<int>(x + minPos.x, y + minPos.y, z + minPos.z);
-
-	// scve::Vector3<int> decoded = octree->morton3Ddecode(octree->morton3Dencode(original));
-
-	// if(original != decoded)
-	// 	printf("%d %d %d -> %d %d %d\n", original.x, original.y, original.z, decoded.x, decoded.y, decoded.z);
-
-
 	if(id != 0) {	
     	octree->insertFixLOD(octree->morton3Dencode(pos) >> (level * 3), id);
 	}
-
-	// printf("1\n");
 }
 
 }

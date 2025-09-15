@@ -10,7 +10,7 @@ public:
     Material material;
     BlockTexture* texture;
 
-    BlockVariant(Material material_, BlockTexture* texture_) : material(material_), texture(texture_) {};
+    __host__ BlockVariant(Material material_, BlockTexture* texture_) : material(material_), texture(texture_) {};
 };
 
 }

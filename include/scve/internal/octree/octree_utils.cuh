@@ -3,7 +3,8 @@
 #include <stdint.h>
 #include "scve/internal/structure/vector3.h"
 
-namespace scve::octree_utils {
+namespace scve {
+namespace octree_utils {
     constexpr unsigned int CUDA_STACK_SIZE = 11;
 
     class Stack {
@@ -44,4 +45,5 @@ namespace scve::octree_utils {
     
         __device__ uint32_t childMortonRevelles(uint32_t mortonCode, unsigned char revellesChildIndex);
     }
+}
 }

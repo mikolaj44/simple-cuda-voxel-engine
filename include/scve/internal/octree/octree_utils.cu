@@ -4,7 +4,8 @@
 #include "scve/internal/block_variant/block_variant_manager.cuh"
 #include "scve/internal/structure/vector3.h"
 
-namespace scve::octree_utils {
+namespace scve {
+namespace octree_utils {
     __device__ scve::Vector3<> getBlockHitPos(scve::Vector3<int> blockPos, scve::Vector3<> rayOrigin, scve::Vector3<> rayDirection, float epsilon) {
         // if (rayDirection.x == 0)
         //     rayDirection.x = blockPos.x;
@@ -89,4 +90,5 @@ namespace scve::octree_utils {
             return (mortonCode << 3) | reversed[revellesChildIndex];
         }
     }
+}
 }

@@ -31,9 +31,6 @@ Octree* VoxelEngine::octree;
 
 uint64_t VoxelEngine::frameNumber = 0;
 
-dim3 VoxelEngine::maxGridSize(32768,32768,32768);
-dim3 VoxelEngine::blockSize(9,9,9);
-
 Vector3<> VoxelEngine::cameraPos = Vector3<>(0, 0, 0);
 Vector3<> VoxelEngine::cameraAngle = Vector3<>(0, 0, 0);
 
@@ -83,6 +80,15 @@ cudaError_t VoxelEngine::clearVoxels(){
     return octree->clear();
 }
 
+void VoxelEngine::showCursorIfEnabled() {
+    if(VoxelEngine::isMouseControlEnabled) {
+        SDL_ShowCursor(SDL_DISABLE);
+    }
+    else {
+        SDL_ShowCursor(SDL_ENABLE);
+    }
+}
+
 void VoxelEngine::displayFrame() {
     cuda_renderer::render(octree, cameraPos, cameraAngle, windowWidth, windowHeight, isTextureRenderingEnabled, isPhongIlluminationEnabled, renderBlocksPerGrid, renderThreadsPerBlock);
 
@@ -90,8 +96,10 @@ void VoxelEngine::displayFrame() {
     frameNumber %= UINT64_MAX;
 }
 
-void VoxelEngine::inputLoop(void (*func)(), bool displayFrame) {
+cudaError_t VoxelEngine::inputLoop(void (*func)(), bool displayFrame) {
     bool quit = false;
+
+    SDL_ShowWindow(cuda_renderer_utils::window);
 
     while (!quit) {
         SDL_Event event_;
@@ -107,16 +115,10 @@ void VoxelEngine::inputLoop(void (*func)(), bool displayFrame) {
                     break;
 
                 case SDL_WINDOWEVENT:
-                    switch (event_.window.event) {
-                        case SDL_WINDOWEVENT_CLOSE:   // exit game
-                            return;
-                        default:
-                            break;
-                    }
                     break;
 
                 case SDL_QUIT:
-                    return;
+                    break;
 
                 case SDL_KEYDOWN:
                     if(!isKeyboardControlEnabled) {
@@ -195,6 +197,8 @@ void VoxelEngine::inputLoop(void (*func)(), bool displayFrame) {
             func();
         }
     }
+
+    return cleanup();
 }
 
 cudaError_t VoxelEngine::init(unsigned int windowWidth_, unsigned int windowHeight_, std::string texturesPath, unsigned int initialMaxOctreeDepth) {
@@ -254,7 +258,7 @@ cudaError_t VoxelEngine::init(unsigned int windowWidth_, unsigned int windowHeig
         return Material(hueToRGB((blockId) * 2.8346 / 360.0), 1.0, 0.0, 20.0);
     };
 
-    setMaterials<decltype(defaultIdFrameToMaterialFunction)>(defaultIdFrameToMaterialFunction);
+    setMaterials(defaultIdFrameToMaterialFunction);
 
     error = cuda_renderer::init(windowWidth_, windowHeight_);
 
@@ -262,6 +266,8 @@ cudaError_t VoxelEngine::init(unsigned int windowWidth_, unsigned int windowHeig
         cleanup();
         return error;
     }
+
+    showCursorIfEnabled();
 
     isInitialized = true;
 
@@ -611,6 +617,8 @@ bool VoxelEngine::getMouseControlEnabled() {
 
 void VoxelEngine::setMouseControlEnabled(bool isEnabled) {
     isMouseControlEnabled = isEnabled;
+
+    showCursorIfEnabled();
 }
 
 bool VoxelEngine::getPhongIlluminationEnabled() {

@@ -19,11 +19,13 @@ Camera movement (mouse + keyboard controls)
 ## Prerequisites
 
 You need to have the following packages installed:\
-**The CUDA Toolkit**, **SDL2**, **glfw3**, **OpenGL**
+The **CUDA Toolkit**, **SDL2**, **glfw3**, **GLEW**, **OpenGL**
 
 You can check out the [Documentation](https://simple-cuda-voxel-engine.readthedocs.io) for a CMakeLists.txt example that installs this library and all of these packages besides the CUDA Toolkit.
 
 ## Installation
+
+The library should was tested on both Linux (NVCC) and Windows (NVCC + MSVC). Only the **Release** build is available at the moment.
 
 You can clone this repo, build and install the library with CMake as shown below. The options passed in the last command are optional:
 
@@ -34,10 +36,15 @@ You can clone this repo, build and install the library with CMake as shown below
 ```bash
     cd path/to/simple-cuda-voxel-engine
     mkdir -p build
-    cmake -S . -B build -DBUILD_EXAMPLES=OFF -DCUDA_ARCHITECTURE_NUM=75
-    cmake --build build
-    sudo cmake --install build
+    cmake -S . -B build -DBUILD_EXAMPLES=OFF -DCUDA_ARCHITECTURE_NUM=75 -DCMAKE_BUILD_TYPE=Release
+    cmake --build build --config Release
+    cmake --install build --config Release
 ```
+
+The last command may require using sudo / running the command line as administrator on Windows.
+
+On Windows, you can get **SDL2**, **glfw3** and **GLEW** via **[vcpkg](https://github.com/microsoft/vcpkg)** and add this option to the third command:
+**-DCMAKE_TOOLCHAIN_FILE=path/to/vcpkg/scripts/buildsystems/vcpkg.cmake**
 
 You can also add the package with **[CPM](https://github.com/cpm-cmake/CPM.cmake)** (CMake Package Manager) like so:
 
@@ -50,8 +57,6 @@ CPMAddPackage(
         "CUDA_ARCHITECTURE_NUM=75"
 )
 ```
-
-It should work on both Linux and Windows, although I am in the process of verifying that.
 
 ## Documentation: 
 ### https://simple-cuda-voxel-engine.readthedocs.io

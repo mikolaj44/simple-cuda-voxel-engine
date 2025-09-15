@@ -1,9 +1,18 @@
 #define SDL_MAIN_HANDLED
 
 #include <GL/glew.h>
+
+#ifdef _WIN32
+    #include <Windows.h> 
+    #include <GL/gl.h>
+#else
+    #include <GL/gl.h>
+#endif
+
 #include <SDL.h>
 
-namespace scve::cuda_renderer_utils {
+namespace scve {
+namespace cuda_renderer_utils {
     extern GLuint textureID;
     extern cudaGraphicsResource *cudaResource;
 
@@ -17,4 +26,5 @@ namespace scve::cuda_renderer_utils {
     cudaError_t initSDL(int windowWidth, int windowHeight);
 
     cudaError_t cleanupSDL();
+}
 }

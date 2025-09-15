@@ -1,8 +1,11 @@
+#if defined(__GNUC__) || defined(__clang__)
+	#include <cxxabi.h>
+#endif
+
 #include <bitset>
 #include <cstddef>
 #include <iostream>
 #include <limits>
-#include <cxxabi.h>
 #include <string>
 #include <cmath>
 

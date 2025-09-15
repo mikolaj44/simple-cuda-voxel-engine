@@ -5,7 +5,11 @@ namespace scve {
 template<typename T>
 class ManagedList {
 public:
-    __host__ ManagedList() {};
+    ManagedList() = delete;
+
+    ManagedList(const ManagedList&) = delete;
+
+    ManagedList(ManagedList&&) = delete;
 
     __host__ cudaError_t init(unsigned int initialCapacity) {
         capacity = initialCapacity;
@@ -16,6 +20,10 @@ public:
     __host__ cudaError_t cleanup() {
         return cudaFree(array);
     }
+
+    ManagedList& operator=(const ManagedList&) = delete;
+
+    ManagedList& operator=(ManagedList&&) = delete;
 
     __host__ cudaError_t add(T element) {
         cudaError_t error = cudaSuccess;
@@ -47,7 +55,7 @@ private:
 
     unsigned int currentSize = 0;
 
-    unsigned int capacity;
+    unsigned int capacity = 0;
 
     __host__ cudaError_t grow() {
         T* arrayCopy;

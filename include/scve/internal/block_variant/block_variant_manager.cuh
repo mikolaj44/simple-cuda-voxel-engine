@@ -6,7 +6,8 @@
 
 #include <stdint.h>
 
-namespace scve::block_variant_manager {
+namespace scve {
+namespace block_variant_manager {
     extern __managed__ ManagedList<BlockVariant*>* blockVariants;
 
     cudaError_t init(std::string texturesPath, unsigned int maxNumVariants, bool skipTextureLoading = false);
@@ -21,4 +22,5 @@ namespace scve::block_variant_manager {
             ((*blockVariants)[index])->material = functor(uint8_t(index + 1), frameNumber);
         }
     }
+}
 }

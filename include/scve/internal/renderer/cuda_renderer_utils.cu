@@ -2,7 +2,8 @@
 
 #include <cuda_gl_interop.h>
 
-namespace scve::cuda_renderer_utils {
+namespace scve {
+namespace cuda_renderer_utils {
     GLuint textureID;
     cudaGraphicsResource* cudaResource;
 
@@ -30,7 +31,7 @@ namespace scve::cuda_renderer_utils {
     cudaError_t initSDL(int windowWidth, int windowHeight) {
         SDL_Init(SDL_INIT_VIDEO);
 
-        window = SDL_CreateWindow("voxel engine", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, windowWidth, windowHeight, SDL_WINDOW_OPENGL);
+        window = SDL_CreateWindow("voxel engine", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, windowWidth, windowHeight, SDL_WINDOW_HIDDEN | SDL_WINDOW_OPENGL);
     
         SDL_GLContext glContext = SDL_GL_CreateContext(window);
         glewInit();
@@ -56,4 +57,5 @@ namespace scve::cuda_renderer_utils {
 
         return error;
     }
+}
 }
