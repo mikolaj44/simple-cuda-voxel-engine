@@ -1,18 +1,18 @@
-# A simple, fully raytraced, CUDA-based voxel engine, designed for ease of use
+# A simple, fully raytraced voxel engine written in CUDA, designed for ease of use
 
 ## Features:
 
-Inserting voxel data using (x, y, z) -> blockId functions
+Inserting voxel data using (x, y, z) -> blockId functors
 
 Inserting voxel data from blockId arrays
 
 Saving voxel data to blockId arrays
 
-Two texturing modes, each for 127 block types: custom textures (any resolution) or custom color mapping (you can use the default blockId -> hue mapping or provide your own blockId -> Material function)
+Two texturing modes, each for 127 block types: custom textures (any resolution) or custom color mapping (you can use the default blockId -> hue mapping or provide your own blockId -> Material functor)
 
 (Work in progress) Phong reflection model based lighting with an ambient light and multiple light sources, all of which you can easily set.
 
-An octree data structure with morton encoding, that's optimized for speed and space - it's entirely on the GPU, supports parallelized insertion and retrieval
+An octree data structure with morton encoding, that's optimized for speed and space - it's entirely on the GPU, supports parallelized insertion and retrieval.
 
 Camera movement (mouse + keyboard controls)
 
@@ -21,7 +21,7 @@ Camera movement (mouse + keyboard controls)
 You need to have the following packages installed:\
 **The CUDA Toolkit**, **SDL2**, **glfw3**, **OpenGL**
 
-You can check out the [Documentation](https://simple-cuda-voxel-engine.readthedocs.io) for a CMakeLists.txt example that installs all of these packages besides the CUDA Toolkit, which is large.
+You can check out the [Documentation](https://simple-cuda-voxel-engine.readthedocs.io) for a CMakeLists.txt example that installs this library and all of these packages besides the CUDA Toolkit.
 
 ## Installation
 
@@ -36,7 +36,7 @@ You can clone this repo, build and install the library with CMake as shown below
     mkdir -p build
     cmake -S . -B build -DBUILD_EXAMPLES=OFF -DCUDA_ARCHITECTURE_NUM=75
     cmake --build build
-    cmake --install build
+    sudo cmake --install build
 ```
 
 You can also add the package with **[CPM](https://github.com/cpm-cmake/CPM.cmake)** (CMake Package Manager) like so:
@@ -51,8 +51,14 @@ CPMAddPackage(
 )
 ```
 
+It should work on both Linux and Windows, although I am in the process of verifying that.
+
 ## Documentation: 
 ### https://simple-cuda-voxel-engine.readthedocs.io
+
+## Usage
+
+To use this library, you need to compile your project using the CUDA Toolkit, which also means that your source files need to be **.cu**, not **.cpp**. This is because the functors are declared as host-device as they need to be used on the GPU. Check the [Documentation](https://simple-cuda-voxel-engine.readthedocs.io) for more examples.
 
 ## Sources I used:
 

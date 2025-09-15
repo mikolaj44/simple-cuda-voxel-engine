@@ -4,6 +4,7 @@
 #include <string>
 #include <cstdint>
 #include <vector>
+#include <unordered_map>
 
 // #include "cuda_math.cuh"
 #include "scve/internal/octree/octree.cuh"
@@ -113,12 +114,12 @@ public:
     static cudaError_t setPointLights(PointLight* pointLights, unsigned int numLights);
 
     /**
-    * @details Sets the materials for all block types (127 of them) using your own (**blockId**, **frameNumber**) to **material** mapping,
+    * @details Sets the materials for all block types (127 of them, 1 - 127) using your own (**blockId**, **frameNumber**) to **material** mapping,
     * so you can decide the material a block type should have, maybe also dependent on the current frame number. If not called by the user,
     * the default mapping is as follows: \par
     * Material color: hue value for the color of each block type (in HSB, where saturation and brightness are set to max) \par
     * In detail: Material(hueToRGB((blockId) * 2.8346 / 360.0), 1.0, 0.0, 20.0)
-    * @param functor the host-device functor that takes 2 parameters: **uint8_t blockId from 1 to 127** and **uint64_t frameNumber** and returns the **Material material** used by that block type.
+    * @param functor The host-device functor that takes 2 parameters: **uint8_t blockId from 1 to 127** and **uint64_t frameNumber** and returns the **Material material** used by that block type.
     * You should pass a \ref scve::IdFrameToMaterialFunctor here. You can also check out the examples.
     * */
     template<typename IdFrameToMaterialFunctor>
@@ -126,6 +127,14 @@ public:
         int numVariants = block_variant_manager::blockVariants->size();
         block_variant_manager::setBlocksVariantMaterialsKernel<<<1, numVariants>>>(functor, frameNumber);
     }
+
+    /**
+    * @details Sets the materials for all block types (127 of them, 1 - 127) using an unordered_map for the uint8_t -> Material mapping. 
+    * If **setUnpresentMaterialsToDefault** is set to **false** and a key is not present, it gets skipped, 
+    * else the unmapped materials get set to default (black) (set to **true** by default).
+    * @param materialMap The host-allocated map that provides the mapping.
+    * */
+    static void setMaterials(const std::unordered_map<uint8_t, Material>& materialMap, bool setUnpresentMaterialsToDefault = true);
 
     /// @}
 

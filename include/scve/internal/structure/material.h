@@ -4,10 +4,6 @@
 
 namespace scve {
 
-/**
-* @brief The Material used by the Phong illumination model. You can set the **color**, **diffuse** which means the diffuse reflection that makes objects
-look more opaque, **specular** that makes them appear shiny and **specularExponent** that controls the size of the light spots.
-* */
 class Material {
 public:
     Vector3<> color;

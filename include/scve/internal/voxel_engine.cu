@@ -423,6 +423,17 @@ cudaError_t VoxelEngine::insertVoxels(uint8_t* hostBlockIdArray, unsigned int ch
     return cudaFree(deviceBlockIdArray);
 }
 
+void VoxelEngine::setMaterials(const std::unordered_map<uint8_t, Material>& materialMap, bool setUnpresentMaterialsToDefault) {
+    for(int i = 1; i <= 127; i++) {
+        if(materialMap.find(i) != materialMap.end()) {
+            (*(block_variant_manager::blockVariants))[i - 1]->material = materialMap.at(i);
+        }
+        else if(setUnpresentMaterialsToDefault) {
+            (*(block_variant_manager::blockVariants))[i - 1]->material = Material();
+        }
+    }
+}
+
 cudaError_t VoxelEngine::getVoxels(uint8_t** hostBlockIdArrayPtr, unsigned int chunkWidth, Vector3<int> startOffset) {
     size_t totalVoxels = chunkWidth;
 

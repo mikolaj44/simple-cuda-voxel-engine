@@ -3,8 +3,10 @@
 
 #include "scve/voxel_engine.h"
 
+// This functor provides a device-side (GPU) function that generates the mandelbulb fractal
+// I got this algorithm from here: https://iquilezles.org/articles/mandelbulb/
 class MyXYZFrameToIdFunctor : public scve::XYZFrameToIdFunctor {
-    __host__ __device__ uint8_t operator()(int x, int y, int z, uint64_t frameNumber) override {
+    __device__ uint8_t operator()(int x, int y, int z, uint64_t frameNumber) override {
         int maxIterations = 4;
 
         float newX = float(x) / 450.0;
@@ -59,33 +61,50 @@ int main() {
 
     texturesPath = texturesPath.parent_path() / "textures";
     
+    // Initialize the engine while checking for CUDA error messages with VoxelEngine::test and catching any exceptions with loading textures
     try {
-       VoxelEngine::test(VoxelEngine::init(1920, 1080, texturesPath, 10));
+       VoxelEngine::test(VoxelEngine::init(1920, 1080, "", 10));
     }
     catch (const std::exception& e) {
         std::cout << "Caught exception: " << e.what() << "\n";
         return 1;
     }
 
+    // Set the position of the camera further back, so the fractal is visible
     VoxelEngine::setCameraPos(Vector3<>(0, 0, -10000));
 
+    // Disable the texture rendering mode (enable it by pressing "c")
     VoxelEngine::setTextureRenderingEnabled(false);
 
-    VoxelEngine::setPropagatingInsertLODsEnabled(false);
-
+    // Enable keyboard control - it's enabled by default as well
     VoxelEngine::setKeyboardControlEnabled(true);
 
+    // Disable mouse control - it's disabled by default too
     VoxelEngine::setMouseControlEnabled(false);
 
+
+
+    // Disable Phong illumination - this feature is still work in progress
     VoxelEngine::setPhongIlluminationEnabled(false);
 
+    // Disable calculating insert LODs - this feature is still work in progress
+    VoxelEngine::setPropagatingInsertLODsEnabled(false);
 
 
+    // You can set materials with a host-allocated map or a functor just like the one above this function, but IdFrameToMaterialFunctor:
+
+    // std::unordered_map<uint8_t, Material> map;
+    // map[127] = Material(Vector3<>(255, 0, 0));
+    // VoxelEngine::setMaterials(map);
+
+
+    // Insert the voxels using the XYZFrameToIdFunctor functor
     VoxelEngine::insertVoxels(MyXYZFrameToIdFunctor());
 
 
-
+    // Start the input loop that also renders frames (displayFrame = true)
     VoxelEngine::inputLoop();
 
+    // Cleanup at the end and check for CUDA error codes
     VoxelEngine::test(VoxelEngine::cleanup());
 }
