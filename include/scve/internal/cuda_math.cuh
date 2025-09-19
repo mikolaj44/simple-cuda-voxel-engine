@@ -26,7 +26,8 @@ __device__ __host__ inline Number absv(Number a) {
 	return a;
 }
 
-__device__ __host__ inline bool equals(float a, float b, float epsilon) {
+template<typename Number>
+__device__ __host__ inline bool equals(Number a, Number b, Number epsilon) {
 	if (absv(a - b) <= epsilon)
 		return true;
 	return false;

@@ -68,7 +68,7 @@ To use this library, you need to compile your project using the CUDA Toolkit, wh
 ## Sources I used:
 
 - I implemented the morton encoding using an algorithm from [this blog post](https://forceflow.be/2013/10/07/morton-encodingdecoding-through-bit-interleaving-implementations/), you can also check out the [libmorton](https://github.com/Forceflow/libmorton) library.
-- I use a modified version of the [Revelles algorithm](https://www.ugr.es/~curena/publ/2000-wscg/revelles-wscg00.pdf) that I temporarily took from [this repository](https://github.com/BadGraphixD/Cuda-Voxel-Raytracing), which is licensed under the MIT License.
+- I use a modified version of the [Revelles algorithm](https://www.ugr.es/~curena/publ/2000-wscg/revelles-wscg00.pdf) that I took from [this repository](https://github.com/BadGraphixD/Cuda-Voxel-Raytracing), which is licensed under the MIT License.
 
 ## What will be added soon:
 

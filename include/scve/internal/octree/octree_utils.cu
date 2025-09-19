@@ -7,19 +7,6 @@
 namespace scve {
 namespace octree_utils {
     __device__ scve::Vector3<> getBlockHitPos(scve::Vector3<int> blockPos, scve::Vector3<> rayOrigin, scve::Vector3<> rayDirection, float epsilon) {
-        // if (rayDirection.x == 0)
-        //     rayDirection.x = blockPos.x;
-
-        // if (rayDirection.y == 0)
-        //     rayDirection.y = blockPos.y;
-
-        // if (rayDirection.z == 0)
-        //     rayDirection.z = blockPos.z;
-
-        // if (equals(rayDirection.x, 0, epsilon) || equals(rayDirection.y, 0, epsilon) || equals(rayDirection.z, 0, epsilon)) {
-        //     return Vector3<>(blockPos.x, blockPos.y, blockPos.z);
-        // }
-        
         float tmin  = minv(static_cast<float>(static_cast<float>(blockPos.x) - rayOrigin.x) / rayDirection.x, static_cast<float>(static_cast<float>(blockPos.x) + 1.0 - rayOrigin.x) / rayDirection.x);
         float tymin = minv(static_cast<float>(static_cast<float>(blockPos.y) - rayOrigin.y) / rayDirection.y, static_cast<float>(static_cast<float>(blockPos.y) + 1.0 - rayOrigin.y) / rayDirection.y);
         float tzmin = minv(static_cast<float>(static_cast<float>(blockPos.z) - rayOrigin.z) / rayDirection.z, static_cast<float>(static_cast<float>(blockPos.z) + 1.0 - rayOrigin.z) / rayDirection.z);
@@ -27,18 +14,6 @@ namespace octree_utils {
         tmin = maxv(maxv(tmin, tymin), tzmin);
 
         scve::Vector3<> result = scve::Vector3<>(rayOrigin.x + tmin * rayDirection.x, rayOrigin.y + tmin * rayDirection.y, rayOrigin.z + tmin * rayDirection.z);
-
-        // if(absv(result.x) - absv(blockPos.x) >= 0) {
-        //     result.x = blockPos.x;
-        // }
-
-        // if(absv(result.y) - absv(blockPos.y) >= 0) {
-        //     result.y = blockPos.y;
-        // }
-
-        // if(absv(result.z) - absv(blockPos.z) >= 0) {
-        //     result.z = blockPos.z;
-        // }
 
         return result;
     }

@@ -15,7 +15,7 @@ namespace scve {
 namespace cuda_renderer {
     uchar4* devicePixels;
 
-    __managed__ float focalLength = 10000; //350 //1200 //4000
+    __managed__ float focalLength = 10000; // 350 // 1200 // 4000
 
     constexpr float epsilon = 0.01;
 
@@ -70,7 +70,9 @@ namespace cuda_renderer {
                 return;
             }
     
-            int imgWidth, imgHeight, imgChannels;
+            int imgWidth;
+            int imgHeight;
+            int imgChannels;
                 
             if(isTextureRenderingEnabled) {
                 imgChannels = ((*blockVariants)[blockId])->texture->getChannels();
@@ -84,100 +86,88 @@ namespace cuda_renderer {
             float y = intersectionData.second.y;
             float z = intersectionData.second.z;
     
-            int imgX = 0, imgY = 0;
-    
-            int r, g, b;
+            scve::Vector3<> color;
             scve::Vector3<> normal;
 
-            // printf("%d %d %d -> %f %f %f\n", blockX, blockY, blockZ, x, y, z);
+            ImagePosition imagePosition;
+            int imgX = 0;
+            int imgY = 0;
 
             // check which side of the block we are on    
-            if (equals(y, (float)blockY, epsilon)) { // top
-                if(isTextureRenderingEnabled){
-                    imgWidth  = ((*blockVariants)[blockId])->texture->getWidth(ImagePosition::TOP);
-                    imgHeight = ((*blockVariants)[blockId])->texture->getHeight(ImagePosition::TOP);
+            if (equals(y, static_cast<float>(blockY), epsilon)) {  // top
+                imagePosition = ImagePosition::TOP;
 
-                    imgX = (int)(absv(x - floorf(x)) * imgWidth);
-                    imgY = (int)(absv(z - floorf(z)) * imgHeight);
-    
-                    r = ((*blockVariants)[blockId])->texture->getImage(ImagePosition::TOP)[(imgY * imgWidth + imgX) * imgChannels];
-                    g = ((*blockVariants)[blockId])->texture->getImage(ImagePosition::TOP)[(imgY * imgWidth + imgX) * imgChannels + 1];
-                    b = ((*blockVariants)[blockId])->texture->getImage(ImagePosition::TOP)[(imgY * imgWidth + imgX) * imgChannels + 2];
+                if(isTextureRenderingEnabled) {
+                    imgWidth  = ((*blockVariants)[blockId])->texture->getWidth(imagePosition);
+                    imgHeight = ((*blockVariants)[blockId])->texture->getHeight(imagePosition);
+
+                    imgX = static_cast<int>(absv(x - floorf(x)) * imgWidth);
+                    imgY = static_cast<int>(absv(z - floorf(z)) * imgHeight);
                 }
     
                 normal = scve::Vector3<>(0, -1, 0);
             }
-            else if (equals(y, (float)blockY + 1.0, epsilon)) { // bottom
-                if(isTextureRenderingEnabled) {
-                    imgWidth  = ((*blockVariants)[blockId])->texture->getWidth(ImagePosition::BOTTOM);
-                    imgHeight = ((*blockVariants)[blockId])->texture->getHeight(ImagePosition::BOTTOM);
+            else if (equals(y, static_cast<float>(blockY + 1.0), epsilon)) { // bottom
+                imagePosition = ImagePosition::BOTTOM;
 
-                    imgX = (int)(absv(x - floorf(x)) * imgWidth);
-                    imgY = (int)(absv(z - floorf(z)) * imgHeight);
-    
-                    r = ((*blockVariants)[blockId])->texture->getImage(ImagePosition::BOTTOM)[(imgY * imgWidth + imgX) * imgChannels];
-                    g = ((*blockVariants)[blockId])->texture->getImage(ImagePosition::BOTTOM)[(imgY * imgWidth + imgX) * imgChannels + 1];
-                    b = ((*blockVariants)[blockId])->texture->getImage(ImagePosition::BOTTOM)[(imgY * imgWidth + imgX) * imgChannels + 2];
+                if(isTextureRenderingEnabled) {
+                    imgWidth  = ((*blockVariants)[blockId])->texture->getWidth(imagePosition);
+                    imgHeight = ((*blockVariants)[blockId])->texture->getHeight(imagePosition);
+
+                    imgX = static_cast<int>(absv(x - floorf(x)) * imgWidth);
+                    imgY = static_cast<int>(absv(z - floorf(z)) * imgHeight);
                 }
     
                 normal = scve::Vector3<>(0, 1, 0);
             }
-            else if (equals(x, (float)blockX, epsilon)) { // left
-                if(isTextureRenderingEnabled){
-                    imgWidth  = ((*blockVariants)[blockId])->texture->getWidth(ImagePosition::LEFT);
-                    imgHeight = ((*blockVariants)[blockId])->texture->getHeight(ImagePosition::LEFT);
+            else if (equals(x, static_cast<float>(blockX), epsilon)) { // left
+                imagePosition = ImagePosition::LEFT;
 
-                    imgX = (int)(absv(z - floorf(z)) * imgWidth);
-                    imgY = (int)(absv(y - floorf(y)) * imgHeight);
-    
-                    r = ((*blockVariants)[blockId])->texture->getImage(ImagePosition::LEFT)[(imgY * imgWidth + imgX) * imgChannels];
-                    g = ((*blockVariants)[blockId])->texture->getImage(ImagePosition::LEFT)[(imgY * imgWidth + imgX) * imgChannels + 1];
-                    b = ((*blockVariants)[blockId])->texture->getImage(ImagePosition::LEFT)[(imgY * imgWidth + imgX) * imgChannels + 2];
+                if(isTextureRenderingEnabled) {
+                    imgWidth  = ((*blockVariants)[blockId])->texture->getWidth(imagePosition);
+                    imgHeight = ((*blockVariants)[blockId])->texture->getHeight(imagePosition);
+
+                    imgX = static_cast<int>(absv(z - floorf(z)) * imgWidth);
+                    imgY = static_cast<int>(absv(y - floorf(y)) * imgHeight);
                 }
     
                 normal = scve::Vector3<>(-1, 0, 0);
             }
-            else if (equals(x, (float)blockX + 1.0, epsilon)) { // right
-                if(isTextureRenderingEnabled){
-                    imgWidth  = ((*blockVariants)[blockId])->texture->getWidth(ImagePosition::RIGHT);
-                    imgHeight = ((*blockVariants)[blockId])->texture->getHeight(ImagePosition::RIGHT);
+            else if (equals(x, static_cast<float>(blockX + 1.0), epsilon)) { // right
+                imagePosition = ImagePosition::RIGHT;
 
-                    imgX = (int)(absv(z - floorf(z)) * imgWidth);
-                    imgY = (int)(absv(y - floorf(y)) * imgHeight);
-    
-                    r = ((*blockVariants)[blockId])->texture->getImage(ImagePosition::RIGHT)[(imgY * imgWidth + imgX) * imgChannels];
-                    g = ((*blockVariants)[blockId])->texture->getImage(ImagePosition::RIGHT)[(imgY * imgWidth + imgX) * imgChannels + 1];
-                    b = ((*blockVariants)[blockId])->texture->getImage(ImagePosition::RIGHT)[(imgY * imgWidth + imgX) * imgChannels + 2];
+                if(isTextureRenderingEnabled) {
+                    imgWidth  = ((*blockVariants)[blockId])->texture->getWidth(imagePosition);
+                    imgHeight = ((*blockVariants)[blockId])->texture->getHeight(imagePosition);
+
+                    imgX = static_cast<int>(absv(z - floorf(z)) * imgWidth);
+                    imgY = static_cast<int>(absv(y - floorf(y)) * imgHeight);
                 }
     
                 normal = scve::Vector3<>(1, 0, 0);
             }
-            else if (equals(z, (float)blockZ, epsilon)) { // front
-                if(isTextureRenderingEnabled){
-                    imgWidth  = ((*blockVariants)[blockId])->texture->getWidth(ImagePosition::FRONT);
-                    imgHeight = ((*blockVariants)[blockId])->texture->getHeight(ImagePosition::FRONT);
+            else if (equals(z, static_cast<float>(blockZ), epsilon)) { // front
+                imagePosition = ImagePosition::FRONT;
 
-                    imgX = (int)(absv(x - floorf(x)) * imgWidth);
-                    imgY = (int)(absv(y - floorf(y)) * imgHeight);
-    
-                    r = ((*blockVariants)[blockId])->texture->getImage(ImagePosition::FRONT)[(imgY * imgWidth + imgX) * imgChannels];
-                    g = ((*blockVariants)[blockId])->texture->getImage(ImagePosition::FRONT)[(imgY * imgWidth + imgX) * imgChannels + 1];
-                    b = ((*blockVariants)[blockId])->texture->getImage(ImagePosition::FRONT)[(imgY * imgWidth + imgX) * imgChannels + 2];
+                if(isTextureRenderingEnabled) {
+                    imgWidth  = ((*blockVariants)[blockId])->texture->getWidth(imagePosition);
+                    imgHeight = ((*blockVariants)[blockId])->texture->getHeight(imagePosition);
+
+                    imgX = static_cast<int>(absv(x - floorf(x)) * imgWidth);
+                    imgY = static_cast<int>(absv(y - floorf(y)) * imgHeight);
                 }
     
                 normal = scve::Vector3<>(0, 0, -1);
             }
-            else if (equals(z, (float)blockZ + 1.0, epsilon)) { // back
-                if(isTextureRenderingEnabled){
-                    imgWidth  = ((*blockVariants)[blockId])->texture->getWidth(ImagePosition::BACK);
-                    imgHeight = ((*blockVariants)[blockId])->texture->getHeight(ImagePosition::BACK);
+            else if (equals(z, static_cast<float>(blockZ + 1.0), epsilon)) { // back
+                imagePosition = ImagePosition::BACK;
 
-                    imgX = (int)(absv(x - floorf(x)) * imgWidth);
-                    imgY = (int)(absv(y - floorf(y)) * imgHeight);
-    
-                    r = ((*blockVariants)[blockId])->texture->getImage(ImagePosition::BACK)[(imgY * imgWidth + imgX) * imgChannels];
-                    g = ((*blockVariants)[blockId])->texture->getImage(ImagePosition::BACK)[(imgY * imgWidth + imgX) * imgChannels + 1];
-                    b = ((*blockVariants)[blockId])->texture->getImage(ImagePosition::BACK)[(imgY * imgWidth + imgX) * imgChannels + 2];
+                if(isTextureRenderingEnabled) {
+                    imgWidth  = ((*blockVariants)[blockId])->texture->getWidth(imagePosition);
+                    imgHeight = ((*blockVariants)[blockId])->texture->getHeight(imagePosition);
+
+                    imgX = static_cast<int>(absv(x - floorf(x)) * imgWidth);
+                    imgY = static_cast<int>(absv(y - floorf(y)) * imgHeight);
                 }
     
                 normal = scve::Vector3<>(0, 0, 1);
@@ -186,9 +176,12 @@ namespace cuda_renderer {
                 return;
             }
 
-            scve::Vector3<> color = scve::Vector3<>(r, g, b);
-
-            if(!isTextureRenderingEnabled) {
+            if (isTextureRenderingEnabled) {
+                color.x = ((*blockVariants)[blockId])->texture->getImage(imagePosition)[(imgY * imgWidth + imgX) * imgChannels];
+                color.y = ((*blockVariants)[blockId])->texture->getImage(imagePosition)[(imgY * imgWidth + imgX) * imgChannels + 1];
+                color.z = ((*blockVariants)[blockId])->texture->getImage(imagePosition)[(imgY * imgWidth + imgX) * imgChannels + 2];
+            }
+            else {
                 color = ((*blockVariants)[blockId])->material.color;
             }
     
@@ -196,7 +189,7 @@ namespace cuda_renderer {
                 color = getPhongIllumination(color, scve::Vector3<>(x, y, z), cameraPos, normal, ((*blockVariants)[blockId])->material, point_light_manager::pointLights, point_light_manager::ambientLight);
             }
 
-            setPixel(pixels, windowWidth, windowHeight, sX, sY, (int)color.x, (int)color.y, (int)color.z, 255);
+            setPixel(pixels, windowWidth, windowHeight, sX, sY, static_cast<int>(color.x), static_cast<int>(color.y), static_cast<int>(color.z), 255);
         }
 
         __global__ void renderKernel(uchar4* pixels, Octree* octree, scve::Vector3<> cameraPos, scve::Vector3<> cameraAngle2d, int windowWidth, int windowHeight, bool isTextureRenderingEnabled, bool isPhongIlluminationEnabled) {                        

@@ -419,7 +419,7 @@ cudaError_t VoxelEngine::insertVoxels(uint8_t* hostBlockIdArray, unsigned int ch
         return error;
     }
 
-    error = octree->insertBlocks(deviceBlockIdArray, startOffset, isCalculatingInsertLODsEnabled, chunkWidth, (totalVoxels + insertionBlockSize - 1) / insertionBlockSize, minv((size_t)insertionBlockSize, totalVoxels));
+    error = octree->insertBlocks(deviceBlockIdArray, startOffset, isCalculatingInsertLODsEnabled, chunkWidth, (totalVoxels + insertionBlockSize - 1) / insertionBlockSize, minv(static_cast<size_t>(insertionBlockSize), totalVoxels));
 
     if(error != cudaSuccess) {
         cudaFree(deviceBlockIdArray);

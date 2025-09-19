@@ -211,7 +211,7 @@ __device__ void Octree::traverseNewNode(bool& foundSolid, Triple<scve::Vector3<i
 		return;
 	}
 
-	if (!nodes[nodeIdx].isMixed() && nodes[nodeIdx].blockId() != 0) { // nodeLevel(nodeIdx, maxLevel) == 0 && nodes[nodeIdx].blockId() != 0
+	if (!nodes[nodeIdx].isMixed() && nodes[nodeIdx].blockId() != 0) {
 		intersectionData.first = morton3Ddecode(nodeIdx);
 		intersectionData.second = getBlockHitPos(intersectionData.first, origRayOrigin, origRayDirection, blockHitEpsilon);
 		intersectionData.third = nodes[nodeIdx].blockId();
@@ -220,8 +220,7 @@ __device__ void Octree::traverseNewNode(bool& foundSolid, Triple<scve::Vector3<i
 		return;
 	}
 
-	// (!nodes[nodeIdx].isMixed() && nodes[nodeIdx].blockId() == 0)
-	if (nodes[nodeIdx].id == 0 || tx1 < 0.0f || ty1 < 0.0f || tz1 < 0.0f) { // !nodes[nodeIdx].isNotSolid()
+	if (nodes[nodeIdx].id == 0 || tx1 < 0.0f || ty1 < 0.0f || tz1 < 0.0f) {
 		return;
 	}
 
@@ -321,18 +320,6 @@ __device__ __host__ void Octree::setMinPos(scve::Vector3<int> minPos) {
 	yMin = minPos.y;
 	zMin = minPos.z;
 }
-
-// __device__ __host__ scve::Vector3<int> Octree::getMinPos() const {
-// 	return scve::Vector3<int>(xMin, yMin, zMin);
-// };
-
-// __device__ __host__ unsigned int Octree::getMaxLevel() const {
-// 	return maxLevel;
-// }
-
-// __device__ __host__ unsigned int Octree::getMaxSize() const {
-// 	return maxSize;
-// }
 
 __host__ unsigned int Octree::getMaxOctreeLevelByGPU() {
 	size_t freeBytes, totalBytes;

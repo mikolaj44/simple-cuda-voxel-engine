@@ -6,7 +6,6 @@
 #include <vector>
 #include <unordered_map>
 
-// #include "cuda_math.cuh"
 #include "scve/internal/octree/octree.cuh"
 #include "scve/internal/structure/vector3.h"
 #include "scve/internal/structure/material.h"
@@ -402,7 +401,7 @@ public:
     
         totalVoxels = totalVoxels * totalVoxels * totalVoxels;
     
-        return octree->insertBlocksByXYZFrameFunctor(functor, frameNumber, isCalculatingInsertLODsEnabled, (totalVoxels + insertionBlockSize - 1) / insertionBlockSize, minv((size_t)insertionBlockSize, totalVoxels));
+        return octree->insertBlocksByXYZFrameFunctor(functor, frameNumber, isCalculatingInsertLODsEnabled, (totalVoxels + insertionBlockSize - 1) / insertionBlockSize, minv(static_cast<size_t>(insertionBlockSize), totalVoxels));
     }
 
     /**
