@@ -32,7 +32,7 @@ namespace point_light_manager {
             return error;
         }
 
-        *ambientLight = PointLight(Vector3<>(0, 0, 0), Vector3<>(0, 0, 0));
+        *ambientLight = PointLight(Vector3<>(0, 0, 0), Vector3<>(20, 20, 20));
         *backgroundLight = PointLight(Vector3<>(0, 0, 0), Vector3<>(0, 0, 255));
 
         error = pointLights->init(numLights_);

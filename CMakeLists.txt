@@ -154,11 +154,9 @@ target_compile_options(scve PRIVATE
     -O3
     --expt-extended-lambda
     -use_fast_math
-    -diag-suppress=550
-    -diag-suppress=177
-    -diag-suppress=1650
-    -diag-suppress=20044
-    -Xcompiler -w
+    --disable-warnings
+    $<$<CXX_COMPILER_ID:MSVC>:-Xcompiler /W0>
+    $<$<NOT:$<CXX_COMPILER_ID:MSVC>>:-Xcompiler -w>
   >
 )
 
@@ -188,16 +186,14 @@ if(BUILD_EXAMPLES)
     )
 
     target_compile_options(${example_name} PRIVATE
-      $<$<COMPILE_LANGUAGE:CUDA>:
-        -O3
-        --expt-extended-lambda
-        -use_fast_math
-        -diag-suppress=550
-        -diag-suppress=177
-        -diag-suppress=1650
-        -diag-suppress=20044
-        -Xcompiler -w
-      >
+  	$<$<COMPILE_LANGUAGE:CUDA>:
+    	-O3
+    	--expt-extended-lambda
+    	-use_fast_math
+    	--disable-warnings
+    	$<$<CXX_COMPILER_ID:MSVC>:-Xcompiler /W0>
+    	$<$<NOT:$<CXX_COMPILER_ID:MSVC>>:-Xcompiler -w>
+  	>
     )
 
     target_compile_options(${example_name} PRIVATE

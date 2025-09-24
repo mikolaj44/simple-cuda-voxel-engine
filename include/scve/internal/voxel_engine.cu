@@ -45,10 +45,16 @@ unsigned int VoxelEngine::renderBlocksPerGrid;
 
 namespace {
     // https://stackoverflow.com/questions/61277046/convert-just-a-hue-into-rgb
-    __device__ scve::Vector3<> hueToRGB(float hue) {
-        float kr = fmodf(5.0f + hue * 6.0f, 6.0f);
-        float kg = fmodf(3.0f + hue * 6.0f, 6.0f);
-        float kb = fmodf(1.0f + hue * 6.0f, 6.0f);
+    __device__ __host__ scve::Vector3<> hueToRGB(float hue) {
+        #ifdef __CUDA_ARCH__
+            float kr = fmodf(5.0f + hue * 6.0f, 6.0f);
+            float kg = fmodf(3.0f + hue * 6.0f, 6.0f);
+            float kb = fmodf(1.0f + hue * 6.0f, 6.0f);
+        #else
+            float kr = std::fmod(5.0f + hue * 6.0f, 6.0f);
+            float kg = std::fmod(3.0f + hue * 6.0f, 6.0f);
+            float kb = std::fmod(1.0f + hue * 6.0f, 6.0f);
+        #endif
 
         float r = (1.0f - maxv(minv(minv(kr, 4 - kr), 1.0f), 0.0f)) * 255.0f;
         float g = (1.0f - maxv(minv(minv(kg, 4 - kg), 1.0f), 0.0f)) * 255.0f;
@@ -70,6 +76,13 @@ void VoxelEngine::handleCameraMovement(int mouseX, int mouseY) {
     }
     else if (cameraAngle.x > M_PI / 2.0) {
         cameraAngle.x = M_PI / 2.0;
+    }
+
+    if (cameraAngle.y < -M_PI / 2.0) {
+        cameraAngle.y = -M_PI / 2.0;
+    }
+    else if (cameraAngle.y > M_PI / 2.0) {
+        cameraAngle.y = M_PI / 2.0;
     }
 
     prevMouseX = mouseX;
@@ -132,6 +145,13 @@ cudaError_t VoxelEngine::inputLoop(void (*func)(), bool displayFrame) {
                             cameraSpeed *= 2;
                             break;
 
+                        case SDLK_b:
+                            cameraTurnSpeed /= 2;
+                            break;
+                        case SDLK_n:
+                            cameraTurnSpeed *= 2;
+                            break;
+
                         case SDLK_c:
                             isTextureRenderingEnabled = !isTextureRenderingEnabled;
                             break;
@@ -166,19 +186,23 @@ cudaError_t VoxelEngine::inputLoop(void (*func)(), bool displayFrame) {
 
                         case SDLK_q:
                             cameraAngle.y -= cameraTurnSpeed;
+                            if (cameraAngle.y < 0)
+                                cameraAngle.y = 2 * M_PI;
                             break;
                         case SDLK_e:
                             cameraAngle.y += cameraTurnSpeed;
+                            if (cameraAngle.y > 2 * M_PI)
+                                cameraAngle.y = 0;
                             break;
 
                         case SDLK_r:
-                            cameraAngle.x += 0.1;
+                            cameraAngle.x += cameraTurnSpeed;
                             if (cameraAngle.x > 2 * M_PI)
                                 cameraAngle.x = 0;
                             break;
 
                         case SDLK_f:
-                            cameraAngle.x -= 0.1;
+                            cameraAngle.x -= cameraTurnSpeed;
                             if (cameraAngle.x < 0)
                                 cameraAngle.x = 2 * M_PI;
                             break;
@@ -429,13 +453,13 @@ cudaError_t VoxelEngine::insertVoxels(uint8_t* hostBlockIdArray, unsigned int ch
     return cudaFree(deviceBlockIdArray);
 }
 
-void VoxelEngine::setMaterials(const std::unordered_map<uint8_t, Material>& materialMap, bool setUnpresentMaterialsToDefault) {
+void VoxelEngine::setMaterials(const std::unordered_map<uint8_t, Material>& materialMap, bool setAbsentMaterialsToDefault) {
     for(int i = 1; i <= 127; i++) {
         if(materialMap.find(i) != materialMap.end()) {
             (*(block_variant_manager::blockVariants))[i - 1]->material = materialMap.at(i);
         }
-        else if(setUnpresentMaterialsToDefault) {
-            (*(block_variant_manager::blockVariants))[i - 1]->material = Material();
+        else if(setAbsentMaterialsToDefault) {
+            (*(block_variant_manager::blockVariants))[i - 1]->material = Material(hueToRGB((i) * 2.8346 / 360.0), 1.0, 0.0, 20.0);
         }
     }
 }

@@ -84,7 +84,7 @@ public:
      * (if enabled, you can do so with \ref setMouseControlEnabled), then calls \ref displayFrame (if **displayFrame** is set to **true**),
      * calls your function (**func**) if it's not **nullptr** after all of this - you can move the octree around here or do whatever you want. \par 
      * Calls cleanup at the end, so put this at the end of your program. \par 
-     * **Keystrokes:** **z** - divides camera move speed by 2,  **x** - divides multiplies move speed by 2, **c** - toggles texture rendering mode, **v** - toggles Phong illumination mode
+     * **Keystrokes:** **z** - divides camera move speed by 2,  **x** - multiplies move speed by 2, **c** - toggles texture rendering mode, **v** - toggles Phong illumination mode, **b** - divides camera turn speed by 2,  **n** - multiplies turn speed by 2
      * @param func A function pointer to your custom function that gets called at the end
      * @param displayFrame Will call \ref displayFrame if set to true, otherwise won't render a frame
      * */
@@ -133,11 +133,11 @@ public:
 
     /**
     * @details Sets the materials for all block types (127 of them, 1 - 127) using an unordered_map for the uint8_t -> Material mapping. 
-    * If **setUnpresentMaterialsToDefault** is set to **false** and a key is not present, it gets skipped, 
-    * else the unmapped materials get set to default (black) (set to **true** by default).
+    * If **setAbsentMaterialsToDefault** is set to **false** and a key is not present, it gets skipped, 
+    * otherwise the unmapped materials get their default mapping (set to **false** by default). The default mapping is explained above this function.
     * @param materialMap The host-allocated map that provides the mapping.
     * */
-    static void setMaterials(const std::unordered_map<uint8_t, Material>& materialMap, bool setUnpresentMaterialsToDefault = true);
+    static void setMaterials(const std::unordered_map<uint8_t, Material>& materialMap, bool setAbsentMaterialsToDefault = false);
 
     /// @}
 
@@ -147,7 +147,7 @@ public:
     /// @{
 
     /**
-    * @return The camera position
+    * @return The camera position, Vector3<>(0, 0, 0) by default
     * */
     static Vector3<> getCameraPos();
 
@@ -191,7 +191,7 @@ public:
     static cudaError_t getOctreeMaxDepth(int depth);
     
     /**
-    * @return The camera angle (first two vector components, third is zero)
+    * @return The camera angle (first two vector components, third is zero), Vector3<>(0, 0, 0) by default
     * */
     static Vector3<> getCameraAngle2D();
 
@@ -208,18 +208,20 @@ public:
 
     /**
     * @details Enables/disables the texture rendering mode - if it's off, then the material rendering mode is active.
+    * When texture rendering mode is enabled, material colors are ignored and the texture colors are displayed. Otherwise,
+    * the color of the material is the one that determines the color of the voxel.
     * You can also toggle this using the "c" key in \ref inputLoop()
     * @param isEnabled The boolean value that enables/disables the texture rendering mode
     * */
     static void setTextureRenderingEnabled(bool isEnabled);
 
     /**
-    * @return A boolean value indicating whether the texture rendering mode is enabled
+    * @return A boolean value indicating whether the texture rendering mode is enabled, true by default
     * */
     static bool getTextureRenderingEnabled();
 
     /**
-    * @return A boolean value indicating whether the propagation of LODs during insertion is enabled
+    * @return A boolean value indicating whether the propagation of LODs during insertion is enabled, false by default
     * */
     static bool getPropagatingInsertLODsEnabled();
 
@@ -252,7 +254,7 @@ public:
     static uint64_t getFrameNumber();
 
     /**
-    * @return The camera moving speed
+    * @return The camera moving speed, 1 by default
     * */
     static float getCameraMoveSpeed();
 
@@ -263,7 +265,7 @@ public:
     static void setCameraMoveSpeed(float speed);
 
     /**
-    * @return The camera turning speed
+    * @return The camera turning speed, 0.1 by default
     * */
     static float getCameraTurnSpeed();
 
@@ -274,7 +276,7 @@ public:
     static void setCameraTurnSpeed(float speed);
 
     /**
-    * @return The mouse sensitivity that the engine uses
+    * @return The mouse sensitivity that the engine uses, 0.0002 by default
     * */
     static float getMouseSensitivity();
 
@@ -285,7 +287,7 @@ public:
     static void setMouseSensitivity(float sensitivity);
 
     /**
-    * @return A boolean value indicating whether keyboard control is enabled in \ref inputLoop
+    * @return A boolean value indicating whether keyboard control is enabled in \ref inputLoop, true by default
     * */
     static bool getKeyboardControlEnabled();
 
@@ -296,7 +298,7 @@ public:
     static void setKeyboardControlEnabled(bool isEnabled);
 
     /**
-    * @return A boolean value indicating whether mouse control is enabled in \ref inputLoop
+    * @return A boolean value indicating whether mouse control is enabled in \ref inputLoop, false by default
     * */
     static bool getMouseControlEnabled();
 
@@ -307,7 +309,7 @@ public:
     static void setMouseControlEnabled(bool isEnabled);
 
     /**
-    * @return A boolean value indicating whether Phong lighting is enabled
+    * @return A boolean value indicating whether Phong lighting is enabled, true by default
     * */
     static bool getPhongIlluminationEnabled();
 
@@ -319,7 +321,7 @@ public:
     static void setPhongIlluminationEnabled(bool isEnabled);
 
     /**
-    * @return A boolean value indicating whether displaying the information about free memory when allocating the octree or when using init or cleanup is enabled
+    * @return A boolean value indicating whether displaying the information about free memory when allocating the octree or when using init or cleanup is enabled, true by default
     * */
    static bool getDisplayingMemoryInfoEnabled();
 
@@ -330,7 +332,7 @@ public:
    static void setDisplayingMemoryInfoEnabled(bool isEnabled);
 
     /**
-    * @return The color of the ambient light (default light when Phong lighting is enabled)
+    * @return The color of the ambient light (default light when Phong lighting is enabled), Vector3<>(20, 20, 20) by default
     * */
     static Vector3<> getAmbientLightColor();
 
@@ -352,7 +354,7 @@ public:
     static void setAmbientLightIntensity(float intensity);
 
     /**
-    * @return The background color (visible when a ray doesn't hit any voxels)
+    * @return The background color (visible when a ray doesn't hit any voxels), Vector3<>(0, 0, 255) by default
     * */
     static Vector3<> getBackgroundColor();
 

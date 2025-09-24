@@ -6,6 +6,8 @@
 // I got this algorithm from here: https://iquilezles.org/articles/mandelbulb/
 class MyXYZFrameToIdFunctor : public scve::XYZFrameToIdFunctor {
     __device__ uint8_t operator()(int x, int y, int z, uint64_t frameNumber) const override {
+        //return int(sqrtf(x*x + y*y + z*z)) % 6 + 1;
+
         int maxIterations = 4;
 
         float newX = float(x) / 450.0;
@@ -49,16 +51,29 @@ class MyXYZFrameToIdFunctor : public scve::XYZFrameToIdFunctor {
             }
         }
         
-        return int(sqrtf(x*x + y*y + z*z)) % 127 + 1;
+        return int(sqrtf(x*x + y*y + z*z)) % 6 + 1;
     }
 };
+
+// This is the same function that the engine uses for converting hue to RGB, we will provide our own mapping with it later
+scve::Vector3<> hueToRGB(float hue) {
+    float kr = std::fmod(5.0f + hue * 6.0f, 6.0f);
+    float kg = std::fmod(3.0f + hue * 6.0f, 6.0f);
+    float kb = std::fmod(1.0f + hue * 6.0f, 6.0f);
+
+    float r = (1.0f - max(min(min(kr, 4 - kr), 1.0f), 0.0f)) * 255.0f;
+    float g = (1.0f - max(min(min(kg, 4 - kg), 1.0f), 0.0f)) * 255.0f;
+    float b = (1.0f - max(min(min(kb, 4 - kb), 1.0f), 0.0f)) * 255.0f;
+
+    return scve::Vector3<>(r, g, b);
+}
 
 int main() {
     using namespace scve;
 
     // Initialize the engine while checking for CUDA error messages with VoxelEngine::test and catching any exceptions with loading textures
     try {
-       VoxelEngine::test(VoxelEngine::init(500, 500, "D:\\Pulpit\\simple-cuda-voxel-engine\\examples\\textures", 10));
+       VoxelEngine::test(VoxelEngine::init(800, 800, "D:\\Pulpit\\simple-cuda-voxel-engine\\examples\\textures", 10));
     }
     catch (const std::exception& e) {
         std::cout << "Caught exception: " << e.what() << "\n";
@@ -70,8 +85,8 @@ int main() {
     // Set the position of the camera further back, so the fractal is visible
     VoxelEngine::setCameraPos(Vector3<>(0, 0, -10000));
 
-    // Disable the texture rendering mode (enable it by pressing "c")
-    VoxelEngine::setTextureRenderingEnabled(false);
+    // Enable the texture rendering mode (disable it by pressing "c"), on by default
+    VoxelEngine::setTextureRenderingEnabled(true);
 
     // Enable keyboard control - it's enabled by default as well
     VoxelEngine::setKeyboardControlEnabled(true);
@@ -79,20 +94,29 @@ int main() {
     // Disable mouse control - it's disabled by default too
     VoxelEngine::setMouseControlEnabled(false);
 
+    // Enable Phong illumination - this feature is still experimental in its accuracy
+    VoxelEngine::setPhongIlluminationEnabled(true);
 
-
-    // Disable Phong illumination - this feature is still work in progress
-    VoxelEngine::setPhongIlluminationEnabled(false);
-
-    // Disable calculating insert LODs - this feature is still work in progress
+    // Disable calculating insert LODs - this feature is still being implemented (off by default)
     VoxelEngine::setPropagatingInsertLODsEnabled(false);
 
 
-    // // You can set materials with a host-allocated map or a functor just like the one above this function, but IdFrameToMaterialFunctor:
 
-    // // std::unordered_map<uint8_t, Material> map;
-    // // map[127] = Material(Vector3<>(255, 0, 0));
-    // // VoxelEngine::setMaterials(map);
+    // Add two point lights behind the camera - red and blue
+    VoxelEngine::setPointLights({PointLight(Vector3<>(5000, 0, -12000), Vector3<>(255, 0, 0))}); // , PointLight(Vector3<>(-5000, -0, -11000), Vector3<>(0, 0, 255))
+
+
+
+    // You can set materials with a host-allocated map (like below) or a functor (IdFrameToMaterialFunctor):
+    std::unordered_map<uint8_t, Material> map;
+
+    // This mimics the default material mapping but does it for the first 6 block ids instead of 127
+    for(int i = 1; i <= 6; i++) {
+        map[i] = Material(hueToRGB((i) * 60.0 / 360.0), 1.0, 0.0, 20.0);
+    }
+
+    VoxelEngine::setMaterials(map);
+
 
 
     // Insert the voxels using the XYZFrameToIdFunctor functor
@@ -101,11 +125,4 @@ int main() {
 
     // Start the input loop that also renders frames at the end of the program (displayFrame = true)
     VoxelEngine::test(VoxelEngine::inputLoop());
-
-    // testKernel<<<10,10>>>();
-
-    // cudaError_t err = cudaDeviceSynchronize();
-    // if (err != cudaSuccess) {
-    //     printf("CUDA Error: %s\n", cudaGetErrorString(err));
-    // }
 }

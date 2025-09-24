@@ -34,7 +34,7 @@ namespace cuda_renderer {
             for(int i = 0; i < pointLights->size(); i++) {
                 scve::Vector3<> ln = scve::Vector3<>(((*pointLights)[i])->pos.x - pos.x, ((*pointLights)[i])->pos.y - pos.y, ((*pointLights)[i])->pos.z - pos.z).norm();
             
-                if (normal.dot(ln) < 0) {
+                if (scve::Vector3<>::dot(ln, normal) < 0) {
                     continue;
                 }  
 
@@ -58,7 +58,7 @@ namespace cuda_renderer {
                 );
             }
 
-            return resultColor.mul(255.0);
+            return resultColor.mul(255.0).clamp(255.0);
         }
         
         __device__ void setPixelByHitInfo(uchar4* pixels, int windowWidth, int windowHeight, Triple<scve::Vector3<int>, scve::Vector3<float>, uint8_t> intersectionData, scve::Vector3<> cameraPos, int sX, int sY, bool isTextureRenderingEnabled, bool isPhongIlluminationEnabled) {            
