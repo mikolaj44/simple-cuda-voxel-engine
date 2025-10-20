@@ -5,14 +5,14 @@
 namespace scve {
 namespace cuda_renderer_utils {
     GLuint textureID;
-    cudaGraphicsResource* cudaResource;
+    cudaGraphicsResource* cudaResource = nullptr;
 
-    SDL_Window* window;
-    SDL_Renderer* renderer;
-    SDL_Texture* texture;
+    SDL_Window* window = nullptr;
+    SDL_Renderer* renderer = nullptr;
+    SDL_Texture* texture = nullptr;
 
-    SDL_Surface* textSurface;
-    SDL_Texture* textTexture;
+    SDL_Surface* textSurface = nullptr;
+    SDL_Texture* textTexture = nullptr;
 
     namespace {
         cudaError_t createCUDATexture(int windowWidth, int windowHeight) {
@@ -54,6 +54,15 @@ namespace cuda_renderer_utils {
         SDL_DestroyRenderer(renderer);
         SDL_DestroyWindow(window);
         SDL_Quit();
+
+        cudaResource = nullptr;
+
+        window = nullptr;
+        renderer = nullptr;
+        texture = nullptr;
+
+        textSurface = nullptr;
+        textTexture = nullptr;
 
         return error;
     }

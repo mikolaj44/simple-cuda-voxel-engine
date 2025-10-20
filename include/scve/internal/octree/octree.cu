@@ -66,6 +66,9 @@ __host__  cudaError_t Octree::allocateByMaxLevel(unsigned int newMaxLevel, bool 
 
 	if(error != cudaSuccess) {
 		cudaFree(nodes);
+
+		nodes = nullptr;
+
 		return error;
 	}
 
@@ -78,6 +81,9 @@ __host__  cudaError_t Octree::allocateByMaxLevel(unsigned int newMaxLevel, bool 
 
 		if(error != cudaSuccess) {
 			cudaFree(nodes);
+
+			nodes = nullptr;
+
 			return error;
 		}
 
@@ -99,7 +105,16 @@ __host__ cudaError_t Octree::init(unsigned int maxLevel, bool displayMemoryInfo)
 }
 
 __host__ cudaError_t Octree::cleanup() {
-	return cudaFree(nodes);
+	cudaError_t error = cudaFree(nodes);
+
+	nodes = nullptr;
+	
+	allocatedMemoryInBytes = 0;
+
+	maxLevel = 0;
+	maxSize = 0;
+
+	return error;
 }
 
 __host__ cudaError_t Octree::clear() {

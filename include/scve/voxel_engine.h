@@ -448,7 +448,7 @@ private:
 
     static const unsigned int insertionBlockSize = 512;
 
-    static const unsigned int renderThreadsPerBlock = 600;
+    static const unsigned int renderThreadsPerBlock = 256;
     static unsigned int renderBlocksPerGrid;
 
     static int prevMouseX;

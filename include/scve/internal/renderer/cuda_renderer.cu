@@ -13,7 +13,7 @@
 
 namespace scve {
 namespace cuda_renderer {
-    uchar4* devicePixels;
+    uchar4* devicePixels = nullptr;
 
     __managed__ float focalLength = 10000; // 350 // 1200 // 4000
 
@@ -21,7 +21,7 @@ namespace cuda_renderer {
 
     namespace {
         __device__ void setPixel(uchar4* pixels, unsigned int windowWidth, unsigned int windowHeight, unsigned int sX, unsigned int sY, unsigned int r, unsigned int g, unsigned int b, unsigned int a) {
-            pixels[(windowHeight - 0 - sY) * windowWidth + sX] = make_uchar4(r, g, b, a);
+            pixels[(windowHeight - 1 - sY) * windowWidth + sX] = make_uchar4(r, g, b, a);
         }
 
         __device__ scve::Vector3<> getPhongIllumination(scve::Vector3<> startColor, scve::Vector3<> pos, scve::Vector3<> cameraPos, scve::Vector3<> normal, Material material, ManagedList<PointLight*>* pointLights, PointLight* ambientLight) {   
@@ -193,7 +193,7 @@ namespace cuda_renderer {
         }
 
         __global__ void renderKernel(uchar4* pixels, Octree* octree, scve::Vector3<> cameraPos, scve::Vector3<> cameraAngle2d, int windowWidth, int windowHeight, bool isTextureRenderingEnabled, bool isPhongIlluminationEnabled) {                        
-            unsigned int index = threadIdx.x + blockDim.x * blockIdx.x;
+            unsigned int index = blockDim.x * blockIdx.x + threadIdx.x;
 
             if (index >= windowWidth * windowHeight) {
                 return;
@@ -236,6 +236,8 @@ namespace cuda_renderer {
 
         error = cudaFree(devicePixels);
 
+        devicePixels = nullptr;
+
         if(error != cudaSuccess) {
             lastError = error;
         }
@@ -256,21 +258,21 @@ namespace cuda_renderer {
         // Copy data to CUDA array
         cudaMalloc(&devicePixels, windowWidth * windowHeight * sizeof(uchar4));
     
-        // cudaEvent_t start, stop;
-        // cudaEventCreate(&start);
-        // cudaEventCreate(&stop);
-        // cudaEventRecord(start);
+        cudaEvent_t start, stop;
+        cudaEventCreate(&start);
+        cudaEventCreate(&stop);
+        cudaEventRecord(start);
         
         renderKernel<<<gridSize,blockSize>>>(devicePixels, octree, cameraPos, cameraAngle2d, windowWidth, windowHeight, isTextureRenderingEnabled, isPhongIlluminationEnabled);
 
-        // cudaDeviceSynchronize();
+        cudaDeviceSynchronize();
     
-        // cudaEventRecord(stop);
-        // cudaEventSynchronize(stop);
-        // float milliseconds = 0;
-        // cudaEventElapsedTime(&milliseconds, start, stop);
-        // printf("Kernel execution time: %f ms (%f fps)\n", milliseconds, 1.0 / (milliseconds / 1000.0));
-        // cudaDeviceSynchronize();
+        cudaEventRecord(stop);
+        cudaEventSynchronize(stop);
+        float milliseconds = 0;
+        cudaEventElapsedTime(&milliseconds, start, stop);
+        printf("Kernel execution time: %f ms (%f fps)\n", milliseconds, 1.0 / (milliseconds / 1000.0));
+        cudaDeviceSynchronize();
     
         // Copy memory from CUDA device to OpenGL texture
         cudaMemcpy2DToArray(cudaArrayPtr, 0, 0, devicePixels, windowWidth * sizeof(uchar4), windowWidth * sizeof(uchar4), windowHeight, cudaMemcpyDeviceToDevice);

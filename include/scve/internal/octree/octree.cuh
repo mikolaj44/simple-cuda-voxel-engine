@@ -21,6 +21,8 @@ public:
 
     Octree(Octree&&) = delete;
 
+	~Octree() = delete;
+
 	__host__ cudaError_t init(int xMin, int yMin, int zMin, unsigned int maxLevel, bool displayMemoryInfo = false);
 
 	__host__ cudaError_t init(unsigned int maxLevel, bool displayMemoryInfo = false);
@@ -101,7 +103,7 @@ private:
 
 	unsigned int maxLevel = 0; // level 0 is a terminal node
 
-	unsigned int maxSize;
+	unsigned int maxSize = 0;
 
 	size_t allocatedMemoryInBytes = 0;
 

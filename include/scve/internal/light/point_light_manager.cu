@@ -6,10 +6,10 @@
 
 namespace scve {
 namespace point_light_manager {
-    __managed__ ManagedList<PointLight*>* pointLights;
+    __managed__ ManagedList<PointLight*>* pointLights = nullptr;
 
-    __managed__ PointLight* ambientLight;
-    __managed__ PointLight* backgroundLight;
+    __managed__ PointLight* ambientLight = nullptr;
+    __managed__ PointLight* backgroundLight = nullptr;
 
     cudaError_t init(unsigned int numLights_) {
         cudaError_t error = cudaMallocManaged(&pointLights, sizeof(ManagedList<PointLight*>));
@@ -68,9 +68,10 @@ namespace point_light_manager {
     cudaError_t cleanup() {
         cudaError_t lastError = cudaSuccess;
 
-
         for(int i = 0; i < pointLights->size(); i++) {
             cudaError_t error = cudaFree((*pointLights)[i]);
+
+            (*pointLights)[i] = nullptr;
         
             if(error != cudaSuccess) {
                lastError = error;
@@ -85,17 +86,23 @@ namespace point_light_manager {
 
         error = cudaFree(pointLights);
 
+        pointLights = nullptr;
+
         if(error != cudaSuccess) {
             lastError = error;
         }
 
         error = cudaFree(backgroundLight);
 
+        backgroundLight = nullptr;
+
         if(error != cudaSuccess) {
             lastError = error;
         }
 
         error = cudaFree(ambientLight);
+
+        ambientLight = nullptr;
 
         if(error != cudaSuccess) {
             lastError = error;

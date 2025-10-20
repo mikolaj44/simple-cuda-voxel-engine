@@ -82,17 +82,19 @@ __host__ cudaError_t BlockTexture::init(int channelsInImg_, std::string* paths) 
 }
 
 __host__ cudaError_t BlockTexture::cleanup() {
-	cudaError_t error = cudaSuccess;
+	cudaError_t lastError = cudaSuccess;
 
 	for(int i = 0; i < 6; i++) {
-		error = cudaFree(images[i]);
+		cudaError_t error = cudaFree(images[i]);
+
+		images[i] = nullptr;
 
 		if(error != cudaSuccess) {
-			return error;
+			lastError = error;
 		}
 	}
 
-	return error;
+	return lastError;
 }
 
 __host__ __device__ int BlockTexture::getChannels() const {

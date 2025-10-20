@@ -110,12 +110,16 @@ namespace block_variant_manager {
             if(((*blockVariants)[i])->texture != nullptr) {
                 cudaError_t error = ((*blockVariants)[i])->texture->cleanup();
 
+                ((*blockVariants)[i])->texture = nullptr;
+
                 if(error != cudaSuccess) {
                     lastError = error;
                 }
             }
 
             cudaError_t error = cudaFree((*blockVariants)[i]);
+
+            (*blockVariants)[i] = nullptr;
 
             if(error != cudaSuccess) {
                 lastError = error;
@@ -130,11 +134,15 @@ namespace block_variant_manager {
 
         error = cudaFree(blockVariants);
 
+        blockVariants = nullptr;
+
         if(error != cudaSuccess) {
             lastError = error;
         }
 
         error = cudaFree(blockTextures);
+        
+        blockTextures = nullptr;
 
         if(error != cudaSuccess) {
             lastError = error;

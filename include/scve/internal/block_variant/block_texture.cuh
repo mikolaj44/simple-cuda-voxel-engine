@@ -21,6 +21,8 @@ public:
 	
     BlockTexture(BlockTexture&&) = delete;
 
+	~BlockTexture() = delete;
+
 	__host__ cudaError_t init(int channelsInImg, std::string* paths);
 
 	__host__ cudaError_t cleanup();

@@ -12,6 +12,8 @@ public:
 
     ManagedList(ManagedList&&) = delete;
 
+    ~ManagedList() = delete;
+
     __host__ cudaError_t init(unsigned int initialCapacity) {
         capacity = initialCapacity;
 
@@ -19,16 +21,12 @@ public:
     }
 
     __host__ cudaError_t cleanup() {
-        capacity = 0;
-        currentSize = 0;
-
         cudaError_t error = cudaFree(array);
 
-        if(error != cudaSuccess) {
-            return error;
-        }
-
         array = nullptr;
+
+        capacity = 0;
+        currentSize = 0;
 
         return error;
     }

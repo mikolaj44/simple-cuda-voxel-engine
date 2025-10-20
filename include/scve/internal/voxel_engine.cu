@@ -315,6 +315,8 @@ cudaError_t VoxelEngine::cleanup() {
         lastError = error;
     }
 
+    octree = nullptr;
+
     error = cuda_renderer::cleanup();
 
     if(error != cudaSuccess) {
