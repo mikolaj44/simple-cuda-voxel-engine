@@ -1,4 +1,5 @@
 #pragma once
+#include <cstdio>
 
 namespace scve {
 
@@ -18,7 +19,18 @@ public:
     }
 
     __host__ cudaError_t cleanup() {
-        return cudaFree(array);
+        capacity = 0;
+        currentSize = 0;
+
+        cudaError_t error = cudaFree(array);
+
+        if(error != cudaSuccess) {
+            return error;
+        }
+
+        array = nullptr;
+
+        return error;
     }
 
     ManagedList& operator=(const ManagedList&) = delete;

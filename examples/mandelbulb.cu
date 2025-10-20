@@ -73,20 +73,18 @@ int main() {
 
     // Initialize the engine while checking for CUDA error messages with VoxelEngine::test and catching any exceptions with loading textures
     try {
-       VoxelEngine::test(VoxelEngine::init(800, 800, "D:\\Pulpit\\simple-cuda-voxel-engine\\examples\\textures", 10));
+       VoxelEngine::test(VoxelEngine::init(800, 800, "", 10));
     }
     catch (const std::exception& e) {
         std::cout << "Caught exception: " << e.what() << "\n";
         return 1;
     }
 
-
-
     // Set the position of the camera further back, so the fractal is visible
     VoxelEngine::setCameraPos(Vector3<>(0, 0, -10000));
 
     // Enable the texture rendering mode (disable it by pressing "c"), on by default
-    VoxelEngine::setTextureRenderingEnabled(true);
+    VoxelEngine::setTextureRenderingEnabled(false);
 
     // Enable keyboard control - it's enabled by default as well
     VoxelEngine::setKeyboardControlEnabled(true);
@@ -122,7 +120,7 @@ int main() {
     // Insert the voxels using the XYZFrameToIdFunctor functor
     VoxelEngine::insertVoxels(MyXYZFrameToIdFunctor());
 
+    VoxelEngine::displayFrame();
 
-    // Start the input loop that also renders frames at the end of the program (displayFrame = true)
-    VoxelEngine::test(VoxelEngine::inputLoop());
+    VoxelEngine::test(VoxelEngine::cleanup());
 }

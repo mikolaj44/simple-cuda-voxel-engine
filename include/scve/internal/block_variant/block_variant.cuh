@@ -8,7 +8,7 @@ namespace scve {
 class BlockVariant {
 public:
     Material material;
-    BlockTexture* texture;
+    BlockTexture* texture = nullptr;
 
     __host__ BlockVariant(Material material_, BlockTexture* texture_) : material(material_), texture(texture_) {};
 };

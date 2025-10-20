@@ -103,6 +103,8 @@ void VoxelEngine::showCursorIfEnabled() {
 }
 
 void VoxelEngine::displayFrame() {
+	SDL_ShowWindow(cuda_renderer_utils::window);
+	
     cuda_renderer::render(octree, cameraPos, cameraAngle, windowWidth, windowHeight, isTextureRenderingEnabled, isPhongIlluminationEnabled, renderBlocksPerGrid, renderThreadsPerBlock);
 
     frameNumber++;

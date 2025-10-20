@@ -61,19 +61,20 @@ namespace point_light_manager {
                 return error;
             }
         }
-
+        
         return error;
     }
 
     cudaError_t cleanup() {
         cudaError_t lastError = cudaSuccess;
 
+
         for(int i = 0; i < pointLights->size(); i++) {
             cudaError_t error = cudaFree((*pointLights)[i]);
-    
+        
             if(error != cudaSuccess) {
-                lastError = error;
-            }    
+               lastError = error;
+            }  
         }
 
         cudaError_t error = pointLights->cleanup();
