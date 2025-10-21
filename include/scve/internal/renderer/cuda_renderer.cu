@@ -255,26 +255,24 @@ namespace cuda_renderer {
         cudaGraphicsMapResources(1, &cudaResource, 0);
         cudaGraphicsSubResourceGetMappedArray(&cudaArrayPtr, cudaResource, 0, 0);
     
-        // Copy data to CUDA array
         cudaMalloc(&devicePixels, windowWidth * windowHeight * sizeof(uchar4));
     
-        cudaEvent_t start, stop;
-        cudaEventCreate(&start);
-        cudaEventCreate(&stop);
-        cudaEventRecord(start);
+        // cudaEvent_t start, stop;
+        // cudaEventCreate(&start);
+        // cudaEventCreate(&stop);
+        // cudaEventRecord(start);
         
         renderKernel<<<gridSize,blockSize>>>(devicePixels, octree, cameraPos, cameraAngle2d, windowWidth, windowHeight, isTextureRenderingEnabled, isPhongIlluminationEnabled);
 
         cudaDeviceSynchronize();
     
-        cudaEventRecord(stop);
-        cudaEventSynchronize(stop);
-        float milliseconds = 0;
-        cudaEventElapsedTime(&milliseconds, start, stop);
-        printf("Kernel execution time: %f ms (%f fps)\n", milliseconds, 1.0 / (milliseconds / 1000.0));
-        cudaDeviceSynchronize();
+        // cudaEventRecord(stop);
+        // cudaEventSynchronize(stop);
+        // float milliseconds = 0;
+        // cudaEventElapsedTime(&milliseconds, start, stop);
+        // printf("Kernel execution time: %f ms (%f fps)\n", milliseconds, 1.0 / (milliseconds / 1000.0));
+        // cudaDeviceSynchronize();
     
-        // Copy memory from CUDA device to OpenGL texture
         cudaMemcpy2DToArray(cudaArrayPtr, 0, 0, devicePixels, windowWidth * sizeof(uchar4), windowWidth * sizeof(uchar4), windowHeight, cudaMemcpyDeviceToDevice);
     
         cudaGraphicsUnmapResources(1, &cudaResource, 0);

@@ -11,56 +11,42 @@ constexpr uint8_t TEXTURE_COUNT = 6;
 // A helper to know what id's we can insert
 constexpr uint8_t MOD = TEXTURE_RENDERING_ENABLED ? TEXTURE_COUNT : 127;
 
-// This functor provides a device-side (GPU) function that generates the mandelbulb fractal
-// I got this algorithm from here: https://iquilezles.org/articles/mandelbulb/
+// This functor provides a device-side (GPU) function that just fills the octree halfway up
 class MyXYZFrameToIdFunctor : public scve::XYZFrameToIdFunctor {
     __device__ uint8_t operator()(int x, int y, int z, uint64_t frameNumber) const override {
-        int maxIterations = 4;
+        // The coordinate system puts 0 at the top, y coordinate grows going down
 
-        float newX = float(x) / 450.0;
-        float newY = float(y) / 450.0;
-        float newZ = float(z) / 450.0;
-
-        float wX = newX;
-        float wY = newY;
-        float wZ = newZ;
-
-        int iterations = maxIterations;
-
-        while(iterations--){
-            float x_ = wX;
-            float y_ = wY;
-            float z_ = wZ;
-
-            float x2 = x_*x_;
-            float y2 = y_*y_;
-            float z2 = z_*z_;
-
-            float x4 = x2*x2;
-            float y4 = y2*y2;
-            float z4 = z2*z2;
-
-            float k3 = x2 + z2;
-            float k2 = 1.0 / sqrt(k3*k3*k3*k3*k3*k3*k3);
-            float k1 = x4 + y4 + z4 - 6.0*y2*z2 - 6.0*x2*y2 + 2.0*z2*x2;
-            float k4 = x2 - y2 + z2;
-
-            wX =  64.0*x_*y_*z_*(x2-z2)*k4*(x4-6.0*x2*z2+z4)*k1*k2;
-            wY = -16.0*y2*k3*k4*k4 + k1*k1;
-            wZ = -8.0*y_*k4*(x4*x4 - 28.0*x4*x2*z2 + 70.0*x4*z4 - 28.0*x2*z2*z4 + z4*z4)*k1*k2;
-
-            wX += newX;
-            wY += newY;
-            wZ += newZ;
-
-            if(wX * wX + wY * wY + wZ * wZ > 0.6) {
-                return 0;
-            }
+        if(y != 0) {
+            return 0;
         }
 
-        return int(sqrtf(x*x + y*y + z*z)) % MOD + 1;
+        x = fabsf(x);
+        z = fabsf(z);
+
+        if(x % 10 <= 6 && z % 10 <= 6) {
+            return int(sqrtf(x*x + z*z)) % MOD + 1;
+        }
+        if(x % 3 <= 1 && z % 3 == 1) {
+            return int(sqrtf(x + z)) % MOD + 1;
+        }
+
+        return 60;
     }
 };
+
+// The callback that will move the octree to the camera position and insert the voxels
+void myFunc() {
+    using namespace scve;
+
+    VoxelEngine::clearVoxels();
+
+    Vector3<int> cameraPos = VoxelEngine::getCameraPos();
+
+    // Move it slightly in front of the camera, you need to fly up with W
+    VoxelEngine::setOctreeCenter(Vector3<int>(cameraPos.x, 500, cameraPos.z + 2000));
+
+    VoxelEngine::insertVoxels(MyXYZFrameToIdFunctor());
+}
 
 // This is the same function that the engine uses for converting hue to RGB, we will provide our own mapping with it later
 scve::Vector3<> hueToRGB(float hue) {
@@ -93,7 +79,7 @@ int main() {
     VoxelEngine::setCameraPos(Vector3<>(0, 0, -10000));
 
     // Disable the texture rendering mode (disable it by pressing "c"), on by default
-    VoxelEngine::setTextureRenderingEnabled(TEXTURE_RENDERING_ENABLED);
+    VoxelEngine::setTextureRenderingEnabled(false);
 
     // Enable keyboard control - it's enabled by default as well
     VoxelEngine::setKeyboardControlEnabled(true);
@@ -102,7 +88,7 @@ int main() {
     VoxelEngine::setMouseControlEnabled(false);
 
     // Enable Phong illumination - this feature is still experimental in its accuracy
-    VoxelEngine::setPhongIlluminationEnabled(true);
+    VoxelEngine::setPhongIlluminationEnabled(false);
 
     // Disable calculating insert LODs - this feature is still being implemented (off by default)
     VoxelEngine::setPropagatingInsertLODsEnabled(false);
@@ -126,10 +112,6 @@ int main() {
 
 
 
-    // Insert the voxels using the XYZFrameToIdFunctor functor
-    VoxelEngine::insertVoxels(MyXYZFrameToIdFunctor());
-
-
     // Start the input loop that also renders frames at the end of the program (displayFrame = true)
-    VoxelEngine::test(VoxelEngine::inputLoop());
+    VoxelEngine::test(VoxelEngine::inputLoop(&myFunc));
 }

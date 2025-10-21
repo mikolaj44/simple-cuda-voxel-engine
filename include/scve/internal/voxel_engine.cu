@@ -114,8 +114,6 @@ void VoxelEngine::displayFrame() {
 cudaError_t VoxelEngine::inputLoop(void (*func)(), bool displayFrame) {
     bool quit = false;
 
-    SDL_ShowWindow(cuda_renderer_utils::window);
-
     while (!quit) {
         SDL_Event event_;
 
@@ -133,7 +131,7 @@ cudaError_t VoxelEngine::inputLoop(void (*func)(), bool displayFrame) {
                     break;
 
                 case SDL_QUIT:
-                    break;
+                    goto end;
 
                 case SDL_KEYDOWN:
                     if(!isKeyboardControlEnabled) {
@@ -223,6 +221,8 @@ cudaError_t VoxelEngine::inputLoop(void (*func)(), bool displayFrame) {
             func();
         }
     }
+
+    end:
 
     return cleanup();
 }

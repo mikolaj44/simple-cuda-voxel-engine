@@ -21,6 +21,14 @@ public:
 
     __host__ __device__ Vector3(T x_, T y_, T z_) : x(x_), y(y_), z(z_) {};
 
+    __host__ __device__ operator Vector3<int>() const {
+        return Vector3<int>(x, y, z);
+    }
+
+    __host__ __device__ operator Vector3<float>() const {
+        return Vector3<float>(x, y, z);
+    }
+
     __host__ __device__ float len(){
         #ifdef __CUDA_ARCH__
             return sqrtf(static_cast<float>(x) * static_cast<float>(x) + static_cast<float>(y) * static_cast<float>(y) + static_cast<float>(z) * static_cast<float>(z));
